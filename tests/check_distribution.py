@@ -41,6 +41,8 @@ def main() -> None:
         with tarfile.open(sdist) as archive:
             names = {name.split("/", 1)[-1] for name in archive.getnames()}
             assert REQUIRED <= names, REQUIRED - names
+            assert "docs/validation-2026-10-18.md" in names
+            assert "docs/validation-2026-10-18.json" in names
     print("Wheel and sdist contain the standalone runtime and licenses")
 
 
