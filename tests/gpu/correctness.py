@@ -34,7 +34,7 @@ from examples.round_trip import (
 DEFAULT_CAPACITY = 128
 DEFAULT_GRAPH_EPOCHS = 18
 DELAYED_WORKER = 1
-DELAYED_EPOCH = 5
+DELAYED_EPOCH = 8
 DELAY_SECONDS = 0.02
 
 
@@ -122,6 +122,17 @@ def cases(capacity: int) -> list[Case]:
         Case("empty", (0,) * ATTENTION_RANKS),
         Case("decode", (1,) * ATTENTION_RANKS),
         Case("hot_worker", (uniform,) * ATTENTION_RANKS, hot_worker=True),
+        Case("all_sources_at_capacity", (capacity,) * ATTENTION_RANKS),
+        Case(
+            "nonempty_all_routes_skipped",
+            (uniform,) * ATTENTION_RANKS,
+            skip_all_experts=True,
+        ),
+        Case(
+            "strided_source_fp8_scales",
+            (uniform,) * ATTENTION_RANKS,
+            strided_scales=True,
+        ),
     ]
 
 
@@ -129,6 +140,8 @@ def eager_checks(buffer: afdep.Buffer, config: afdep.Config, rank: int) -> list[
     checked = []
     for case in cases(config.capacity_tokens_per_rank):
         exchange = make_exchange(buffer, config, rank, case)
+        if case.strided_scales and config.payload == "fp8" and rank >= FFN_RANKS:
+            assert not exchange.inputs.scale.is_contiguous()
         for epoch in range(2):
             exchange.update(epoch)
             exchange.run(read_host_counts=True)
@@ -149,6 +162,8 @@ def graph_checks(
     captures = []
     for case in cases(config.capacity_tokens_per_rank):
         exchange = make_exchange(buffer, config, rank, case)
+        if case.strided_scales and config.payload == "fp8" and rank >= FFN_RANKS:
+            assert not exchange.inputs.scale.is_contiguous()
         exchange.run()
         torch.cuda.synchronize()
         dist.barrier()

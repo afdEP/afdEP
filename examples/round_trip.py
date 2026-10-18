@@ -46,6 +46,8 @@ class Case:
     name: str
     counts: tuple[int, ...]
     hot_worker: bool = False
+    skip_all_experts: bool = False
+    strided_scales: bool = False
 
     @property
     def bucket(self) -> int:
@@ -162,10 +164,21 @@ def make_inputs(case: Case, source: int, epoch: int, config: afdep.Config) -> In
     # Skipped choices test -1 semantics and force epoch-dependent zero counts.
     omitted = (row[:, None] + slot[None, :] + epoch).remainder(11) == 0
     ids = torch.where(omitted, -1, ids).contiguous()
+    if case.skip_all_experts:
+        ids.fill_(-1)
     weight = torch.pow(2.0, slot.remainder(3).float()) / WEIGHT_DENOMINATOR
     weights = weight[None, :].expand(count, config.top_k).contiguous()
     if config.payload == "fp8":
         quantized, scale = quantize_block128(x)
+        if case.strided_scales:
+            strided = torch.empty_strided(
+                scale.shape,
+                (1, max(4, count)),
+                dtype=scale.dtype,
+                device=scale.device,
+            )
+            strided.copy_(scale)
+            scale = strided
         return Inputs(quantized, ids, weights, scale)
     return Inputs(x, ids, weights, None)
 
