@@ -68,6 +68,19 @@ PyTorch distributions pin an older NCCL package; check `doctor --build` after
 dependency changes rather than allowing an installer to silently replace the
 NCCL version selected for AFDEP.
 
+For the tested CUDA 13 setup, an isolated NCCL prefix can be provisioned without
+replacing the environment's other packages:
+
+```bash
+python -m pip install --no-deps --target "$HOME/.cache/afdep/dependencies" \
+  nvidia-nccl-cu13==2.30.7
+export AFDEP_NCCL_ROOT="$HOME/.cache/afdep/dependencies/nvidia/nccl"
+export LD_LIBRARY_PATH="$AFDEP_NCCL_ROOT/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+python -m afdep doctor --build
+```
+
+Set the library path before starting Python, including every `torchrun` worker.
+
 The loaded NCCL runtime version must match the headers used to compile the
 extension. An override cannot safely mix a different NCCL version with the one
 already loaded by PyTorch; AFDEP rejects that mismatch.
