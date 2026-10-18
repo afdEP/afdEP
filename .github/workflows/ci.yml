@@ -1,0 +1,27 @@
+name: CPU checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install build pytest ruff
+      - run: python -m pip install --no-deps .
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest
+      - run: python -m build
+      - run: python tests/check_distribution.py

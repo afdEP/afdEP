@@ -1,0 +1,33 @@
+{
+  "component": "DeepEP host NCCL bootstrap and symmetric-memory runtime",
+  "upstream_repository": "https://github.com/deepseek-ai/DeepEP",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2025 DeepSeek",
+  "snapshot_chain": [
+    "DeepEP V2",
+    "FastAFD commit 3c71619 (abbreviated pin recorded by afd-plugin)",
+    "afd-plugin PR23 base 7cc7ebd2283eff0388a7aa9495a9445a1cbd8349 plus measured directional transport snapshot"
+  ],
+  "pin_limit": "The intermediary full commit and upstream DeepEP commit are not recorded in the source snapshot. Exact input SHA-256 hashes below identify the adapted code without guessing an upstream revision.",
+  "input_files": {
+    "deepep/LICENSE": "6c73a30c14a2938abaa6afe98ebb19e6d81dac5bd4ace0cb05c61c20afa37b85",
+    "deepep/csrc/kernels/backend/api.cuh": "5b03e8f35a8803b4e67a6e68296f078c48e24a2c413c3655505752931297ba1e",
+    "deepep/csrc/kernels/backend/nccl.cu": "26e9bb4234599984815423e3df67691190059ae35d779148604fed3e7647d507"
+  },
+  "adapted_files": [
+    "afdep/csrc/nccl_runtime.hpp",
+    "afdep/csrc/nccl_runtime.cpp"
+  ],
+  "differences": [
+    "Retain only NCCL unique ID/communicator, physical topology query, registered windows and GIN rail device communicator.",
+    "Remove DeepEP logical expert/dispatch/combine interfaces and environment-based optional GIN support; AFDEP requires cross-domain GIN.",
+    "Rename namespace and APIs, use AFDEP checked errors, validate IDs and physical four-GPU NVLink placement.",
+    "Preserve measured GIN context, queue depth, signal allocation and traffic-class settings.",
+    "Track allocated resources for explicit idempotent close and initialization-failure cleanup."
+  ],
+  "omitted": [
+    "DeepEP Python package, JIT compiler and driver-loader helpers",
+    "ElasticBuffer and all MoE dispatch/combine kernels and layouts",
+    "DeepGEMM, CUTLASS and fmt"
+  ]
+}

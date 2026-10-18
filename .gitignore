@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.so
+*.o
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+results/
+*.nsys-rep
+*.sqlite
+.DS_Store
