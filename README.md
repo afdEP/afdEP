@@ -1,188 +1,68 @@
-# AFDEP
+# afdEP
 
-AFDEP is a GPU communication library for attention–FFN disaggregation. Attention
-GPUs send routed tokens to a separate FFN GPU domain; the FFN GPUs return one
-reduced result per source token. Model execution, expert weights, routing policy,
-and serving control remain in the caller.
+**Expert-parallel communication for Attention–FFN Disaggregation (AFD).**
 
-The initial implementation provides a directional request/reply protocol over
-NCCL GPU-Initiated Networking (GIN) and local NVLink peer access. It does not call
-DeepEP dispatch/combine, create dummy experts, or require the DeepEP or vLLM
-Python packages. Minimal upstream transport helpers are vendored with their
-attribution and licenses; AFDEP owns its extension build and bootstrap wrapper.
+afdEP connects Attention token sources to FFN expert workers: dispatch routed
+tokens, receive expert inputs, and return combined results. Routing, quantization,
+expert compute, and serving scheduling stay with the caller.
 
-**Status:** experimental standalone Hopper library. The installed AFDEP wheel
-has compiled on both H100 hosts and passed the eight-rank BF16 and FP8
-eager/CUDA-graph correctness suites and communication-only smoke benchmarks; see
-the [October 18 validation record](docs/validation-2026-10-18.md). The earlier
-[October 15 performance comparison](docs/performance.md) measured the prototype
-before extraction and is separate from these package checks.
+![DeepEP shared EP roles versus afdEP separate Attention and FFN roles](docs/assets/communication.svg)
 
-## Supported configuration
+The current backend uses NCCL GPU-Initiated Networking (GIN) and NVLink, with
+afdEP's own request/reply kernels. No DeepEP or vLLM runtime package is required.
 
-The first backend supports one specific placement:
+## Support
 
-| Process-group ranks | Role | Placement |
+| Hardware | Status | Current coverage |
 |---|---|---|
-| 0–3 | FFN workers | One four-GPU NVLink domain |
-| 4–7 | Attention sources | A second four-GPU NVLink domain |
+| H100 | **Validated** | Eight 80GB GPUs; BF16/FP8; eager and CUDA graphs |
+| H200 | Not validated | [SM90](https://developer.nvidia.com/cuda/gpus) hardware; no independent validation yet |
+| B200 / Blackwell | Backend not implemented | Current CUDA backend requires SM90 |
 
-It targets Hopper SM90, one in-flight request/reply lane, BF16 activations or
-prequantized FP8 E4M3 activations with FP32 block-128 scales, and BF16 replies.
-The rank numbers above are relative to the supplied process group. Four workers
-own contiguous, equal-sized ranges of real expert IDs. All eight ranks must
-participate in every exchange, including ranks with no tokens or expert work.
+The current backend implements **four Attention + four FFN ranks**, each role in
+its own four-GPU NVLink domain, with one in-flight lane. Other N/M layouts and
+concurrent lanes require further implementation and validation.
 
-Arbitrary N/M ratios, mixed-role domains, additional domains, concurrent lanes,
-Blackwell, and other GPU architectures are not supported by this first backend.
-The library name describes its intended scope; it is not a claim that those
-topologies already work.
+## Quick start
 
-## Installation
-
-GPU execution requires Linux, Hopper SM90 GPUs, PyTorch with CUDA 13, a compatible
-CUDA 13 `nvcc` compiler, and NCCL 2.30.7 or later with device GIN headers and a
-working native RDMA backend. A CPU Gloo process group bootstraps the native
-communicator. AFDEP uses PyTorch's C++ extension tooling to compile its standalone
-extension on first use; it does not use DeepEP's JIT. The CUDA compiler and
-development headers must therefore remain available at runtime. Installing the
-Python package, importing it, and testing configuration do not require a GPU.
-
-From a source checkout, install into an environment with the required PyTorch
-and CUDA/NCCL development dependencies already installed:
+In a provisioned PyTorch/CUDA environment, from the checkout:
 
 ```bash
 python -m pip install --no-build-isolation --no-deps -e .
-python -m afdep doctor
-# On a supported GPU host, also compile and load the extension:
 python -m afdep doctor --build
 ```
 
-Install `torch`, `setuptools`, and `ninja` in the execution environment. Set
-`CUDA_HOME` or `CUDA_NVCC_EXECUTABLE` if compiler discovery needs an override.
-`AFDEP_NCCL_ROOT` selects NCCL headers/libraries; otherwise AFDEP looks for the
-installed NVIDIA NCCL Python distribution. `AFDEP_CACHE_DIR` overrides the
-extension build cache location.
-
-The command above preserves a pre-provisioned CUDA/NCCL environment. Some
-PyTorch distributions pin an older NCCL package; check `doctor --build` after
-dependency changes rather than allowing an installer to silently replace the
-NCCL version selected for AFDEP.
-
-For the tested CUDA 13 setup, an isolated NCCL prefix can be provisioned without
-replacing the environment's other packages:
-
-```bash
-python -m pip install --no-deps --target "$HOME/.cache/afdep/dependencies" \
-  nvidia-nccl-cu13==2.30.7
-export AFDEP_NCCL_ROOT="$HOME/.cache/afdep/dependencies/nvidia/nccl"
-export LD_LIBRARY_PATH="$AFDEP_NCCL_ROOT/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-python -m afdep doctor --build
-```
-
-Set the library path before starting Python, including every `torchrun` worker.
-
-The loaded NCCL runtime version must match the headers used to compile the
-extension. An override cannot safely mix a different NCCL version with the one
-already loaded by PyTorch; AFDEP rejects that mismatch.
-NCCL's [GIN compatibility rules](https://docs.nvidia.com/deeplearning/nccl/archives/nccl_2307/user-guide/docs/usage/deviceapi.html#cross-version-compatibility)
-require rebuilding device kernels when changing NCCL versions; AFDEP includes
-the installed NCCL headers in its build-cache fingerprint.
-
-Use the repository's validation and benchmark entry points before relying on a
-new toolchain or network setup. The historical tested software configuration
-and limitations are listed in [docs/performance.md](docs/performance.md).
-
-Run the following from the source checkout on both four-GPU hosts, with
-`NODE_RANK=0` on the FFN host and `NODE_RANK=1` on the Attention host. Set
-`MASTER_ADDR` to the rendezvous address and configure network/NIC affinity for
-the selected RDMA rail before launch.
-
-```bash
-torchrun --nnodes=2 --nproc-per-node=4 --node-rank="$NODE_RANK" \
-  --master-addr="$MASTER_ADDR" --master-port=29500 \
-  --module tests.gpu.correctness --payload bf16
-```
-
-Repeat with `--payload fp8`. To run the communication-only CUDA-graph benchmark,
-replace the module and its options with:
-
-```text
---module benchmarks.round_trip --payload bf16 --graph --iterations 100
-```
-
-Use `--nvtx` in a separate profiling run for annotated Nsight Systems traces.
-Tracing changes timing; do not mix profiled samples into latency results. The
-[round-trip example](examples/round_trip.py) demonstrates caller-owned weighted
-expert computation without a model-serving framework.
-
-## API
-
-Create one buffer on every rank after selecting that process's CUDA device.
-Construction and `close()` are collective lifecycle operations on the supplied
-CPU Gloo group. Exchange methods enqueue work on the current PyTorch CUDA stream.
+After constructing a buffer on each rank, the roles use separate operations:
 
 ```python
-import afdep
-
-config = afdep.Config(
-    capacity_tokens_per_rank=8192,
-    hidden_size=2048,
-    num_experts=128,
-    top_k=8,
-    payload="bf16",
-)
-buffer = afdep.Buffer(group=group, config=config)
-```
-
-For each exchange, all ranks agree on a positive `bucket` no greater than the
-configured capacity. Each source may have between zero and `bucket` tokens.
-The roles then follow separate APIs:
-
-```python
-# Attention source, on each rank 4–7:
-buffer.source_dispatch(x, expert_ids, topk_weights, bucket=bucket)
+# Attention ranks:
+buffer.source_dispatch(x, expert_ids, weights, bucket=bucket)
 buffer.source_collect(out)
 
-# FFN worker, on each rank 0–3:
-received = buffer.worker_receive(bucket=bucket, read_host_counts=False)
-weighted_rows = run_local_experts(received)  # Caller-owned computation.
-buffer.worker_reply(weighted_rows, received.receipt)
+# FFN ranks:
+received = buffer.worker_receive(bucket=bucket)
+buffer.worker_reply(weighted_expert_outputs, received.receipt)
 ```
 
-`x` is BF16 `[tokens, hidden_size]`, `expert_ids` is INT64 `[tokens, top_k]`,
-`topk_weights` is FP32 with the same shape, and `out` is BF16 with the same shape
-as `x`. FP8 dispatch uses `payload="fp8"`, FP8 E4M3 values, and
-`x_scale=...` containing FP32 scales of shape `[tokens, hidden_size // 128]`.
-AFDEP transports those values; it does not quantize them.
+Apply routing weights **once** before `worker_reply`.
+[Installation and API](docs/api.md) · [Runnable example](examples/round_trip.py)
 
-**Apply routing weights exactly once in the expert computation before
-`worker_reply`.** AFDEP transports the weights in `recv_topk_weights` and sums
-the supplied expert rows. It does not multiply by those weights during reply
-reduction. `run_local_experts` above is an application placeholder, not an AFDEP
-function.
+## H100 experiment
 
-The receive tensors include conservative padding. Use the device expert
-offsets/count metadata when scheduling GPU expert work; the physical tensor
-length is not the number of valid rows. Retain the opaque receipt unchanged for
-the matching reply. See [the API contract](docs/api.md) for tensor layouts,
-ownership, stream ordering, CUDA graphs, and shutdown.
+Eight H100s, four Attention + four FFN ranks, CUDA graphs, communication only:
 
-```python
-# After every rank has completed its final exchange:
-buffer.close()
-```
+![H100 communication latency and registered buffer comparison](docs/assets/h100-performance.svg)
 
-## Design and evidence
+- At 512 tokens/source, BF16 and FP8 round-trip latencies were about **30% lower**.
+- At 2048, BF16 was approximately tied; FP8 latency was **12% lower**.
+- Registered transport buffers were **68–72% smaller**.
 
-- [Architecture](docs/architecture.md): library boundaries, roles, and transport.
-- [Protocol](docs/protocol.md): epochs, completion signals, and reader credits.
-- [API contract](docs/api.md): shapes, weighted results, streams, and graphs.
-- [Performance](docs/performance.md): inherited measurements and open questions.
-- [Contributing](CONTRIBUTING.md): changes and validation expectations.
+October 15: directional prototype vs **Masked DeepEP**,
+with different tuned execution budgets. The standalone wheel passed separate
+eight-H100 checks on October 18. [H100 experiment details](docs/performance.md).
 
-AFDEP is licensed under Apache-2.0. Upstream-derived components retain their
-original notices; consult the repository's third-party attribution alongside
-the source. The directional protocol originated in the AFD plugin experiments
-comparing a dedicated transport against
-[AFD plugin PR #23](https://github.com/ms-llmd/afd-plugin/pull/23).
+## Development
+
+[Contributing](CONTRIBUTING.md) · [CI](https://github.com/ms-llmd/afdEP/actions/workflows/ci.yml)
+
+Apache-2.0; upstream-derived components retain their [original notices](THIRD_PARTY_NOTICES.md).

@@ -22,6 +22,8 @@ from types import ModuleType
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 MIN_NCCL_VERSION = 23007
+CUDA_CAPABILITY = (9, 0)
+CUDA_ARCH = "9.0a"
 DEFAULT_MAX_JOBS = "4"
 NCCL_DISTRIBUTIONS = ("nvidia-nccl-cu13", "nvidia-nccl-cu12")
 SOURCE_NAMES = ("bindings.cpp", "nccl_runtime.cpp", "kernels.cu")
@@ -152,7 +154,7 @@ def build_signature(nvcc: Path, include: Path, lib: Path) -> dict:
         "setup_script": hashlib.sha256(SETUP_SCRIPT.encode()).hexdigest(),
         "source_names": SOURCE_NAMES,
         "link_flags": ["-l:libnccl.so.2", f"-Wl,-rpath,{lib}"],
-        "arch": "9.0a",
+        "arch": CUDA_ARCH,
     }
 
 
@@ -163,9 +165,9 @@ def load_native() -> ModuleType:
     import torch
 
     if platform.system() != "Linux" or not torch.cuda.is_available():
-        raise RuntimeError("AFDEP transport requires Linux with Hopper CUDA GPUs")
-    if torch.cuda.get_device_capability() != (9, 0):
-        raise RuntimeError("This AFDEP version supports Hopper SM90 GPUs only")
+        raise RuntimeError("The current CUDA backend requires Linux with CUDA GPUs")
+    if torch.cuda.get_device_capability() != CUDA_CAPABILITY:
+        raise RuntimeError("The current CUDA backend requires SM90")
     nvcc = resolve_nvcc()
     include, lib = nccl_paths()
     signature = build_signature(nvcc, include, lib)
@@ -198,7 +200,7 @@ def load_native() -> ModuleType:
                 "library_dirs": [str(lib)],
                 "cxx_flags": [*CXX_FLAGS, *system_headers],
                 "nvcc_flags": [*NVCC_FLAGS, *system_headers],
-                "link_flags": ["-l:libnccl.so.2", f"-Wl,-rpath,{lib}"],
+                "link_flags": signature["link_flags"],
             }
             (build_dir / "spec.json").write_text(json.dumps(spec, indent=2))
             (build_dir / "signature.json").write_text(json.dumps(signature, indent=2))
@@ -209,7 +211,7 @@ def load_native() -> ModuleType:
                 env.pop(key, None)
             env["CUDA_HOME"] = str(nvcc.parent.parent)
             env["PYTORCH_NVCC"] = str(nvcc)
-            env["TORCH_CUDA_ARCH_LIST"] = "9.0a"
+            env["TORCH_CUDA_ARCH_LIST"] = CUDA_ARCH
             env.setdefault("MAX_JOBS", DEFAULT_MAX_JOBS)
             subprocess.run(
                 [

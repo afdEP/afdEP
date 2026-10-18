@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Hardware-independent validation of the initial AFDEP protocol geometry."""
+"""Configuration of the current directional communication backend."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import Literal
 
 RANKS_PER_DOMAIN = 4
-NUM_DOMAINS = 2
 FP8_BLOCK_SIZE = 128
 MAX_TOP_K = 32
 INT32_MAX = (1 << 31) - 1
@@ -15,12 +14,7 @@ INT32_MAX = (1 << 31) - 1
 
 @dataclass(frozen=True)
 class Config:
-    """Allocation and launch configuration shared by every participating rank.
-
-    The initial protocol supports one four-GPU FFN NVLink domain followed by
-    one four-GPU Attention domain, with one request/reply lane. ``num_sms``
-    controls local transforms; GIN sends use ``transport_stripes`` CTAs.
-    """
+    """Allocation and launch configuration for the current backend."""
 
     capacity_tokens_per_rank: int
     hidden_size: int
@@ -59,7 +53,7 @@ class Config:
             or self.attention_ranks != RANKS_PER_DOMAIN
         ):
             raise ValueError(
-                "AFDEP currently requires four FFN and four Attention ranks"
+                "The current backend requires four FFN and four Attention ranks"
             )
         if self.hidden_size % FP8_BLOCK_SIZE:
             raise ValueError("hidden_size must be a multiple of 128")

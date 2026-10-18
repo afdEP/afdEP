@@ -7,32 +7,25 @@ import tarfile
 import zipfile
 from pathlib import Path
 
-REQUIRED = {
-    "afdep/__init__.py",
-    "afdep/buffer.py",
-    "afdep/config.py",
-    "afdep/csrc/bindings.cpp",
-    "afdep/csrc/buffer.hpp",
-    "afdep/csrc/kernels.cu",
-    "afdep/csrc/kernels.cuh",
-    "afdep/csrc/kernels.hpp",
-    "afdep/csrc/layout.hpp",
-    "afdep/csrc/nccl_runtime.cpp",
-    "afdep/csrc/nccl_runtime.hpp",
-    "afdep/csrc/ORIGIN.json",
-    "afdep/third_party/deepep/LICENSE",
-    "afdep/third_party/deepep/PROVENANCE.json",
-}
+
+def source_files(root: str) -> set[str]:
+    suffixes = {".py", ".typed", ".cpp", ".cu", ".cuh", ".hpp", ".json", ".md", ".svg"}
+    return {
+        path.as_posix()
+        for path in Path(root).rglob("*")
+        if path.is_file() and (path.suffix in suffixes or path.name == "LICENSE")
+    }
 
 
 def main() -> None:
+    required = source_files("afdep")
     wheels = list(Path("dist").glob("*.whl"))
     sdists = list(Path("dist").glob("*.tar.gz"))
     assert wheels and sdists, "Build both wheel and sdist first"
     for wheel in wheels:
         with zipfile.ZipFile(wheel) as archive:
             names = set(archive.namelist())
-            assert REQUIRED <= names, REQUIRED - names
+            assert required <= names, required - names
             assert any(name.endswith("/licenses/LICENSE") for name in names)
             assert any(
                 name.endswith("/licenses/THIRD_PARTY_NOTICES.md") for name in names
@@ -40,9 +33,9 @@ def main() -> None:
     for sdist in sdists:
         with tarfile.open(sdist) as archive:
             names = {name.split("/", 1)[-1] for name in archive.getnames()}
-            assert REQUIRED <= names, REQUIRED - names
-            assert "docs/validation-2026-10-18.md" in names
-            assert "docs/validation-2026-10-18.json" in names
+            assert required <= names, required - names
+            documentation = source_files("docs")
+            assert documentation <= names, documentation - names
     print("Wheel and sdist contain the standalone runtime and licenses")
 
 

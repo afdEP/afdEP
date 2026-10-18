@@ -11,18 +11,13 @@ from typing import Literal
 import torch
 import torch.distributed as dist
 
-from ._build import MIN_NCCL_VERSION, load_native, source_digest
+from ._build import CUDA_CAPABILITY, MIN_NCCL_VERSION, load_native, source_digest
 from .config import Config
 
 
 @dataclass(frozen=True)
 class ReceiveResult:
-    """Aligned real-expert rows and the receipt for the matching worker reply.
-
-    Rows returned to ``worker_reply`` must be BF16 and already multiplied by
-    ``recv_topk_weights`` exactly once. Only receipt-present rows are reduced.
-    Counts are cumulative aligned expert ends; host counts are optional.
-    """
+    """Expert-major rows, routing weights, count metadata, and a reply receipt."""
 
     recv_x: torch.Tensor
     recv_scale: torch.Tensor | None
@@ -53,7 +48,9 @@ class Buffer:
         if str(dist.get_backend(group)) != "gloo":
             raise ValueError("AFDEP bootstrap requires a CPU Gloo process group")
         if dist.get_world_size(group) != config.world_size:
-            raise ValueError(f"AFDEP requires a group of {config.world_size} ranks")
+            raise ValueError(
+                f"The current backend requires a group of {config.world_size} ranks"
+            )
         self.config = config
         self._group = group
         self.rank = dist.get_rank(group)
@@ -67,11 +64,11 @@ class Buffer:
         local_error = None
         try:
             if platform.system() != "Linux" or not torch.cuda.is_available():
-                raise RuntimeError("AFDEP requires Linux and CUDA")
+                raise RuntimeError("The current CUDA backend requires Linux and CUDA")
             device = torch.cuda.current_device()
             properties = torch.cuda.get_device_properties(device)
-            if (properties.major, properties.minor) != (9, 0):
-                raise ValueError("AFDEP currently supports Hopper SM90 only")
+            if (properties.major, properties.minor) != CUDA_CAPABILITY:
+                raise ValueError("The current CUDA backend requires SM90")
             if config.num_sms > properties.multi_processor_count:
                 raise ValueError("num_sms exceeds the selected GPU's SM count")
             if torch.cuda.is_current_stream_capturing():
@@ -176,26 +173,14 @@ class Buffer:
         *,
         bucket: int,
     ) -> None:
-        """Publish a request; IDs are int64 and weights are FP32 [tokens,top_k].
-
-        ``x`` is contiguous BF16 or E4M3 FP8 [tokens,hidden]. FP8 requires FP32
-        block-128 scales [tokens,hidden/128]. Valid IDs must be unique per token
-        and lie in [0,num_experts); -1 disables a slot. These device values
-        are a caller contract, not CPU-validated.
-        Keep input storage alive until the enqueued reads finish.
-        """
+        """Publish activations and routes; FP8 requires caller-provided scales."""
         self._check_live("attention")
         self._runtime.source_dispatch(x, x_scale, ids, weights, bucket)
 
     def worker_receive(
         self, *, bucket: int, read_host_counts: bool = False
     ) -> ReceiveResult:
-        """Wait for requests and produce expert-major rows.
-
-        The same bucket must be used on all ranks for an exchange. During
-        graph capture, ``read_host_counts`` must be false. Expert computation
-        must honor device cumulative counts and zero-initialized padding.
-        """
+        """Receive expert rows; disable host counts during CUDA graph capture."""
         self._check_live("ffn")
         return ReceiveResult(*self._runtime.worker_receive(bucket, read_host_counts))
 
@@ -210,11 +195,9 @@ class Buffer:
         self._runtime.source_collect(out)
 
     def close(self) -> None:
-        """Collectively drain all peer readers, then free windows/communicator.
+        """Collectively drain peers and free resources outside graph capture.
 
-        Every group member must call this outside capture after its final
-        exchange. Do not call it as rank-local exception cleanup; a failed
-        distributed job should terminate all ranks together.
+        All ranks must participate; do not use for rank-local exception cleanup.
         """
         if self._closed:
             return

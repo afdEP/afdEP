@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Standalone weighted expert echo over AFDEP, without AFD or vLLM.
 
-On each of two four-H100 hosts, run from the repository root::
+For the validated two-host, four-GPU-per-host configuration::
 
     torchrun --nnodes=2 --nproc-per-node=4 --node-rank=$NODE_RANK \
       --master-addr=$MASTER_ADDR --master-port=29500 \
@@ -32,7 +32,6 @@ HIDDEN_SIZE = 2048
 NUM_EXPERTS = 128
 TOP_K = 8
 FP8_BLOCK_SIZE = 128
-EXPERT_ALIGNMENT = 128
 SIGNATURE_BITS = 32
 SOURCE_SHIFT = 16
 EPOCH_SHIFT = 18
@@ -233,7 +232,7 @@ def initialize(timeout_s: int = 180) -> int:
             "Run two hosts with four processes each; node 0 FFN, node 1 Attention"
         )
     if torch.cuda.get_device_capability() != (9, 0):
-        raise ValueError("This initial transport targets Hopper SM90")
+        raise ValueError("The current CUDA backend requires SM90")
     return rank
 
 

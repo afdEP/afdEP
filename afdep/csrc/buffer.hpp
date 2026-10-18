@@ -106,7 +106,7 @@ class DirectionalM2NBuffer {
           stripes(transport_stripes), num_sms(num_sms),
           num_buffer_bytes(rank < 4 ? layout.worker_bytes : layout.source_bytes) {
         TORCH_CHECK(world == 8 && ffn_size == 4 && attn_size == 4 && rank >= 0 && rank < 8,
-                    "Directional transport currently requires world [F0..F3,A0..A3]");
+                    "The current directional backend requires world [F0..F3,A0..A3]");
         TORCH_CHECK(expert_alignment > 0 && gpu_timeout_s > 0,
                     "Directional alignment and timeout settings must be positive");
         TORCH_CHECK(num_qps > 0 && stripes > 0 && stripes <= num_qps,
@@ -118,8 +118,8 @@ class DirectionalM2NBuffer {
                     "Directional num_sms exceeds the device SM count");
         const auto physical = get_physical_domain_size(nccl_comm);
         TORCH_CHECK(std::get<0>(physical) == 2 && std::get<1>(physical) == 4,
-                    "Directional transport requires exactly two four-GPU NVLink domains");
-        TORCH_CHECK(properties.major == 9, "The initial directional transport targets Hopper SM90");
+                    "The current directional backend requires exactly two four-GPU NVLink domains");
+        TORCH_CHECK(properties.major == 9, "The current directional CUDA backend requires SM90");
         int clock_rate_khz;
         AFDEP_CUDA_CHECK(cudaDeviceGetAttribute(&clock_rate_khz, cudaDevAttrClockRate, device));
         timeout_cycles = uint64_t(gpu_timeout_s) * uint64_t(clock_rate_khz) * 1000;

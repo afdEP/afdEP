@@ -1,50 +1,17 @@
-# Performance and validation
+# H100 experiment: directional EP versus Masked DeepEP
 
-## Provenance and scope
+On eight H100 80GB GPUs, the tuned directional prototype had lower small/medium
+communication latency than Masked DeepEP. At 2048 tokens/source, BF16 was near
+parity and FP8 latency was about 12% lower. Registered transport capacity fell 68–72%.
+These are communication-only measurements.
 
-The numbers on this page come from the directional prototype measured on
-October 15, 2026, before extraction into this standalone repository. They are
-included to explain the design decisions. They are **not results from the new
-AFDEP package** and do not establish a newly measured package-versus-DeepEP
-comparison. The extracted wheel has since passed standalone eight-H100 BF16/FP8
-eager/graph validation and short communication benchmarks; see the separate
-[October 18 validation record](validation-2026-10-18.md). Its smoke workload,
-capacity, and run length differ from the historical comparison below.
+![H100 prototype latency and memory comparison](assets/h100-performance.svg)
 
-The baseline was Ronen Kat's masked DeepEP connector in
-[AFD plugin PR #23](https://github.com/ms-llmd/afd-plugin/pull/23), at commit
-`7cc7ebd2283eff0388a7aa9495a9445a1cbd8349`. The directional prototype used its
-own request/reply data plane, with DeepEP infrastructure for bootstrap and JIT.
-AFDEP extracts that directional implementation into its own extension and
-bootstrap wrapper, retaining only minimal attributed transport helpers. It does
-not retain the prototype's DeepEP JIT or module loader.
+## October 15 prototype comparison
 
-## Measurement setup
+CUDA-graph round trips in milliseconds; four Attention sources and four FFN workers:
 
-- Two four-GPU H100 80GB NVLink domains: four FFN workers and four Attention
-  sources, with one active request/reply lane.
-- Hidden size 2048, 128 real experts, top-k eight, expert alignment 128, and
-  capacity 8192 tokens per source.
-- BF16 or prequantized FP8 E4M3 block-128 activation dispatch with FP32 scales;
-  BF16 replies in both cases.
-- Eight GIN contexts and eight directional transport stripes. The network setup
-  used one selected RoCE rail; these results do not establish peak aggregate NIC
-  bandwidth.
-- PyTorch 2.13.0+cu130, CUDA 13.0, NCCL 2.30.7, and Nsight Systems 2026.5.1 in
-  the historical environment. This is a recorded setup, not an exhaustive
-  compatibility guarantee for the standalone package.
-
-The timed exchange includes real activations and routing metadata, but replaces
-expert GEMMs with persistent BF16 output rows. Routing, launch skew,
-synchronization, and communication remain in the measured host-wall time.
-Separate correctness scenarios exercised expert compute. These are
-communication-only results, not serving throughput or end-to-end model latency.
-
-## Latency
-
-CUDA-graph round-trip latency, milliseconds:
-
-| Payload | Tokens/source | Masked DeepEP baseline | Directional, tuned local grid |
+| Payload | Tokens/source | Masked DeepEP | Directional, tuned |
 |---|---:|---:|---:|
 | BF16 | 1 | 0.635 | 0.432 |
 | BF16 | 128 | 0.797 | 0.562 |
@@ -55,100 +22,81 @@ CUDA-graph round-trip latency, milliseconds:
 | FP8 | 512 | 1.495 | 1.043 |
 | FP8 | 2048 | 3.582 | 3.145 |
 
-The metric is the median across three runs of each run's median aligned
-iteration maximum across Attention ranks. It is not a device kernel duration
-or wire-only latency. Each timed bucket used five warmups and 100 iterations.
+The **Masked DeepEP** baseline uses DeepEP's general EP dispatch/combine with
+unused roles masked out. Its useful payload is already directional. afdEP's
+protocol makes the source and expert-worker roles explicit.
+This comparison predates extraction into the standalone afdEP package.
 
-The original directional local grids used 24 CTAs and were about 2.2× slower at
-2048 tokens. Increasing local grids to 132 CTAs, without changing the protocol,
-reduced the directional BF16 latency from 8.257 to 3.698 ms and FP8 from 8.217 to
-3.145 ms. The GIN send grid remained eight CTAs. This identified local
-underparallelism as the main cause of the initial large-batch regression.
+| Setup | Value |
+|---|---|
+| GPUs / placement | Eight H100 80GB; two pure-role four-GPU NVLink domains |
+| Workload | H=2048, E=128, top-k=8, alignment=128, capacity=8192/source |
+| Dispatch / replies | BF16 or FP8 E4M3 block-128 + FP32 scales; BF16 replies |
+| Transport | Eight GIN contexts; directional sends use eight stripes; one RoCE rail/lane |
+| Software | PyTorch 2.13.0+cu130, CUDA 13.0, NCCL 2.30.7 |
 
-The table compares that later tuning experiment with earlier baseline
-references. It is not an equal-resource, randomized protocol-only ablation.
-The baseline's local epilogues already used 132 CTAs; matching a `num_sms`
-setting did not give both implementations identical local execution geometry.
-A final baseline check at 2048 tokens differed by less than one percent from the
-earlier baseline reference. Small-batch drift was larger, so exact small-batch
-percentages do not identify the causal benefit of eliminating bookkeeping.
+The metric is the median across three runs of each run's median iteration
+maximum across Attention ranks: five warmups and 100 measured exchanges/bucket.
+Host-wall time includes launches, GPU completion, and readiness skew. Timed
+expert outputs are persistent BF16 ones; quantization/model GEMMs are excluded.
+
+The tuned directional local grids use 132 CTAs; GIN sends use eight. Earlier
+24-CTA grids were about 2.2× slower at the largest bucket. Increasing local
+parallelism reduced BF16 8.257→3.698 ms and FP8 8.217→3.145 ms without changing
+the protocol. The baseline's local epilogues already used 132 CTAs.
+
+These later tuning runs use earlier baseline references, not an equal-resource
+randomized protocol-only ablation. A final large-bucket baseline check drifted
+less than 1%; tiny-bucket drift was larger. Gains cannot be attributed precisely
+to removed bookkeeping, and this does not establish aggregate NIC saturation.
 
 ## Memory
 
-Separate sums across all eight ranks:
+Separate sums across eight ranks, MiB; allocator peaks at 2048 tokens/source:
 
-| Payload | Registered transport windows, baseline → directional (MiB) | Graph allocator peaks at 2048 tokens, baseline → directional (MiB) | Eager allocator peaks at 2048 tokens, baseline → directional (MiB) |
+| Payload | Registered windows, baseline→directional | Graph allocator peaks | Eager allocator peaks |
 |---|---:|---:|---:|
-| BF16 | 3201.6 → 1030.0 | 9656 → 2419 | 1818 → 2419 |
-| FP8 | 3201.6 → 906.0 | 7627 → 1892 | 1681 → 1892 |
+| BF16 | 3201.6→1030.0 | 9656→2419 | 1818→2419 |
+| FP8 | 3201.6→906.0 | 7627→1892 | 1681→1892 |
 
-Registered capacity fell 67.8% in BF16 and 71.7% in FP8. The graph-case allocator
-peaks fell about 75%, while eager-case allocator peaks increased by 33.0% and
-12.5%. Conservative receive allocation remains an optimization opportunity.
+Registered capacity fell 67.8%/71.7%; graph allocator peaks fell about 75%.
+Eager allocator peaks instead increased 33.0%/12.5% with conservative receive
+allocation. Neither metric is total VRAM; peaks need not coincide, and graph
+pools/padded rows/retained caches affect them. Do not add the columns.
 
-Registered transport windows and PyTorch allocator peaks are different metrics;
-neither is total GPU VRAM. Per-rank allocator peaks need not occur
-simultaneously. Graph pools, retained output caches, padded expert outputs, and
-other allocations affect the comparison. Do not add these columns to claim a
-total memory saving.
+## Nsight findings
 
-## What Nsight established
+Nsight Systems 2026.5.1 covered all eight ranks and BF16/FP8 graph replays.
+No DeepEP dispatch/combine kernels ran in the directional path. At 2048 tokens,
+per-worker median stages changed with the local grid:
 
-Paired Nsight Systems captures covered all eight ranks and measured graph
-replays for BF16 and FP8. The directional captures contained the new protocol
-kernels rather than DeepEP dispatch/combine kernels.
-
-At 2048 tokens, raising the directional local grid from 24 to 132 CTAs changed
-per-worker median stage durations approximately as follows:
-
-| Stage | BF16, 24 → 132 CTAs (ms) | FP8, 24 → 132 CTAs (ms) |
+| Stage | BF16, 24→132 CTAs (ms) | FP8, 24→132 CTAs (ms) |
 |---|---:|---:|
-| Expert-row packing | 1.33–1.36 → 0.30–0.38 | 1.86–1.91 → 0.37–0.40 |
-| Local partial reduction | 3.67–3.69 → 0.68 | 3.66–3.69 → 0.68 |
-| Reply reduction | 0.72–0.84 → 0.14–0.16 | 0.73–0.84 → 0.14–0.16 |
+| Expert-row packing | 1.33–1.36→0.30–0.38 | 1.86–1.91→0.37–0.40 |
+| Local partial reduction | 3.67–3.69→0.68 | 3.66–3.69→0.68 |
+| Reply reduction | 0.72–0.84→0.14–0.16 | 0.73–0.84→0.14–0.16 |
 
-GIN reply stages still occupied about 1.1 ms. Stages include their associated
-completion semantics and may include waiting; these are not isolated wire
-times. Timelines across different ranks overlap, so stage durations must not be
-summed into an end-to-end estimate.
+GIN reply stages remained about 1.1 ms. Durations include waits/completion;
+parallel ranks and overlapping stages must not be summed as elapsed time.
+Baseline fused dispatch/combine durations do not isolate bookkeeping costs.
+One tuned FP8 trace required graph-launch correlation for GPU-internal timing;
+unaligned CPU/GPU offsets and cross-node timestamps were not interpreted.
 
-In the masked DeepEP baseline, Attention combine and FFN dispatch had long
-resident durations. Those fused kernels include payload movement, coordination,
-and peer waits. Systems traces alone did not isolate the latency contribution
-of generic expert-parallel bookkeeping. Removing standalone epilogues alone
-also did not establish a consistent latency speedup in the earlier partial
-specialization experiment.
+Next targets are vectorized/reused local reductions that need fewer SMs,
+activation reuse during expert expansion, FP8 scale packing, chunked pipelining
+with independent credits, and smaller eager receive allocations. Full-device
+local grids can compete with GEMMs; serving/compute overlap remains unmeasured.
 
-One tuned FP8 capture had host/GPU timestamp-alignment excursions. Coverage was
-validated through exact graph-launch correlation and GPU-internal durations;
-cross-clock offsets and tails were not interpreted. No cross-node timestamp
-subtraction was used without alignment.
+## October 18 standalone H100 validation
 
-## Inherited correctness evidence
+The installed afdEP wheel compiled on both H100 hosts without AFD/vLLM/DeepEP
+imports. Eight-rank BF16 and FP8 eager/graph correctness passed: eight cases run
+twice, 18 changing-input graph replays, empty/skewed/all-skipped routes, full
+source load, strided FP8 scales, delayed-peer reuse, and alignment rejection.
+Exact artifacts/configuration are frozen in [the validation record](validation-2026-10-18.json).
 
-The prototype passed BF16 and FP8 eager and graph checks across all eight GPUs,
-including real expert execution, empty and skewed routing, changing source/token
-signatures, interleaved buckets, and delayed-peer buffer reuse. Device epochs and
-credits were exercised without per-exchange CPU barriers in the replay-safety
-scenario. A second correctness pass covered the tuned 132-CTA configuration.
-
-Standalone AFDEP changes build ownership, import paths, packaging, and bootstrap
-integration. Its own validation must therefore cover installation/import,
-native extension compilation, placement rejection, and the same GPU safety scenarios.
-Passing inherited tests is not a substitute for running the extracted library.
-
-## Optimization priorities
-
-1. Vectorize partial/reply reductions and improve data reuse so comparable
-   performance needs fewer SMs, leaving resources for expert GEMMs.
-2. Load a token activation once before expanding it into expert rows; improve
-   FP8 scale packing and its strided accesses.
-3. Pipeline chunks of request transfer, packing, computation, and reply, with
-   explicit independent credits for every reusable chunk.
-4. Reduce conservative eager receive allocation when host counts are available.
-5. Measure transport phases and NIC utilization before claiming bandwidth
-   saturation or assigning costs to notifications and barriers.
-
-Serving integration, expert-GEMM overlap, multiple lanes, and broader N/M
-topologies remain unmeasured. Full-device local grids can contend with expert
-compute; communication-only wins do not guarantee higher serving throughput.
+The package checks used capacity 128 for correctness and 2048 for short
+communication benchmarks (five warmups/20 samples). They passed BF16/FP8 in
+eager and graph modes. **No DeepEP baseline was rerun**; these checks establish
+package correctness, not an additional relative speedup.
+Current hardware/topology support is listed in the [README](../README.md#support).

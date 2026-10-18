@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Directional GPU communication for Attention-FFN Disaggregation."""
+"""Expert-parallel communication for Attention-FFN Disaggregation."""
 
 from __future__ import annotations
 

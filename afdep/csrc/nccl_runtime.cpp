@@ -22,7 +22,8 @@ pybind11::bytearray get_nccl_unique_id() {
 int64_t create_nccl_comm(const pybind11::bytearray &unique_id, int world_size, int rank) {
     const auto bytes = unique_id.cast<std::string>();
     TORCH_CHECK(bytes.size() == sizeof(ncclUniqueId), "Invalid NCCL unique ID size");
-    TORCH_CHECK(world_size == 8 && rank >= 0 && rank < world_size, "AFDEP currently requires eight ranks");
+    TORCH_CHECK(world_size == 8 && rank >= 0 && rank < world_size,
+                "The current directional backend requires eight ranks");
     ncclUniqueId id;
     std::memcpy(&id, bytes.data(), sizeof(id));
     ncclComm_t comm = nullptr;
@@ -59,7 +60,7 @@ NcclContext::NcclContext(int64_t handle, int world_size, int rank, size_t size, 
     TORCH_CHECK(handle != 0 && num_qps > 0, "NCCL communicator and positive GIN contexts are required");
     const char *disable_gin = std::getenv("EP_DISABLE_GIN");
     TORCH_CHECK(disable_gin == nullptr || std::string(disable_gin) == "0",
-                "AFDEP requires NCCL GIN; unset EP_DISABLE_GIN or set it to 0");
+                "The current directional backend requires NCCL GIN; unset EP_DISABLE_GIN or set it to 0");
     TORCH_CHECK(size > 0 && alignment > 0 && size % alignment == 0,
                 "Registered window size must satisfy its alignment");
     int actual_rank, actual_world, communicator_device, current_device;
@@ -74,8 +75,9 @@ NcclContext::NcclContext(int64_t handle, int world_size, int rank, size_t size, 
     // physical domain validation, explicit initialization-failure cleanup.
     ncclCommProperties properties = NCCL_COMM_PROPERTIES_INITIALIZER;
     AFDEP_NCCL_CHECK(ncclCommQueryProperties(comm, &properties));
-    TORCH_CHECK(properties.railedGinType != NCCL_GIN_TYPE_NONE,
-                "AFDEP needs NCCL GPU-initiated RDMA between its NVLink domains");
+    TORCH_CHECK(
+        properties.railedGinType != NCCL_GIN_TYPE_NONE,
+        "The current directional backend requires NCCL GPU-initiated RDMA between its NVLink domains");
     ncclDevCommRequirements_t requirements = NCCL_DEV_COMM_REQUIREMENTS_INITIALIZER;
     requirements.ginContextCount = num_qps;
     requirements.ginExclusiveContexts = true;
@@ -89,8 +91,9 @@ NcclContext::NcclContext(int64_t handle, int world_size, int rank, size_t size, 
         device_comm_created = true;
         num_nvl_ranks = dev_comm.lsaSize;
         nvl_rank_idx = dev_comm.lsaRank;
-        TORCH_CHECK(num_nvl_ranks == 4 && world_size == 8 && nvl_rank_idx == rank % 4,
-                    "AFDEP requires contiguous four-GPU NVLink domains [F0..F3,A0..A3]");
+        TORCH_CHECK(
+            num_nvl_ranks == 4 && world_size == 8 && nvl_rank_idx == rank % 4,
+            "The current directional backend requires contiguous four-GPU NVLink domains [F0..F3,A0..A3]");
         num_rdma_ranks = world_size / num_nvl_ranks;
         rdma_rank_idx = rank / num_nvl_ranks;
         AFDEP_NCCL_CHECK(ncclMemAlloc(&raw_window_ptr, size));

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "afdep"
 version = "0.1.0.dev0"
-description = "Directional GPU communication for Attention-FFN Disaggregation"
+description = "Expert-parallel communication for Attention-FFN Disaggregation"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
@@ -31,9 +31,9 @@ classifiers = [
 dev = ["pytest>=8", "ruff>=0.9", "build>=1.2"]
 
 [project.urls]
-Homepage = "https://github.com/ms-llmd/AFDEP"
-Repository = "https://github.com/ms-llmd/AFDEP"
-Issues = "https://github.com/ms-llmd/AFDEP/issues"
+Homepage = "https://github.com/ms-llmd/afdEP"
+Repository = "https://github.com/ms-llmd/afdEP"
+Issues = "https://github.com/ms-llmd/afdEP/issues"
 
 [tool.setuptools.packages.find]
 include = ["afdep*"]

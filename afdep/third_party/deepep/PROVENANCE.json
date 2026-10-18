@@ -6,7 +6,7 @@
   "snapshot_chain": [
     "DeepEP V2",
     "FastAFD commit 3c7161949310b6d59d6b4cf9bf997a4935c8113b",
-    "afd-plugin PR23 base 7cc7ebd2283eff0388a7aa9495a9445a1cbd8349 plus measured directional transport snapshot"
+    "afd-plugin base commit 7cc7ebd2283eff0388a7aa9495a9445a1cbd8349 plus measured directional transport snapshot"
   ],
   "pin_limit": "The original DeepEP commit is not recorded in the source snapshot. The complete FastAFD intermediary commit was resolved from its recorded abbreviated pin through the primary repository API; exact upstream and local input hashes below identify the retained code.",
   "input_files": {
