@@ -11,11 +11,19 @@ contains code adapted from DeepEP and remains licensed under MIT.
   [`afdep/third_party/deepep/LICENSE`](afdep/third_party/deepep/LICENSE).
 - Adapted files: `afdep/csrc/nccl_runtime.hpp` and
   `afdep/csrc/nccl_runtime.cpp`.
-- Origin: the DeepEP V2 snapshot vendored by FastAFD at recorded abbreviated
-  commit `3c71619`, then copied into AFD plugin PR #23. The snapshot does not
-  record the original DeepEP commit or the full FastAFD revision. Exact input
-  file SHA-256 hashes and the extraction differences are recorded in
+- Origin: the DeepEP V2 snapshot vendored by
+  [hao-ai-lab/FastAFD](https://github.com/hao-ai-lab/FastAFD) at commit
+  [`3c7161949310b6d59d6b4cf9bf997a4935c8113b`](https://github.com/hao-ai-lab/FastAFD/commit/3c7161949310b6d59d6b4cf9bf997a4935c8113b),
+  then copied into AFD plugin PR #23. The original DeepEP commit is not
+  recorded in that snapshot. Exact upstream and local input SHA-256 hashes,
+  primary-source verification, and the extraction differences are recorded in
   [`PROVENANCE.json`](afdep/third_party/deepep/PROVENANCE.json).
+
+The license and runtime API header match that FastAFD revision byte-for-byte.
+The AFD plugin runtime input includes its marked patch allowing single-node
+use without GIN; its hash is retained separately from the pristine FastAFD
+hash. AFDEP requires rail GIN for its supported two-domain topology and does
+not retain that optional-GIN path.
 
 The extracted runtime implements NCCL communicator bootstrap, topology queries,
 registered windows, and a GPU-initiated rail communicator. AFDEP does not ship

@@ -34,7 +34,7 @@ from examples.round_trip import (
 DEFAULT_CAPACITY = 128
 DEFAULT_GRAPH_EPOCHS = 18
 DELAYED_WORKER = 1
-DELAYED_EPOCH = 7
+DELAYED_EPOCH = 5
 DELAY_SECONDS = 0.02
 
 
@@ -238,7 +238,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.capacity < 1 or args.epochs <= DELAYED_EPOCH:
         parser.error(
-            "capacity must be positive and epochs must exceed the delayed epoch (7)"
+            "capacity must be positive and epochs must exceed the delayed epoch "
+            f"({DELAYED_EPOCH})"
         )
     rank = initialize()
     config = afdep.Config(
