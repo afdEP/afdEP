@@ -26,6 +26,8 @@ The **Masked DeepEP** baseline uses DeepEP's general EP dispatch/combine with
 unused roles masked out. Its useful payload is already directional. afdEP's
 protocol makes the source and expert-worker roles explicit.
 This comparison predates extraction into the standalone afdEP package.
+Both paths used hierarchical network/NVLink communication. These results do
+not compare direct mode or establish the best DeepEP mode for each batch size.
 
 | Setup | Value |
 |---|---|
@@ -100,3 +102,14 @@ communication benchmarks (five warmups/20 samples). They passed BF16/FP8 in
 eager and graph modes. **No DeepEP baseline was rerun**; these checks establish
 package correctness, not an additional relative speedup.
 Current hardware/topology support is listed in the [README](../README.md#support).
+
+### Hybrid/direct extension
+
+Both modes passed eight-H100 BF16/FP8 eager and graph correctness: 12 cases,
+26 changing-input graph replays per combination, selective worker destinations,
+empty/skewed routes, and delayed-peer reuse. All eight communication smoke runs
+also passed (two modes × two payloads × eager/graph; five warmups/20 samples).
+At capacity 2048/source, registered windows totaled 257.5/226.5 MiB for hybrid
+BF16/FP8 and 518.5/394.5 MiB for direct. Direct reserves per-peer request/reply
+slots. Short timings were mixed; no mode speedup or new DeepEP comparison is
+claimed. [Mode validation record](validation-modes-2026-10-18.json).

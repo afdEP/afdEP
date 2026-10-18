@@ -10,12 +10,14 @@ expert compute, and serving scheduling stay with the caller.
 
 The current backend uses NCCL GPU-Initiated Networking (GIN) and NVLink, with
 afdEP's own request/reply kernels. No DeepEP or vLLM runtime package is required.
+`Config.allow_hybrid_mode` selects ingress/NVLink forwarding (`True`, default)
+or direct worker delivery (`False`); see [modes](docs/api.md#api).
 
 ## Support
 
 | Architecture | Backend | Validated hardware and modes |
 |---|---|---|
-| Hopper (SM90) | **Implemented** | Eight H100 80GB GPUs; BF16/FP8; eager and CUDA graphs |
+| Hopper (SM90) | **Implemented** | Eight H100 80GB GPUs; hybrid/direct; BF16/FP8; eager and CUDA graphs |
 | Blackwell | Not implemented | — |
 
 The current backend implements **four Attention + four FFN ranks**, each role in

@@ -43,7 +43,8 @@ torchrun --nnodes=2 --nproc-per-node=4 --node-rank="$NODE_RANK" \
   --module tests.gpu.correctness --payload bf16
 ```
 
-Repeat with `--payload fp8`. Use `--module examples.round_trip` for a weighted
+Repeat with `--payload fp8` and with `--mode direct` (the default is `hybrid`).
+Use `--module examples.round_trip` for a weighted
 expert example, or `--module benchmarks.round_trip --graph --iterations 100`
 for communication timing. Add `--nvtx` only in a separate profiling run.
 
@@ -61,6 +62,7 @@ config = afdep.Config(
     num_experts=128,
     top_k=8,
     payload="bf16",
+    allow_hybrid_mode=True,  # False selects direct delivery.
 )
 buffer = afdep.Buffer(group=group, config=config)
 # Attention role:
@@ -75,6 +77,15 @@ buffer.close()
 
 The current backend orders FFN ranks 0–3 before Attention ranks 4–7. Each FFN
 owns a contiguous quarter of the real experts. All ranks participate even when empty.
+
+| `allow_hybrid_mode` | Dispatch / reply organization |
+|---|---|
+| `True` (default) | Rail-aligned GIN to an ingress worker; NVLink distribution and reduction on the FFN side |
+| `False` | Full-connectivity GIN directly to selected workers; each worker returns its partial, and the source reduces replies |
+
+Mode is fixed at construction and must agree on every rank. Direct mode requires
+full GIN connectivity; a rail-only fabric can support hybrid but reject direct.
+Both modes currently require the same two pure-role four-GPU NVLink domains.
 
 | Configuration | Current contract/default |
 |---|---|
@@ -121,7 +132,8 @@ counts; reading them synchronizes and is forbidden during graph capture.
 Supply contiguous BF16 `[allocated_rows,H]` expert outputs, **already multiplied
 by the received routing weights exactly once**. afdEP sums rows without applying
 weights again, using the matching unchanged receipt. Padding outputs are ignored.
-Local FP32 sums round to BF16 partials before the final FP32 sum/BF16 reply;
+Local FP32 sums round to BF16 partials before the final FP32 sum/BF16 reply
+(on the FFN side in hybrid mode, on the Attention side in direct mode);
 this need not match one-rounding FP32 summation bit for bit.
 
 ## Ordering and lifetime
