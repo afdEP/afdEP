@@ -66,6 +66,9 @@ extension build cache location.
 The loaded NCCL runtime version must match the headers used to compile the
 extension. An override cannot safely mix a different NCCL version with the one
 already loaded by PyTorch; AFDEP rejects that mismatch.
+NCCL's [GIN compatibility rules](https://docs.nvidia.com/deeplearning/nccl/archives/nccl_2307/user-guide/docs/usage/deviceapi.html#cross-version-compatibility)
+require rebuilding device kernels when changing NCCL versions; AFDEP includes
+the installed NCCL headers in its build-cache fingerprint.
 
 Use the repository's validation and benchmark entry points before relying on a
 new toolchain or network setup. The historical tested software configuration
