@@ -51,7 +51,7 @@ From a source checkout, install into an environment with the required PyTorch
 and CUDA/NCCL development dependencies already installed:
 
 ```bash
-python -m pip install --no-build-isolation -e .
+python -m pip install --no-build-isolation --no-deps -e .
 python -m afdep doctor
 # On a supported GPU host, also compile and load the extension:
 python -m afdep doctor --build
@@ -62,6 +62,11 @@ Install `torch`, `setuptools`, and `ninja` in the execution environment. Set
 `AFDEP_NCCL_ROOT` selects NCCL headers/libraries; otherwise AFDEP looks for the
 installed NVIDIA NCCL Python distribution. `AFDEP_CACHE_DIR` overrides the
 extension build cache location.
+
+The command above preserves a pre-provisioned CUDA/NCCL environment. Some
+PyTorch distributions pin an older NCCL package; check `doctor --build` after
+dependency changes rather than allowing an installer to silently replace the
+NCCL version selected for AFDEP.
 
 The loaded NCCL runtime version must match the headers used to compile the
 extension. An override cannot safely mix a different NCCL version with the one
