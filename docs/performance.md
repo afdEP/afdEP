@@ -5,8 +5,11 @@
 The numbers on this page come from the directional prototype measured on
 October 15, 2026, before extraction into this standalone repository. They are
 included to explain the design decisions. They are **not results from the new
-AFDEP package**, and should not be presented as a release benchmark until the
-extracted build has been validated and remeasured.
+AFDEP package** and do not establish a newly measured package-versus-DeepEP
+comparison. The extracted wheel has since passed standalone eight-H100 BF16/FP8
+eager/graph validation and short communication benchmarks; see the separate
+[October 18 validation record](validation-2026-10-18.md). Its smoke workload,
+capacity, and run length differ from the historical comparison below.
 
 The baseline was Ronen Kat's masked DeepEP connector in
 [AFD plugin PR #23](https://github.com/ms-llmd/afd-plugin/pull/23), at commit

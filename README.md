@@ -11,11 +11,12 @@ DeepEP dispatch/combine, create dummy experts, or require the DeepEP or vLLM
 Python packages. Minimal upstream transport helpers are vendored with their
 attribution and licenses; AFDEP owns its extension build and bootstrap wrapper.
 
-**Status:** experimental extraction of the Hopper directional prototype. That
-prototype passed eight-GPU correctness and communication benchmarks on October
-15, 2026. Those results are historical evidence for the protocol, not validation
-or performance measurements of every subsequent AFDEP build. See
-[performance and validation](docs/performance.md) for the distinction.
+**Status:** experimental standalone Hopper library. The installed AFDEP wheel
+has compiled on both H100 hosts and passed the eight-rank BF16 and FP8
+eager/CUDA-graph correctness suites and communication-only smoke benchmarks; see
+the [October 18 validation record](docs/validation-2026-10-18.md). The earlier
+[October 15 performance comparison](docs/performance.md) measured the prototype
+before extraction and is separate from these package checks.
 
 ## Supported configuration
 
