@@ -6,7 +6,8 @@ and serving scheduling outside the core. No DeepEP or vLLM runtime dependency.
 
 ## Scope
 
-[README support](README.md#support) owns current hardware/topology status.
+[README support](README.md#support) owns architecture/topology support and tested
+hardware. Group the support matrix by architecture, not GPU model.
 Implementation limits belong to backends, not the library's identity. Do not
 claim unvalidated hardware or general N/M layouts are implemented. Do not treat
 unvalidated hardware as rejected unless the code actually rejects it.

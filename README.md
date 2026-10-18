@@ -13,11 +13,10 @@ afdEP's own request/reply kernels. No DeepEP or vLLM runtime package is required
 
 ## Support
 
-| Hardware | Status | Current coverage |
+| Architecture | Backend | Validated hardware and modes |
 |---|---|---|
-| H100 | **Validated** | Eight 80GB GPUs; BF16/FP8; eager and CUDA graphs |
-| H200 | Not validated | [SM90](https://developer.nvidia.com/cuda/gpus) hardware; no independent validation yet |
-| B200 / Blackwell | Backend not implemented | Current CUDA backend requires SM90 |
+| Hopper (SM90) | **Implemented** | Eight H100 80GB GPUs; BF16/FP8; eager and CUDA graphs |
+| Blackwell | Not implemented | — |
 
 The current backend implements **four Attention + four FFN ranks**, each role in
 its own four-GPU NVLink domain, with one in-flight lane. Other N/M layouts and
