@@ -1,6 +1,10 @@
-# afdEP
+<div align="center">
 
-**Expert-parallel communication for Attention–FFN Disaggregation (AFD).**
+<img src="docs/assets/afdep-logo.png" alt="afdEP" width="60%"/>
+
+<p><b>Expert-parallel communication for Attention–FFN Disaggregation (AFD).</b></p>
+
+</div>
 
 afdEP connects Attention token sources to FFN expert workers: dispatch routed
 tokens, receive expert inputs, and return combined results. Routing, quantization,
