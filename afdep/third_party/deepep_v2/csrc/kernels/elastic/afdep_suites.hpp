@@ -12,7 +12,7 @@ namespace deep_ep::elastic {
 // Role suites. On the role path an Attention rank runs {dispatch send, combine
 // receive} and an FFN rank {dispatch receive, combine send}; a Masked rank sends
 // and receives in every phase. Each suite picks its role's kernel and launch shape
-// per phase. kShared and kSendBlock run v2.1's kernel generated from the shared
+// per phase. kShared and kSendBlock run v1's kernel generated from the shared
 // launch arguments (same code, include hash, cache key and cubin; kSendBlock only
 // launches fewer threads). kRoleKernel runs a separate kernel: the FFN dispatch is a
 // generated copy of hybrid_dispatch.cuh (the edits in tests/role_kernels.py) and the
@@ -20,7 +20,7 @@ namespace deep_ep::elastic {
 // on the wire: no rank reads a peer's grid, and every protocol word is unchanged.
 // kCountFirst is not: its count words carry an epoch and its sources write row flags.
 enum class AfdLaunchShape {
-    // v2.1's launch, identical on every role.
+    // v1's launch, identical on every role.
     kShared,
     // Directional hybrid Attention dispatch: the shared kernel without its forward warps.
     kSendBlock,
@@ -33,17 +33,17 @@ enum class AfdLaunchShape {
     kCountFirst,
 };
 
-// AFDEP_SHARED_ROLE_KERNELS=1 launches every role kernel in v2.1's shared shape:
-// one switch back to v2.1. Each shape also has its own control.
+// AFDEP_SHARED_ROLE_KERNELS=1 launches every role kernel in v1's shared shape:
+// one switch back to v1. Each shape also has its own control.
 static bool afdep_role_suites() {
     return deep_ep::get_env<int>("AFDEP_SHARED_ROLE_KERNELS", 0) == 0;
 }
 
-// One NVLink domain keeps v2.1's launch shapes on both roles. Its receive-only kernels
+// One NVLink domain keeps v1's launch shapes on both roles. Its receive-only kernels
 // (FFN dispatch, Attention combine) launch the senders' grid, but CTAs 1.. exit about
 // 0.6 us after launch (measured on H100), so only CTA 0 stays resident, and it owns
 // its SM either way. A one-CTA receive therefore frees almost nothing, and it moved
-// latency by about 0.3 us (1-2%) at 1-8 tokens, in both directions (docs/v2.1.md, R10).
+// latency by about 0.3 us (1-2%) at 1-8 tokens, in both directions (docs/v1.md, R10).
 //
 // What the FFN receive does hold is the copy epilogue: a PDL dependent of 132
 // max-shared-memory CTAs that launches once every receive CTA has triggered. The FFN
@@ -55,7 +55,7 @@ static bool afdep_role_suites() {
 // have arrived, early enough to hide the epilogue's launch behind the payload, and the
 // epilogue no longer holds the SMs from receive entry. Template, launch shape and every
 // other statement are the shared kernel's (one-token 3A:1F pays ~0.4 us, where counts
-// and payload arrive together; docs/v2.1.md section 15). AFDEP_SHARED_FFN_RECEIVE=1
+// and payload arrive together; docs/v1.md section 15). AFDEP_SHARED_FFN_RECEIVE=1
 // keeps the shared kernel; AFDEP_KEEP_ENTRY_BARRIERS, AFDEP_UNION_NOTIFY and
 // AFDEP_ALL_RANK_EXIT imply it.
 static bool afdep_ffn_receive_kernels() {

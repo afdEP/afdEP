@@ -1,9 +1,9 @@
 {
  "date": "2026-10-22",
- "change": "Role suites (csrc/kernels/elastic/afdep_suites.hpp). Directional hybrid: the Attention dispatch launches the shared cubin without its forward warps; the FFN dispatch runs afdep_ffn_hybrid_dispatch.cuh (hybrid_dispatch.cuh without scale-out warps, generated); the Attention combine runs the one-CTA afdep_hybrid_collect.cuh. One NVLink domain: the FFN dispatch receive runs afdep_ffn_dispatch.cuh (dispatch.cuh in which only the notify warps trigger the copy epilogue, generated). Direct GIN keeps v2.1's kernels.",
+ "change": "Role suites (csrc/kernels/elastic/afdep_suites.hpp). Directional hybrid: the Attention dispatch launches the shared cubin without its forward warps; the FFN dispatch runs afdep_ffn_hybrid_dispatch.cuh (hybrid_dispatch.cuh without scale-out warps, generated); the Attention combine runs the one-CTA afdep_hybrid_collect.cuh. One NVLink domain: the FFN dispatch receive runs afdep_ffn_dispatch.cuh (dispatch.cuh in which only the notify warps trigger the copy epilogue, generated). Direct GIN keeps v1's kernels.",
  "native_source_sha256": {
   "final": "9675783bee5e9a41c3239cb0e8f2342dc5cbac8feb459f72d75f6d6f2700425a",
-  "v2.1_head": "8205d02bfc622ba98c680c977d8cfef4e47f9394afea26fc5828d29e3589b879",
+  "v1_head": "8205d02bfc622ba98c680c977d8cfef4e47f9394afea26fc5828d29e3589b879",
   "hybrid_c7c4e90e": "c7c4e90e97048f899e3c099ca0276c6e877c99baf5bc7cb982ed25ae937e3915",
   "audit_comments_26cd2d09": "26cd2d09e3c0807925d9321eef4ac10d2f0bdc2fa3a0ff9dd0f65a05a2c97c69",
   "development_c8a74161": "c8a741613a6a9f890a15f8c24556f5035777257a02c14a2b1bec24fc874d975e",
@@ -146,7 +146,7 @@
   ],
   "addressed": "H1/VG6 screen output resolved; H5 --role-env limited to launch-shape controls; H2/H3/DE-1/DE-2/H4/K comments; A/B/F/H docs; C cscreen checks every rank's digest per repeat; D/DE-3/VG4 fault markers, tree digests and negative controls; VG1/VG3/VG9 multi-domain layouts, hidden 7168/8192 and controls; VG2/VG5 suite records digest/env and cycles buckets"
  },
- "baseline_profiles_v2.1": {
+ "baseline_profiles_v1": {
   "native_source_sha256": "8205d02bfc622ba98c680c977d8cfef4e47f9394afea26fc5828d29e3589b879",
   "one_domain_pokprod_4xH100": [
    "## afd n4 F2 T1",
@@ -525,8 +525,8 @@
     }
    }
   },
-  "v2.1_attention_combine_cta_lifetimes": {
-   "native_source_sha256": "scratch v2.1 tree (8205d02b + per-CTA timer, see hlife-patch)",
+  "v1_attention_combine_cta_lifetimes": {
+   "native_source_sha256": "scratch v1 tree (8205d02b + per-CTA timer, see hlife-patch)",
    "result": [
     "T=1: exchanges 32 ctas 24: kernel span median 59.2 us; CTA lifetime median 43.3 us; used SM-us median 1049 vs reserved 24 x span = 1420 (74% used)",
     "T=512: exchanges 32 ctas 24: kernel span median 196.2 us; CTA lifetime median 187.6 us; used SM-us median 4416 vs reserved 24 x span = 4710 (94% used)"
@@ -12194,8 +12194,8 @@
     }
    }
   },
-  "v2.1_epilogue_trace_2a2f_t1": {
-   "native_source_sha256": "development tree, one-domain kernels identical to v2.1 (split = one-CTA candidate, shared = v2.1 shape)",
+  "v1_epilogue_trace_2a2f_t1": {
+   "native_source_sha256": "development tree, one-domain kernels identical to v1 (split = one-CTA candidate, shared = v1 shape)",
    "trace": [
     "## split",
     "anchor device 2 dispatch start = 0; period median 22.18 us",
@@ -12251,7 +12251,7 @@
     "  1:combine_impl             grid   24 x 1024 thr  smem  227.0 KiB  coop 0  dur    11.04 us  SM-us     265.0"
    ]
   },
-  "v2.1_starvation_under_load_statler": {
+  "v1_starvation_under_load_statler": {
    "native_source_sha256": {
     "afd": [
      "c7c4e90e97048f899e3c099ca0276c6e877c99baf5bc7cb982ed25ae937e3915"
@@ -15669,7 +15669,7 @@
      }
     ]
    },
-   "statler_24cta_trim_vs_v2.1": {
+   "statler_24cta_trim_vs_v1": {
     "arms": {
      "g24": {
       "_env": {
@@ -16191,7 +16191,7 @@
     ]
    }
   },
-  "cta_lifetimes_v2.1": [
+  "cta_lifetimes_v1": [
    "f2ac01def4ccd175b474df9531487f5a4da79d11866224c3b6e0e6bed2b3e23c  life.log",
    "attention_combine CTAs 1..23 n 1529 median us 0.61 p90 0.64",
    "attention_combine CTA 0 n 71 median us 1074.3 p90 1203.04",
@@ -16233,8 +16233,8 @@
    " }  // deep_ep::elastic",
    "command terminated with exit code 1"
   ],
-  "reading": "v2.1's receive CTAs 1..23 live ~0.6 us. On the candidate digest a11fe415 a one-CTA receive was slower at one token in 6 of 8 pokprod repeats (median +0.22 us) and 3 of 5 on statler (+0.04 us), faster at 8; scratch builds with extra host switches (same device code) were slower at one token in 16 of 16 (+0.3-0.4 us). The earlier '22 of 24' pooled those builds. Cooperative and two-CTA clustered launches recovered little. No mechanism found; the one-domain suites keep v2.1's shapes."
+  "reading": "v1's receive CTAs 1..23 live ~0.6 us. On the candidate digest a11fe415 a one-CTA receive was slower at one token in 6 of 8 pokprod repeats (median +0.22 us) and 3 of 5 on statler (+0.04 us), faster at 8; scratch builds with extra host switches (same device code) were slower at one token in 16 of 16 (+0.3-0.4 us). The earlier '22 of 24' pooled those builds. Cooperative and two-CTA clustered launches recovered little. No mechanism found; the one-domain suites keep v1's shapes."
  },
- "benchmark_limits": "Two Buffers in one process fault with an illegal address on this DeepEP build (v2.1 HEAD and Masked too), and two graphs captured on one Buffer corrupt each other, so every A/B is paired across fresh processes.",
+ "benchmark_limits": "Two Buffers in one process fault with an illegal address on this DeepEP build (v1 HEAD and Masked too), and two graphs captured on one Buffer corrupt each other, so every A/B is paired across fresh processes.",
  "scope": "communication only; synthetic GEMM load; no serving claim"
 }

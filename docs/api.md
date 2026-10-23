@@ -67,7 +67,7 @@ work and frees registered storage; destroy graphs before closing the Buffer.
 
 ## Transport and tuning
 
-V1 preserves DeepEP's uniform logical expert slots and collective participation.
+The role path preserves DeepEP's uniform logical expert slots and collective participation.
 Attention dummy slots are never legal routing targets. `role_aware=True` is the
 public default. `role_aware=False` is an unspecialized control using the same
 backend; `afdep.deepep.ElasticBuffer` retains the low-level connector interface.
@@ -77,8 +77,9 @@ the specializations; the high-level `Buffer` does this from `Config`.
 `allow_hybrid_mode`, `num_sms`, `num_qps`, timeouts and RDMA traffic class pass
 through to the pinned transport. `num_sms=0` selects approximately 24/132 of the
 smallest device's SM count; choose/tune explicitly for a workload. Both hybrid
-settings are checked on one physical NVLink domain. Role specialization rejects
-multiple physical domains; no inter-node v1 claim is made.
+settings are validated in one NVLink domain and across NVLink domains joined by GIN.
+Across domains, role specialization runs the directional hybrid when every domain
+holds one role, and the union hybrid otherwise ([v1](v1.md), sections 6 and 7).
 
 Native compilation is lazy and process-locked. `AFDEP_CACHE_DIR` controls the
 extension cache; `EP_JIT_CACHE_DIR` controls DeepEP kernel JIT cache. Both must be

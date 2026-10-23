@@ -2274,7 +2274,7 @@
  "gpu_matrix": {
   "native_source_sha256": "ac298049b70f8bf87c315cb6f1999e495a6e77167ba84ba95e34fa58dd32f76d",
   "device": "4 x NVIDIA H100 80GB HBM3, one NVLink domain",
-  "runner": "tests.gpu.deepep matrix as in validation-v2.1-combine.json, now also delaying Attention rank 1 before dispatch",
+  "runner": "tests.gpu.deepep matrix as in validation-v1-combine.json, now also delaying Attention rank 1 before dispatch",
   "result": "10 valid runs exit 0; 8 invalid-route runs exit 1 with device assertion",
   "logs": [
    {

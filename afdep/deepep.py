@@ -748,6 +748,6 @@ class Buffer:
         self._zero_output = None
 
 
-# Names used by the pre-v1 reuse connector. These share the v1 implementation.
+# Names used by the earlier (v0) reuse connector. They alias the current implementation.
 DeepEPBuffer = Buffer
 DeepEPConfig = Config

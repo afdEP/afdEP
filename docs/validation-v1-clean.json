@@ -1,6 +1,6 @@
 {
  "date": "2026-10-21",
- "build": "v2.1 role path with only AFD-specific changes (entry barriers, directional counts, directed exit, role-sized buffers); generic combine sizing/unroll and split combine removed",
+ "build": "v1 role path with only AFD-specific changes (entry barriers, directional counts, directed exit, role-sized buffers); generic combine sizing/unroll and split combine removed",
  "native_source_sha256": "3d68dba2908a071fa732163a66a697d010c62d6227e0868db2672dfb8683e199",
  "scope": "4 x H100 80GB, one NVLink domain; communication-only",
  "correctness": {

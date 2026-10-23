@@ -116,7 +116,7 @@ public:
             layout::WorkspaceLayout::get_num_bytes() + num_buffer_bytes, kBufferAlignment,
             allow_hybrid_mode, sl_idx, num_allocated_qps);
 
-        // afdEP count-first: the role path of one NVLink domain with every v2.1 role protocol;
+        // afdEP count-first: the role path of one NVLink domain with every v1 role protocol;
         // afdep/deepep.py checks that every rank latched the same configuration and a valid arm.
         // Nothing is checked here: one rank throwing would leave its peers in the collective
         // window registration above. Generic buffers never read the screen arm.
