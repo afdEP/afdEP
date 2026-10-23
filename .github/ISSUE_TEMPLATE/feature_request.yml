@@ -1,0 +1,23 @@
+name: Feature or optimization
+description: A new capability, topology, hardware target or AFD-specific optimization
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+    validations:
+      required: true
+  - type: textarea
+    id: afd-basis
+    attributes:
+      label: AFD basis
+      description: >-
+        For optimizations: which property of the Attention and FFN roles (one-way dataflow,
+        idle role resources, the Attention:FFN ratio) makes it AFD-specific. A change that
+        would speed up Masked DeepEP as well belongs upstream; see docs/v1.md.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or plan to measure
+      description: Paired fresh-process screens against Masked DeepEP and the change's own control switch, with native source digests.
