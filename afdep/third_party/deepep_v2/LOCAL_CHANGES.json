@@ -74,7 +74,7 @@
       "sha256": "40f9f963bcbca7b914f929a5a21895269a6192c658fc61a1bccb0d1d244d9ee7"
     },
     "deep_ep/include/deep_ep/impls/afdep_fp8_combine.cuh": {
-      "sha256": "9901f56621f2985f349690b6d85a2279af421539903d5c64afd3bbf30e79dc63"
+      "sha256": "7602654e1f5d1762913fd849ec6b2d8fd811e51e323f74533c24cd276b5eb317"
     },
     "deep_ep/include/deep_ep/impls/afdep_fp8_combine_reduce.cuh": {
       "sha256": "fbc5774cc039d08b9c0e93aab9cd95d8b2aa906a9f647c3c4ffc7c78442a277e"

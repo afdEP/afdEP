@@ -36,6 +36,8 @@ constexpr int kAfdFp8MantissaThreshold = 0x600000;
 // The clamp (zero or tiny groups) keeps 2^e and 2^-e normal and every nonzero dequantized value
 // (at least the E4M3 minimum 2^-9 times 2^e) an FP32 normal, so scaling, dequantizing and the
 // fused accumulate below are exact products: the only rounding is the E4M3 cast (nearest even).
+// The exception is the top scale 2^120 (amax above 448 * 2^119, or an infinity): 448 * 2^120 is
+// not a finite FP32, so a group amax of 248 * 2^120 or more decodes to infinity.
 constexpr int kAfdFp8MinExponent = -117;
 
 template <int kHidden>
@@ -142,10 +144,22 @@ __forceinline__ __device__ void afdep_fp8_store_vec(const vec_t& value, const in
     }
 
     // Values at [vec_idx * E, vec_idx * E + E), the scale byte at H + group
+    constexpr int kNumHidden = kHiddenVec * kNumElemsPerVec;
+    constexpr int kNumGroups = kNumHidden / kAfdFp8GroupSize;
+    constexpr int kNumScaleBytes = (kNumGroups + 31) / 32 * 32;
     const auto row = reinterpret_cast<uint8_t*>(dst_buffer_ptr);
     *reinterpret_cast<pack_t*>(row + vec_idx * kNumElemsPerVec) = packed;
-    if (lane_idx % kNumLanesPerGroup == 0)
-        row[kHiddenVec * kNumElemsPerVec + vec_idx / kNumLanesPerGroup] = static_cast<uint8_t>(127 + exponent);
+    if (lane_idx % kNumLanesPerGroup == 0) {
+        const int group_idx = vec_idx / kNumLanesPerGroup;
+        row[kNumHidden + group_idx] = static_cast<uint8_t>(127 + exponent);
+        // The last group's lane also zeroes the pad up to the 32-byte-aligned row end: the whole row
+        // goes on the wire, and the epilogue's 4-byte scale loads cover up to 3 pad bytes.
+        if (group_idx == kNumGroups - 1) {
+            #pragma unroll
+            for (int b = kNumGroups; b < kNumScaleBytes; ++ b)
+                row[kNumHidden + b] = 0;
+        }
+    }
 }
 
 // Attention reduce epilogue: combine_reduce's FP32 path (combine_utils.cuh) over FP8 reply rows.

@@ -324,6 +324,9 @@ def test_fp8_combine_exponent_rule():
         assert e == min_exponent or amax > e4m3_max * Fraction(2) ** (e - 1), bf16_bits
         # The UE8M0 byte and both powers of two are FP32 normals.
         assert 1 <= 127 + e <= 254 and 1 <= 127 - e <= 254, bf16_bits
+        # The largest decoded magnitude is finite below the top scale; at 2^120 it
+        # is not, as the header and docs/v1.md section 19 state.
+        assert e == 120 or e4m3_max * Fraction(2) ** e < Fraction(2) ** 128, bf16_bits
     assert exponent(0x7F7F) == 120  # the largest finite BF16
     assert exponent(0x7F80) == 120  # an infinity keeps the same, finite scale
     # Every nonzero dequantized value is an FP32 normal, so products are exact.
