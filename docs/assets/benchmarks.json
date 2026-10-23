@@ -1,8 +1,9 @@
 {
  "units": "round-trip µs (dispatch + combine), communication only, CUDA graphs; lower is better",
+ "paired_ratio": "per series and token count, the geometric mean over repeats of the per-repeat ratio of that series' process median to the control series' (paired fresh processes); series values are medians",
  "in_node_h100": {
-  "setup": "4 × H100 in one NVLink domain, E128 / top-8 (E96 for 1A:3F), capacity 2,048, BF16 unless noted, 24 transport SMs; median of three fresh-process repeats, max over Attention ranks",
-  "source": "docs/v1.md (Result), records validation-v1-cta-exit.json and validation-v1-result.json",
+  "setup": "4 × H100 in one NVLink domain, E128 / top-8 (E96 for 1A:3F), capacity 2,048, BF16 unless noted, 24 transport SMs; median of three fresh-process repeats, max over Attention ranks; native tree bd4db4da (sections 1–4, before sections 10 and 13–16)",
+  "source": "docs/v1.md (Result), record validation-v1-result.json",
   "layouts": {
    "2A2F, hidden 2,048, random routing": {
     "tokens": [
@@ -29,6 +30,25 @@
       44.3,
       78.7,
       201.0
+     ]
+    },
+    "control": "Masked DeepEP",
+    "paired_ratio": {
+     "afdEP v1": [
+      0.654,
+      0.709,
+      0.735,
+      0.798,
+      0.896,
+      0.959
+     ],
+     "Masked DeepEP": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
      ]
     }
    },
@@ -58,6 +78,25 @@
       136.2,
       392.6
      ]
+    },
+    "control": "Masked DeepEP",
+    "paired_ratio": {
+     "afdEP v1": [
+      0.728,
+      0.811,
+      0.816,
+      0.897,
+      0.936,
+      0.976
+     ],
+     "Masked DeepEP": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
     }
    },
    "2A2F, hidden 2,048, skew routing": {
@@ -85,6 +124,25 @@
       50.1,
       95.9,
       274.1
+     ]
+    },
+    "control": "Masked DeepEP",
+    "paired_ratio": {
+     "afdEP v1": [
+      0.705,
+      0.724,
+      0.759,
+      0.825,
+      0.924,
+      0.985
+     ],
+     "Masked DeepEP": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
      ]
     }
    },
@@ -114,6 +172,25 @@
       119.5,
       372.1
      ]
+    },
+    "control": "Masked DeepEP",
+    "paired_ratio": {
+     "afdEP v1": [
+      0.686,
+      0.706,
+      0.735,
+      0.825,
+      0.916,
+      0.989
+     ],
+     "Masked DeepEP": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
     }
    },
    "1A:3F, hidden 2,048, random routing": {
@@ -141,6 +218,25 @@
       39.7,
       67.7,
       197.7
+     ]
+    },
+    "control": "Masked DeepEP",
+    "paired_ratio": {
+     "afdEP v1": [
+      0.658,
+      0.687,
+      0.707,
+      0.751,
+      0.878,
+      0.953
+     ],
+     "Masked DeepEP": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
      ]
     }
    },
@@ -170,12 +266,32 @@
       71.8,
       167.8
      ]
+    },
+    "control": "Masked DeepEP",
+    "paired_ratio": {
+     "afdEP v1": [
+      0.659,
+      0.722,
+      0.732,
+      0.794,
+      0.871,
+      0.948
+     ],
+     "Masked DeepEP": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
     }
    }
   }
  },
  "in_node_h200": {
-  "setup": "8 × H200 in one NVLink domain (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks",
+  "setup": "8 × H200 in one NVLink domain (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3",
+  "source": "docs/validation-v1-h200-screens.json",
   "layouts": {
    "6A:2F": {
     "tokens": [
@@ -213,7 +329,26 @@
      ]
     },
     "screen": "xn-innode-6a2f",
-    "repeats": 2
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Masked DeepEP": [
+      1.32318,
+      1.30183,
+      1.23211,
+      1.15057,
+      1.03901,
+      1.01174
+     ]
+    }
    },
    "7A:1F": {
     "tokens": [
@@ -251,7 +386,26 @@
      ]
     },
     "screen": "xn-innode-7a1f",
-    "repeats": 2
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Masked DeepEP": [
+      1.65242,
+      1.70311,
+      1.56273,
+      1.38411,
+      1.21041,
+      1.15007
+     ]
+    }
    },
    "4A:4F": {
     "tokens": [
@@ -289,12 +443,32 @@
      ]
     },
     "screen": "xn-innode-4a4f",
-    "repeats": 2
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Masked DeepEP": [
+      1.27776,
+      1.32076,
+      1.30022,
+      1.19758,
+      1.07134,
+      1.02214
+     ]
+    }
    }
   }
  },
  "cross_node": {
-  "setup": "H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks",
+  "setup": "H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3",
+  "source": "docs/validation-v1-h200-screens.json",
   "layouts": {
    "11:1, 12 single-role domains (12 × 2 H200)": {
     "tokens": [
@@ -332,7 +506,26 @@
      ]
     },
     "screen": "xn-pure-f2",
-    "repeats": 2
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Masked DeepEP": [
+      1.43829,
+      1.33772,
+      1.29203,
+      1.25955,
+      1.21199,
+      1.04534
+     ]
+    }
    },
    "5:1, 6 single-role domains (6 × 4 H200)": {
     "tokens": [
@@ -367,7 +560,24 @@
      ]
     },
     "screen": "xn-k4-dom-f4",
-    "repeats": 2
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Masked DeepEP": [
+      1.34549,
+      1.24704,
+      1.27702,
+      1.18176,
+      1.05159
+     ]
+    }
    },
    "11:1, mixed-role FFN node (3 × 8 H200)": {
     "tokens": [
@@ -405,7 +615,26 @@
      ]
     },
     "screen": "xn-base-f2",
-    "repeats": 2
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Masked DeepEP": [
+      1.01326,
+      1.00119,
+      1.00293,
+      0.99732,
+      0.98867,
+      0.99196
+     ]
+    }
    },
    "11:1, mixed-role FFN domain (6 × 4 H200)": {
     "tokens": [
@@ -440,7 +669,24 @@
      ]
     },
     "screen": "xn-k4-mixed-f2",
-    "repeats": 2
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Masked DeepEP": [
+      0.99594,
+      1.00139,
+      0.99844,
+      0.99687,
+      0.9956
+     ]
+    }
    }
   }
  }

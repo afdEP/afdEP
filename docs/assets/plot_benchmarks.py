@@ -100,9 +100,14 @@ def panel(ax, name, dataset, order, theme, headline):
     if headline and all(label in dataset["series"] for label in headline):
         # One direct label per panel: the first series' change against the reference at
         # one token, above the upper of the two points (the series are lowest there).
+        # The change is the paired geometric mean where the dataset has one.
         new, ref = headline
         a, b = dataset["series"][new][0], dataset["series"][ref][0]
-        change = (a / b - 1) * 100
+        paired = dataset.get("paired_ratio", {})
+        if new in paired and ref in paired:
+            change = (paired[new][0] / paired[ref][0] - 1) * 100
+        else:
+            change = (a / b - 1) * 100
         sign = "−" if change < 0 else "+"
         ax.annotate(
             f"{sign}{abs(change):.0f}% at 1 token",
@@ -202,8 +207,7 @@ figure(
     "results-in-node-h100",
     "One NVLink domain, 4 × H100",
     "afdEP v1 against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128"
-    " experts;"
-    " BF16 unless noted",
+    " experts (96 for 1A:3F); BF16 unless noted",
     list(DATA["in_node_h100"]["layouts"].items()),
     [V1, MASKED],
     3,

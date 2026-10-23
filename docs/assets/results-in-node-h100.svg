@@ -798,7 +798,7 @@ L 267.769127 304.943939
     </g>
    </g>
    <g id="text_56">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="46.07433" y="408.948397" transform="rotate(-0 46.07433 408.948397)">−32% at 1 token</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="46.07433" y="408.948397" transform="rotate(-0 46.07433 408.948397)">−31% at 1 token</text>
    </g>
    <g id="text_57">
     <text style="font-weight: 600; font-size: 10.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="42.555781" y="285.904375" transform="rotate(-0 42.555781 285.904375)">3A:1F, hidden 2,048, random routing</text>
@@ -981,7 +981,7 @@ L 535.922044 306.558352
     </g>
    </g>
    <g id="text_70">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="314.227247" y="401.546567" transform="rotate(-0 314.227247 401.546567)">−35% at 1 token</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="314.227247" y="401.546567" transform="rotate(-0 314.227247 401.546567)">−34% at 1 token</text>
    </g>
    <g id="text_71">
     <text style="font-weight: 600; font-size: 10.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="310.708698" y="285.904375" transform="rotate(-0 310.708698 285.904375)">1A:3F, hidden 2,048, random routing</text>
@@ -1174,7 +1174,7 @@ L 804.074961 307.692842
    <text style="font-weight: 600; font-size: 13px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="9.936" y="18.39" transform="rotate(-0 9.936 18.39)">One NVLink domain, 4 × H100</text>
   </g>
   <g id="text_87">
-   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="9.936" y="37.365" transform="rotate(-0 9.936 37.365)">afdEP v1 against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128 experts; BF16 unless noted</text>
+   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="9.936" y="37.365" transform="rotate(-0 9.936 37.365)">afdEP v1 against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128 experts (96 for 1A:3F); BF16 unless noted</text>
   </g>
   <g id="legend_1">
    <g id="line2d_149">

@@ -1,0 +1,707 @@
+{
+ "date": "2026-10-22 to 2026-10-23",
+ "question": "afdEP v1 against Masked DeepEP on 8 x H200 in one NVLink domain and on 24 H200 ranks across NVLink domains (the README's 8 x H200 and cross-node results)",
+ "native_source_sha256": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663 for both arms of every screen (v1 before the rename; see the naming note in docs/v1.md)",
+ "method": "benchmarks.screen pairing: each repeat runs one fresh process per arm in rotating order; each process times dispatch + combine round trips under CUDA graphs (benchmarks.comm), per exchange the max over Attention ranks of CUDA-event us; median_us is the median over repeats of the process medians; paired_change_pct is Masked against v1 per repeat, geomean_change_pct their geometric mean; repeats_faster counts repeats where Masked was faster. Multi-pod screens ran every rank of an arm under one torchrun per pod; the flags below are passed to benchmarks.comm.",
+ "scope": "communication only; no serving claim. These layouts are measured, not GPU-suite validated for v1.",
+ "screens": {
+  "in_node_6a2f": {
+   "layout": "6A:2F in one NVLink domain",
+   "topology": "one pod of 8 H200, one NVLink domain",
+   "flags": "--payload bf16 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 2048 --capacity 2048 --ffn-ranks 2 --attention-ranks 6",
+   "arms": {
+    "v1": {},
+    "masked": {
+     "role_aware": false
+    }
+   },
+   "repeats": 2,
+   "table": [
+    {
+     "tokens": 1,
+     "v1": {
+      "median_us": 24.32
+     },
+     "masked": {
+      "median_us": 32.19,
+      "paired_change_pct": [
+       31.1,
+       33.54
+      ],
+      "geomean_change_pct": 32.32,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 8,
+     "v1": {
+      "median_us": 29.29
+     },
+     "masked": {
+      "median_us": 38.13,
+      "paired_change_pct": [
+       31.66,
+       28.72
+      ],
+      "geomean_change_pct": 30.18,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 32,
+     "v1": {
+      "median_us": 35.47
+     },
+     "masked": {
+      "median_us": 43.7,
+      "paired_change_pct": [
+       23.91,
+       22.52
+      ],
+      "geomean_change_pct": 23.21,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 128,
+     "v1": {
+      "median_us": 53.17
+     },
+     "masked": {
+      "median_us": 61.17,
+      "paired_change_pct": [
+       14.93,
+       15.18
+      ],
+      "geomean_change_pct": 15.06,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 512,
+     "v1": {
+      "median_us": 151.96
+     },
+     "masked": {
+      "median_us": 157.89,
+      "paired_change_pct": [
+       3.67,
+       4.13
+      ],
+      "geomean_change_pct": 3.9,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 2048,
+     "v1": {
+      "median_us": 502.01
+     },
+     "masked": {
+      "median_us": 507.9,
+      "paired_change_pct": [
+       1.19,
+       1.16
+      ],
+      "geomean_change_pct": 1.17,
+      "repeats_faster": 0
+     }
+    }
+   ]
+  },
+  "in_node_7a1f": {
+   "layout": "7A:1F in one NVLink domain",
+   "topology": "one pod of 8 H200, one NVLink domain",
+   "flags": "--payload bf16 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 2048 --capacity 2048 --ffn-ranks 1 --attention-ranks 7",
+   "arms": {
+    "v1": {},
+    "masked": {
+     "role_aware": false
+    }
+   },
+   "repeats": 2,
+   "table": [
+    {
+     "tokens": 1,
+     "v1": {
+      "median_us": 23.81
+     },
+     "masked": {
+      "median_us": 39.35,
+      "paired_change_pct": [
+       66.02,
+       64.47
+      ],
+      "geomean_change_pct": 65.24,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 8,
+     "v1": {
+      "median_us": 27.21
+     },
+     "masked": {
+      "median_us": 46.35,
+      "paired_change_pct": [
+       68.81,
+       71.83
+      ],
+      "geomean_change_pct": 70.31,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 32,
+     "v1": {
+      "median_us": 34.15
+     },
+     "masked": {
+      "median_us": 53.36,
+      "paired_change_pct": [
+       56.17,
+       56.37
+      ],
+      "geomean_change_pct": 56.27,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 128,
+     "v1": {
+      "median_us": 70.27
+     },
+     "masked": {
+      "median_us": 97.26,
+      "paired_change_pct": [
+       38.32,
+       38.5
+      ],
+      "geomean_change_pct": 38.41,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 512,
+     "v1": {
+      "median_us": 202.05
+     },
+     "masked": {
+      "median_us": 244.56,
+      "paired_change_pct": [
+       21.03,
+       21.05
+      ],
+      "geomean_change_pct": 21.04,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 2048,
+     "v1": {
+      "median_us": 736.83
+     },
+     "masked": {
+      "median_us": 847.41,
+      "paired_change_pct": [
+       14.99,
+       15.03
+      ],
+      "geomean_change_pct": 15.01,
+      "repeats_faster": 0
+     }
+    }
+   ]
+  },
+  "in_node_4a4f": {
+   "layout": "4A:4F in one NVLink domain",
+   "topology": "one pod of 8 H200, one NVLink domain",
+   "flags": "--payload bf16 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 2048 --capacity 2048 --ffn-ranks 4 --attention-ranks 4",
+   "arms": {
+    "v1": {},
+    "masked": {
+     "role_aware": false
+    }
+   },
+   "repeats": 2,
+   "table": [
+    {
+     "tokens": 1,
+     "v1": {
+      "median_us": 24.32
+     },
+     "masked": {
+      "median_us": 31.07,
+      "paired_change_pct": [
+       27.73,
+       27.83
+      ],
+      "geomean_change_pct": 27.78,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 8,
+     "v1": {
+      "median_us": 26.57
+     },
+     "masked": {
+      "median_us": 35.09,
+      "paired_change_pct": [
+       32.36,
+       31.79
+      ],
+      "geomean_change_pct": 32.08,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 32,
+     "v1": {
+      "median_us": 27.76
+     },
+     "masked": {
+      "median_us": 36.09,
+      "paired_change_pct": [
+       29.62,
+       30.43
+      ],
+      "geomean_change_pct": 30.02,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 128,
+     "v1": {
+      "median_us": 39.58
+     },
+     "masked": {
+      "median_us": 47.4,
+      "paired_change_pct": [
+       20.29,
+       19.22
+      ],
+      "geomean_change_pct": 19.76,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 512,
+     "v1": {
+      "median_us": 95.96
+     },
+     "masked": {
+      "median_us": 102.81,
+      "paired_change_pct": [
+       6.86,
+       7.41
+      ],
+      "geomean_change_pct": 7.13,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 2048,
+     "v1": {
+      "median_us": 296.32
+     },
+     "masked": {
+      "median_us": 302.88,
+      "paired_change_pct": [
+       2.08,
+       2.35
+      ],
+      "geomean_change_pct": 2.21,
+      "repeats_faster": 0
+     }
+    }
+   ]
+  },
+  "cross_node_11to1_12x2": {
+   "layout": "11:1 (2F:22A), 12 single-role NVLink domains",
+   "topology": "12 pods x 2 H200, each its own NVLink domain, InfiniBand GIN",
+   "flags": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 16 32 64 128 --capacity 2048 --hybrid on --ffn-ranks 2 --attention-ranks 22",
+   "arms": {
+    "v1": {},
+    "masked": {
+     "role_aware": false
+    }
+   },
+   "repeats": 2,
+   "table": [
+    {
+     "tokens": 1,
+     "v1": {
+      "median_us": 236.05
+     },
+     "masked": {
+      "median_us": 339.42,
+      "paired_change_pct": [
+       49.31,
+       38.55
+      ],
+      "geomean_change_pct": 43.83,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 8,
+     "v1": {
+      "median_us": 264.85
+     },
+     "masked": {
+      "median_us": 354.26,
+      "paired_change_pct": [
+       38.99,
+       28.75
+      ],
+      "geomean_change_pct": 33.77,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 16,
+     "v1": {
+      "median_us": 272.71
+     },
+     "masked": {
+      "median_us": 352.24,
+      "paired_change_pct": [
+       32.57,
+       25.92
+      ],
+      "geomean_change_pct": 29.2,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 32,
+     "v1": {
+      "median_us": 287.28
+     },
+     "masked": {
+      "median_us": 361.83,
+      "paired_change_pct": [
+       26.9,
+       25.02
+      ],
+      "geomean_change_pct": 25.96,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 64,
+     "v1": {
+      "median_us": 329.87
+     },
+     "masked": {
+      "median_us": 399.74,
+      "paired_change_pct": [
+       25.25,
+       17.28
+      ],
+      "geomean_change_pct": 21.2,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 128,
+     "v1": {
+      "median_us": 473.06
+     },
+     "masked": {
+      "median_us": 494.51,
+      "paired_change_pct": [
+       4.48,
+       4.59
+      ],
+      "geomean_change_pct": 4.53,
+      "repeats_faster": 0
+     }
+    }
+   ]
+  },
+  "cross_node_5to1_6x4": {
+   "layout": "5:1 (4F:20A), 6 single-role NVLink domains",
+   "topology": "6 pods x 4 H200, each its own NVLink domain, InfiniBand GIN",
+   "flags": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 20",
+   "arms": {
+    "v1": {},
+    "masked": {
+     "role_aware": false
+    }
+   },
+   "repeats": 2,
+   "table": [
+    {
+     "tokens": 1,
+     "v1": {
+      "median_us": 137.81
+     },
+     "masked": {
+      "median_us": 185.42,
+      "paired_change_pct": [
+       34.42,
+       34.68
+      ],
+      "geomean_change_pct": 34.55,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 8,
+     "v1": {
+      "median_us": 155.29
+     },
+     "masked": {
+      "median_us": 193.65,
+      "paired_change_pct": [
+       24.77,
+       24.64
+      ],
+      "geomean_change_pct": 24.7,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 32,
+     "v1": {
+      "median_us": 164.96
+     },
+     "masked": {
+      "median_us": 210.66,
+      "paired_change_pct": [
+       27.62,
+       27.78
+      ],
+      "geomean_change_pct": 27.7,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 128,
+     "v1": {
+      "median_us": 235.12
+     },
+     "masked": {
+      "median_us": 277.86,
+      "paired_change_pct": [
+       18.24,
+       18.11
+      ],
+      "geomean_change_pct": 18.18,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 512,
+     "v1": {
+      "median_us": 604.8
+     },
+     "masked": {
+      "median_us": 636.0,
+      "paired_change_pct": [
+       5.16,
+       5.15
+      ],
+      "geomean_change_pct": 5.16,
+      "repeats_faster": 0
+     }
+    }
+   ]
+  },
+  "cross_node_11to1_mixed_3x8": {
+   "layout": "11:1 (2F:22A), FFN node = 2 FFN + 6 Attention GPUs (v1 runs the union hybrid)",
+   "topology": "3 pods x 8 H200, each its own NVLink domain, InfiniBand GIN",
+   "flags": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 16 32 64 128 --capacity 2048 --hybrid on --ffn-ranks 2 --attention-ranks 22",
+   "arms": {
+    "v1": {},
+    "masked": {
+     "role_aware": false
+    }
+   },
+   "repeats": 2,
+   "table": [
+    {
+     "tokens": 1,
+     "v1": {
+      "median_us": 166.76
+     },
+     "masked": {
+      "median_us": 168.94,
+      "paired_change_pct": [
+       3.42,
+       -0.73
+      ],
+      "geomean_change_pct": 1.33,
+      "repeats_faster": 1
+     }
+    },
+    {
+     "tokens": 8,
+     "v1": {
+      "median_us": 189.68
+     },
+     "masked": {
+      "median_us": 189.9,
+      "paired_change_pct": [
+       0.56,
+       -0.32
+      ],
+      "geomean_change_pct": 0.12,
+      "repeats_faster": 1
+     }
+    },
+    {
+     "tokens": 16,
+     "v1": {
+      "median_us": 200.36
+     },
+     "masked": {
+      "median_us": 200.95,
+      "paired_change_pct": [
+       0.38,
+       0.21
+      ],
+      "geomean_change_pct": 0.29,
+      "repeats_faster": 0
+     }
+    },
+    {
+     "tokens": 32,
+     "v1": {
+      "median_us": 214.47
+     },
+     "masked": {
+      "median_us": 213.89,
+      "paired_change_pct": [
+       -0.4,
+       -0.13
+      ],
+      "geomean_change_pct": -0.27,
+      "repeats_faster": 2
+     }
+    },
+    {
+     "tokens": 64,
+     "v1": {
+      "median_us": 230.7
+     },
+     "masked": {
+      "median_us": 228.09,
+      "paired_change_pct": [
+       -0.98,
+       -1.28
+      ],
+      "geomean_change_pct": -1.13,
+      "repeats_faster": 2
+     }
+    },
+    {
+     "tokens": 128,
+     "v1": {
+      "median_us": 257.7
+     },
+     "masked": {
+      "median_us": 255.63,
+      "paired_change_pct": [
+       -1.35,
+       -0.25
+      ],
+      "geomean_change_pct": -0.8,
+      "repeats_faster": 2
+     }
+    }
+   ]
+  },
+  "cross_node_11to1_mixed_6x4": {
+   "layout": "11:1 (2F:22A), FFN domain = 2 FFN + 2 Attention GPUs (v1 runs the union hybrid)",
+   "topology": "6 pods x 4 H200, each its own NVLink domain, InfiniBand GIN",
+   "flags": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 --capacity 2048 --hybrid on --ffn-ranks 2 --attention-ranks 22",
+   "arms": {
+    "v1": {},
+    "masked": {
+     "role_aware": false
+    }
+   },
+   "repeats": 2,
+   "table": [
+    {
+     "tokens": 1,
+     "v1": {
+      "median_us": 212.11
+     },
+     "masked": {
+      "median_us": 211.25,
+      "paired_change_pct": [
+       -0.44,
+       -0.37
+      ],
+      "geomean_change_pct": -0.41,
+      "repeats_faster": 2
+     }
+    },
+    {
+     "tokens": 8,
+     "v1": {
+      "median_us": 235.4
+     },
+     "masked": {
+      "median_us": 235.73,
+      "paired_change_pct": [
+       -0.12,
+       0.4
+      ],
+      "geomean_change_pct": 0.14,
+      "repeats_faster": 1
+     }
+    },
+    {
+     "tokens": 32,
+     "v1": {
+      "median_us": 264.97
+     },
+     "masked": {
+      "median_us": 264.55,
+      "paired_change_pct": [
+       -0.27,
+       -0.04
+      ],
+      "geomean_change_pct": -0.16,
+      "repeats_faster": 2
+     }
+    },
+    {
+     "tokens": 128,
+     "v1": {
+      "median_us": 333.45
+     },
+     "masked": {
+      "median_us": 332.41,
+      "paired_change_pct": [
+       -0.49,
+       -0.14
+      ],
+      "geomean_change_pct": -0.31,
+      "repeats_faster": 2
+     }
+    },
+    {
+     "tokens": 512,
+     "v1": {
+      "median_us": 763.8
+     },
+     "masked": {
+      "median_us": 760.43,
+      "paired_change_pct": [
+       -0.33,
+       -0.55
+      ],
+      "geomean_change_pct": -0.44,
+      "repeats_faster": 2
+     }
+    }
+   ]
+  }
+ }
+}
