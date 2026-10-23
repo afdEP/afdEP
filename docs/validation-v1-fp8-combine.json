@@ -1,0 +1,967 @@
+{
+ "date": "2026-10-23",
+ "change": "opt-in FP8 combine replies across NVLink domains on the directional hybrid (AFDEP_HYBRID_FP8_COMBINE=1) and their minimum bucket (AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET); docs/v1.md section 19; off by default",
+ "commits": [
+  "4c8521d",
+  "1e0a1b5",
+  "3989bcf",
+  "189c0eb"
+ ],
+ "native_source_sha256": {
+  "ungated_gpu_suite_and_screens": "024e98b05de66aecbc2e72da3046d8d083b0ec4776dae3ec927f6330f252b846",
+  "gated_final": "2cee2f51ee29cdbeb62ad4c38f77ba6bd5fd006b73e02181f5a9c8590cb4edae",
+  "fault_tree": "60cf91b3c74ef7814e8da71ae73ebffb82ffd86cf12a7e1c0f841398e38dd1e9",
+  "negative_control_tree": "679c96af7f1ae589ce65483c2a606493e3b31f6452c55a585ff978e0bb6c9124"
+ },
+ "setup": "kermit (CoreWeave) H200, NCCL 2.30.7 GIN over InfiniBand; 6 pods x 4 GPUs (one NVLink domain each) and 4 pods x 8 GPUs; vLLM 0.30.0 with the afd-plugin lanes tree (5215c41) for serving; Qwen3-235B-A22B-FP8 shapes (hidden 4096, top-8 of 128 experts, FP8 dispatch) unless stated",
+ "decision": "opt-in; recommended with AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET=64. Round trip -4% to -21% from 64 tokens per Attention GPU, neutral below with the minimum bucket (+3% to +8% without it). Serving at 4,096/2,048 tokens: -1.4% to +0.9% TPOT. Lossy: needs a model-level accuracy check before serving use.",
+ "gpu_suite_ungated": [
+  {
+   "case": "g14-h4096",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g14-h4096-sparse",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g1-c8",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g1-c64",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g1-c2048",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g2-bf16-c8",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g2-bf16-c64",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g3-h4096-fp8",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g3-h4096-bf16",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g3-h7168-fp8",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g3-h7168-bf16",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g3-h8192-fp8",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g3-h8192-bf16",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g4-topk2",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g5-c8",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g5-c64-stagger16",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g5-c2048",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g5-nostagger",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g6-f8-c8",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g6-f8-c8-sparse",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g6-f8-c64",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g6-f8-c64-sparse",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g7-s1",
+   "result": "PASS",
+   "pods_exit0": "2/2"
+  },
+  {
+   "case": "g7-s1-sparse",
+   "result": "PASS",
+   "pods_exit0": "2/2"
+  },
+  {
+   "case": "g8-shared-collect",
+   "result": "PASS",
+   "pods_exit0": "6/6"
+  },
+  {
+   "case": "g9-mismatch",
+   "result": "PASS",
+   "pods_exit0": "0/6",
+   "note": "negative: every rank must reject the mismatch ('same hybrid configuration'); 6/6 rejected"
+  },
+  {
+   "case": "g10-mixed",
+   "result": "PASS",
+   "pods_exit0": "6/6",
+   "note": "off topology: fp8_combine reported false on every rank, BF16 reference"
+  },
+  {
+   "case": "g10-union",
+   "result": "PASS",
+   "pods_exit0": "6/6",
+   "note": "off topology: fp8_combine reported false on every rank, BF16 reference"
+  },
+  {
+   "case": "g10-innode",
+   "result": "PASS",
+   "pods_exit0": "1/1",
+   "note": "off topology: fp8_combine reported false on every rank, BF16 reference"
+  },
+  {
+   "case": "g10-innode-off",
+   "result": "PASS",
+   "pods_exit0": "1/1",
+   "note": "off topology: fp8_combine reported false on every rank, BF16 reference"
+  },
+  {
+   "case": "g11-route",
+   "result": "PASS",
+   "pods_exit0": "0/6",
+   "note": "negative: an invalid route must stop at the in-kernel assertion; it fired on 6/6 pods"
+  }
+ ],
+ "gpu_suite_gated": [
+  {
+   "case": "gate-c8-mb4",
+   "result": "PASS",
+   "pods_exit0": "4/4"
+  },
+  {
+   "case": "gate-c8-mb4-sparse",
+   "result": "PASS",
+   "pods_exit0": "4/4"
+  },
+  {
+   "case": "gate-c64-mb32",
+   "result": "PASS",
+   "pods_exit0": "4/4"
+  },
+  {
+   "case": "gate-c64-mb32-sparse",
+   "result": "PASS",
+   "pods_exit0": "4/4"
+  },
+  {
+   "case": "gate-c64-mb32-bf16",
+   "result": "PASS",
+   "pods_exit0": "4/4"
+  },
+  {
+   "case": "gate-f8-c64-mb32",
+   "result": "PASS",
+   "pods_exit0": "4/4"
+  },
+  {
+   "case": "gate-f8-c64-mb32-sparse",
+   "result": "PASS",
+   "pods_exit0": "4/4"
+  },
+  {
+   "case": "gate-s1-c64-mb32",
+   "result": "PASS",
+   "pods_exit0": "2/2"
+  },
+  {
+   "case": "gate-s1-c64-mb32-sparse",
+   "result": "PASS",
+   "pods_exit0": "2/2"
+  },
+  {
+   "case": "gate-c64-mb4096",
+   "result": "PASS",
+   "pods_exit0": "4/4"
+  }
+ ],
+ "screens": {
+  "4gpu_domains_4F_4A": {
+   "pods": "2 pods (koc) x 4 GPUs, InfiniBand, GIN",
+   "args": "--payload fp8 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 1 8 32 64 128 256 512 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 4 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "024e98b05de66aecbc2e72da3046d8d083b0ec4776dae3ec927f6330f252b846"
+   ],
+   "median_us": [
+    {
+     "tokens": 1,
+     "v1": 79.1,
+     "v1_fp8": 81.3,
+     "v1_fp8_paired_pct": 2.8,
+     "sparse": 74.5,
+     "sparse_paired_pct": -5.8,
+     "sparse_fp8": 77.3,
+     "sparse_fp8_paired_pct": -2.2
+    },
+    {
+     "tokens": 8,
+     "v1": 87.7,
+     "v1_fp8": 90.4,
+     "v1_fp8_paired_pct": 3.0,
+     "sparse": 86.1,
+     "sparse_paired_pct": -1.8,
+     "sparse_fp8": 88.8,
+     "sparse_fp8_paired_pct": 1.2
+    },
+    {
+     "tokens": 32,
+     "v1": 94.3,
+     "v1_fp8": 96.0,
+     "v1_fp8_paired_pct": 1.9,
+     "sparse": 93.8,
+     "sparse_paired_pct": -0.4,
+     "sparse_fp8": 96.3,
+     "sparse_fp8_paired_pct": 2.2
+    },
+    {
+     "tokens": 64,
+     "v1": 103.6,
+     "v1_fp8": 103.4,
+     "v1_fp8_paired_pct": -0.2,
+     "sparse": 100.2,
+     "sparse_paired_pct": -3.3,
+     "sparse_fp8": 102.5,
+     "sparse_fp8_paired_pct": -1.1
+    },
+    {
+     "tokens": 128,
+     "v1": 124.1,
+     "v1_fp8": 119.8,
+     "v1_fp8_paired_pct": -3.5,
+     "sparse": 119.3,
+     "sparse_paired_pct": -3.8,
+     "sparse_fp8": 115.1,
+     "sparse_fp8_paired_pct": -7.2
+    },
+    {
+     "tokens": 256,
+     "v1": 163.9,
+     "v1_fp8": 158.2,
+     "v1_fp8_paired_pct": -3.5,
+     "sparse": 166.8,
+     "sparse_paired_pct": 1.8,
+     "sparse_fp8": 162.0,
+     "sparse_fp8_paired_pct": -1.2
+    },
+    {
+     "tokens": 512,
+     "v1": 270.3,
+     "v1_fp8": 239.1,
+     "v1_fp8_paired_pct": -11.5,
+     "sparse": 268.8,
+     "sparse_paired_pct": -0.5,
+     "sparse_fp8": 239.9,
+     "sparse_fp8_paired_pct": -11.2
+    }
+   ]
+  },
+  "4gpu_domains_4F_12A": {
+   "pods": "4 pods (koc) x 4 GPUs, InfiniBand, GIN",
+   "args": "--payload fp8 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 1 8 32 64 128 256 512 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 12 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "024e98b05de66aecbc2e72da3046d8d083b0ec4776dae3ec927f6330f252b846"
+   ],
+   "median_us": [
+    {
+     "tokens": 1,
+     "v1": 119.6,
+     "v1_fp8": 125.8,
+     "v1_fp8_paired_pct": 5.2,
+     "sparse": 77.0,
+     "sparse_paired_pct": -35.6,
+     "sparse_fp8": 81.1,
+     "sparse_fp8_paired_pct": -32.2
+    },
+    {
+     "tokens": 8,
+     "v1": 151.6,
+     "v1_fp8": 156.9,
+     "v1_fp8_paired_pct": 3.5,
+     "sparse": 92.5,
+     "sparse_paired_pct": -39.0,
+     "sparse_fp8": 96.3,
+     "sparse_fp8_paired_pct": -36.5
+    },
+    {
+     "tokens": 32,
+     "v1": 160.7,
+     "v1_fp8": 166.7,
+     "v1_fp8_paired_pct": 3.8,
+     "sparse": 106.3,
+     "sparse_paired_pct": -33.9,
+     "sparse_fp8": 106.8,
+     "sparse_fp8_paired_pct": -33.6
+    },
+    {
+     "tokens": 64,
+     "v1": 177.6,
+     "v1_fp8": 176.8,
+     "v1_fp8_paired_pct": -0.5,
+     "sparse": 134.4,
+     "sparse_paired_pct": -24.3,
+     "sparse_fp8": 127.8,
+     "sparse_fp8_paired_pct": -28.0
+    },
+    {
+     "tokens": 128,
+     "v1": 233.4,
+     "v1_fp8": 220.5,
+     "v1_fp8_paired_pct": -5.5,
+     "sparse": 215.7,
+     "sparse_paired_pct": -7.6,
+     "sparse_fp8": 200.1,
+     "sparse_fp8_paired_pct": -14.3
+    },
+    {
+     "tokens": 256,
+     "v1": 361.4,
+     "v1_fp8": 327.2,
+     "v1_fp8_paired_pct": -9.5,
+     "sparse": 364.4,
+     "sparse_paired_pct": 0.8,
+     "sparse_fp8": 321.8,
+     "sparse_fp8_paired_pct": -10.9
+    },
+    {
+     "tokens": 512,
+     "v1": 642.3,
+     "v1_fp8": 531.5,
+     "v1_fp8_paired_pct": -17.2,
+     "sparse": 643.2,
+     "sparse_paired_pct": 0.1,
+     "sparse_fp8": 533.8,
+     "sparse_fp8_paired_pct": -16.9
+    }
+   ]
+  },
+  "4gpu_domains_4F_20A": {
+   "pods": "6 pods (koc) x 4 GPUs, InfiniBand, GIN",
+   "args": "--payload fp8 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 1 8 32 64 128 256 512 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 20 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "024e98b05de66aecbc2e72da3046d8d083b0ec4776dae3ec927f6330f252b846"
+   ],
+   "median_us": [
+    {
+     "tokens": 1,
+     "v1": 163.3,
+     "v1_fp8": 172.1,
+     "v1_fp8_paired_pct": 5.4,
+     "sparse": 79.0,
+     "sparse_paired_pct": -51.7,
+     "sparse_fp8": 84.6,
+     "sparse_fp8_paired_pct": -48.2
+    },
+    {
+     "tokens": 8,
+     "v1": 197.5,
+     "v1_fp8": 205.2,
+     "v1_fp8_paired_pct": 3.9,
+     "sparse": 94.0,
+     "sparse_paired_pct": -52.4,
+     "sparse_fp8": 98.6,
+     "sparse_fp8_paired_pct": -50.1
+    },
+    {
+     "tokens": 32,
+     "v1": 213.3,
+     "v1_fp8": 219.9,
+     "v1_fp8_paired_pct": 3.1,
+     "sparse": 124.0,
+     "sparse_paired_pct": -41.9,
+     "sparse_fp8": 120.2,
+     "sparse_fp8_paired_pct": -43.6
+    },
+    {
+     "tokens": 64,
+     "v1": 245.6,
+     "v1_fp8": 245.6,
+     "v1_fp8_paired_pct": -0.0,
+     "sparse": 183.4,
+     "sparse_paired_pct": -25.3,
+     "sparse_fp8": 177.1,
+     "sparse_fp8_paired_pct": -27.9
+    },
+    {
+     "tokens": 128,
+     "v1": 336.0,
+     "v1_fp8": 311.0,
+     "v1_fp8_paired_pct": -7.4,
+     "sparse": 324.5,
+     "sparse_paired_pct": -3.4,
+     "sparse_fp8": 297.2,
+     "sparse_fp8_paired_pct": -11.5
+    },
+    {
+     "tokens": 256,
+     "v1": 542.8,
+     "v1_fp8": 483.1,
+     "v1_fp8_paired_pct": -11.0,
+     "sparse": 540.5,
+     "sparse_paired_pct": -0.4,
+     "sparse_fp8": 478.8,
+     "sparse_fp8_paired_pct": -11.8
+    },
+    {
+     "tokens": 512,
+     "v1": 994.0,
+     "v1_fp8": 811.1,
+     "v1_fp8_paired_pct": -18.4,
+     "sparse": 997.4,
+     "sparse_paired_pct": 0.3,
+     "sparse_fp8": 813.6,
+     "sparse_fp8_paired_pct": -18.1
+    }
+   ]
+  },
+  "4gpu_domains_8F_16A": {
+   "pods": "6 pods (koc) x 4 GPUs, InfiniBand, GIN",
+   "args": "--payload fp8 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 1 8 32 64 128 256 512 --capacity 2048 --hybrid on --ffn-ranks 8 --attention-ranks 16 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "024e98b05de66aecbc2e72da3046d8d083b0ec4776dae3ec927f6330f252b846"
+   ],
+   "median_us": [
+    {
+     "tokens": 1,
+     "v1": 126.0,
+     "v1_fp8": 135.0,
+     "v1_fp8_paired_pct": 7.2,
+     "sparse": 71.4,
+     "sparse_paired_pct": -43.3,
+     "sparse_fp8": 77.3,
+     "sparse_fp8_paired_pct": -38.6
+    },
+    {
+     "tokens": 8,
+     "v1": 143.1,
+     "v1_fp8": 150.9,
+     "v1_fp8_paired_pct": 5.5,
+     "sparse": 85.0,
+     "sparse_paired_pct": -40.6,
+     "sparse_fp8": 90.5,
+     "sparse_fp8_paired_pct": -36.7
+    },
+    {
+     "tokens": 32,
+     "v1": 156.7,
+     "v1_fp8": 164.8,
+     "v1_fp8_paired_pct": 5.2,
+     "sparse": 106.2,
+     "sparse_paired_pct": -32.2,
+     "sparse_fp8": 104.7,
+     "sparse_fp8_paired_pct": -33.2
+    },
+    {
+     "tokens": 64,
+     "v1": 182.1,
+     "v1_fp8": 180.7,
+     "v1_fp8_paired_pct": -0.8,
+     "sparse": 149.8,
+     "sparse_paired_pct": -17.8,
+     "sparse_fp8": 142.7,
+     "sparse_fp8_paired_pct": -21.7
+    },
+    {
+     "tokens": 128,
+     "v1": 250.1,
+     "v1_fp8": 229.9,
+     "v1_fp8_paired_pct": -8.1,
+     "sparse": 242.4,
+     "sparse_paired_pct": -3.0,
+     "sparse_fp8": 221.4,
+     "sparse_fp8_paired_pct": -11.4
+    },
+    {
+     "tokens": 256,
+     "v1": 415.6,
+     "v1_fp8": 362.3,
+     "v1_fp8_paired_pct": -12.8,
+     "sparse": 418.0,
+     "sparse_paired_pct": 0.6,
+     "sparse_fp8": 359.2,
+     "sparse_fp8_paired_pct": -13.6
+    },
+    {
+     "tokens": 512,
+     "v1": 763.6,
+     "v1_fp8": 603.4,
+     "v1_fp8_paired_pct": -21.0,
+     "sparse": 765.1,
+     "sparse_paired_pct": 0.2,
+     "sparse_fp8": 608.5,
+     "sparse_fp8_paired_pct": -20.3
+    }
+   ]
+  },
+  "4gpu_domains_4F_20A_bf16": {
+   "pods": "6 pods (koc) x 4 GPUs, InfiniBand, GIN",
+   "args": "--payload bf16 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 64 128 512 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 20 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "024e98b05de66aecbc2e72da3046d8d083b0ec4776dae3ec927f6330f252b846"
+   ],
+   "median_us": [
+    {
+     "tokens": 64,
+     "v1": 283.9,
+     "v1_fp8": 284.2,
+     "v1_fp8_paired_pct": 0.1,
+     "sparse": 221.0,
+     "sparse_paired_pct": -22.1,
+     "sparse_fp8": 215.0,
+     "sparse_fp8_paired_pct": -24.3
+    },
+    {
+     "tokens": 128,
+     "v1": 409.8,
+     "v1_fp8": 384.9,
+     "v1_fp8_paired_pct": -6.1,
+     "sparse": 398.9,
+     "sparse_paired_pct": -2.7,
+     "sparse_fp8": 372.4,
+     "sparse_fp8_paired_pct": -9.1
+    },
+    {
+     "tokens": 512,
+     "v1": 1283.3,
+     "v1_fp8": 1099.8,
+     "v1_fp8_paired_pct": -14.3,
+     "sparse": 1292.0,
+     "sparse_paired_pct": 0.7,
+     "sparse_fp8": 1108.3,
+     "sparse_fp8_paired_pct": -13.6
+    }
+   ]
+  },
+  "gated_4F_12A": {
+   "pods": "4 pods (koc) x 4 GPUs, InfiniBand, GIN",
+   "args": "--payload fp8 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 1 8 32 64 128 256 512 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 12 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "2cee2f51ee29cdbeb62ad4c38f77ba6bd5fd006b73e02181f5a9c8590cb4edae"
+   ],
+   "median_us": [
+    {
+     "tokens": 1,
+     "sparse": 76.4,
+     "sparse_fp8": 81.1,
+     "sparse_fp8_paired_pct": 6.1,
+     "sparse_fp8_gate64": 76.9,
+     "sparse_fp8_gate64_paired_pct": 0.6
+    },
+    {
+     "tokens": 8,
+     "sparse": 90.1,
+     "sparse_fp8": 94.4,
+     "sparse_fp8_paired_pct": 4.7,
+     "sparse_fp8_gate64": 90.3,
+     "sparse_fp8_gate64_paired_pct": 0.2
+    },
+    {
+     "tokens": 32,
+     "sparse": 102.1,
+     "sparse_fp8": 104.8,
+     "sparse_fp8_paired_pct": 2.7,
+     "sparse_fp8_gate64": 102.2,
+     "sparse_fp8_gate64_paired_pct": 0.1
+    },
+    {
+     "tokens": 64,
+     "sparse": 129.9,
+     "sparse_fp8": 123.8,
+     "sparse_fp8_paired_pct": -4.6,
+     "sparse_fp8_gate64": 123.6,
+     "sparse_fp8_gate64_paired_pct": -4.8
+    },
+    {
+     "tokens": 128,
+     "sparse": 213.0,
+     "sparse_fp8": 197.3,
+     "sparse_fp8_paired_pct": -7.4,
+     "sparse_fp8_gate64": 196.7,
+     "sparse_fp8_gate64_paired_pct": -7.6
+    },
+    {
+     "tokens": 256,
+     "sparse": 361.5,
+     "sparse_fp8": 319.8,
+     "sparse_fp8_paired_pct": -11.5,
+     "sparse_fp8_gate64": 319.6,
+     "sparse_fp8_gate64_paired_pct": -11.6
+    },
+    {
+     "tokens": 512,
+     "sparse": 639.8,
+     "sparse_fp8": 529.6,
+     "sparse_fp8_paired_pct": -17.2,
+     "sparse_fp8_gate64": 530.4,
+     "sparse_fp8_gate64_paired_pct": -17.1
+    }
+   ]
+  },
+  "8gpu_domains_8F_8A": {
+   "pods": "2 pods (koc) x 8 GPUs, InfiniBand, GIN",
+   "args": "--payload fp8 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 1 8 32 64 128 256 512 --capacity 2048 --hybrid on --ffn-ranks 8 --attention-ranks 8 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "2cee2f51ee29cdbeb62ad4c38f77ba6bd5fd006b73e02181f5a9c8590cb4edae"
+   ],
+   "median_us": [
+    {
+     "tokens": 1,
+     "v1": 81.6,
+     "sparse": 76.8,
+     "sparse_paired_pct": -5.9,
+     "sparse_fp8_gate64": 77.1,
+     "sparse_fp8_gate64_paired_pct": -5.5
+    },
+    {
+     "tokens": 8,
+     "v1": 96.2,
+     "sparse": 91.2,
+     "sparse_paired_pct": -5.2,
+     "sparse_fp8_gate64": 90.9,
+     "sparse_fp8_gate64_paired_pct": -5.6
+    },
+    {
+     "tokens": 32,
+     "v1": 99.5,
+     "sparse": 98.0,
+     "sparse_paired_pct": -1.5,
+     "sparse_fp8_gate64": 97.9,
+     "sparse_fp8_gate64_paired_pct": -1.6
+    },
+    {
+     "tokens": 64,
+     "v1": 108.2,
+     "sparse": 105.7,
+     "sparse_paired_pct": -2.3,
+     "sparse_fp8_gate64": 107.3,
+     "sparse_fp8_gate64_paired_pct": -0.8
+    },
+    {
+     "tokens": 128,
+     "v1": 129.4,
+     "sparse": 125.5,
+     "sparse_paired_pct": -3.0,
+     "sparse_fp8_gate64": 121.6,
+     "sparse_fp8_gate64_paired_pct": -6.0
+    },
+    {
+     "tokens": 256,
+     "v1": 183.9,
+     "sparse": 183.9,
+     "sparse_paired_pct": 0.0,
+     "sparse_fp8_gate64": 181.7,
+     "sparse_fp8_gate64_paired_pct": -1.2
+    },
+    {
+     "tokens": 512,
+     "v1": 303.3,
+     "sparse": 303.0,
+     "sparse_paired_pct": -0.1,
+     "sparse_fp8_gate64": 274.3,
+     "sparse_fp8_gate64_paired_pct": -9.5
+    }
+   ]
+  },
+  "8gpu_domains_8F_16A": {
+   "pods": "3 pods (koc) x 8 GPUs, InfiniBand, GIN",
+   "args": "--payload fp8 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 1 8 32 64 128 256 512 --capacity 2048 --hybrid on --ffn-ranks 8 --attention-ranks 16 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "2cee2f51ee29cdbeb62ad4c38f77ba6bd5fd006b73e02181f5a9c8590cb4edae"
+   ],
+   "median_us": [
+    {
+     "tokens": 1,
+     "v1": 103.5,
+     "sparse": 77.9,
+     "sparse_paired_pct": -24.7,
+     "sparse_fp8_gate64": 78.0,
+     "sparse_fp8_gate64_paired_pct": -24.6
+    },
+    {
+     "tokens": 8,
+     "v1": 122.5,
+     "sparse": 93.0,
+     "sparse_paired_pct": -24.1,
+     "sparse_fp8_gate64": 93.1,
+     "sparse_fp8_gate64_paired_pct": -24.0
+    },
+    {
+     "tokens": 32,
+     "v1": 132.5,
+     "sparse": 101.7,
+     "sparse_paired_pct": -23.3,
+     "sparse_fp8_gate64": 101.8,
+     "sparse_fp8_gate64_paired_pct": -23.1
+    },
+    {
+     "tokens": 64,
+     "v1": 145.2,
+     "sparse": 120.0,
+     "sparse_paired_pct": -17.3,
+     "sparse_fp8_gate64": 116.2,
+     "sparse_fp8_gate64_paired_pct": -20.0
+    },
+    {
+     "tokens": 128,
+     "v1": 186.4,
+     "sparse": 176.1,
+     "sparse_paired_pct": -5.5,
+     "sparse_fp8_gate64": 179.8,
+     "sparse_fp8_gate64_paired_pct": -3.5
+    },
+    {
+     "tokens": 256,
+     "v1": 287.3,
+     "sparse": 294.2,
+     "sparse_paired_pct": 2.4,
+     "sparse_fp8_gate64": 273.7,
+     "sparse_fp8_gate64_paired_pct": -4.7
+    },
+    {
+     "tokens": 512,
+     "v1": 523.6,
+     "sparse": 528.8,
+     "sparse_paired_pct": 1.0,
+     "sparse_fp8_gate64": 458.9,
+     "sparse_fp8_gate64_paired_pct": -12.4
+    }
+   ]
+  },
+  "8gpu_domains_8F_24A": {
+   "pods": "4 pods (koc) x 8 GPUs, InfiniBand, GIN",
+   "args": "--payload fp8 --routing random --hidden 4096 --experts 128 --top-k 8 --tokens 1 8 32 64 128 256 512 --capacity 2048 --hybrid on --ffn-ranks 8 --attention-ranks 24 --warmup 100 --iterations 200 --blocks 5",
+   "digest": [
+    "2cee2f51ee29cdbeb62ad4c38f77ba6bd5fd006b73e02181f5a9c8590cb4edae"
+   ],
+   "median_us": [
+    {
+     "tokens": 1,
+     "v1": 137.4,
+     "sparse": 80.4,
+     "sparse_paired_pct": -41.5,
+     "sparse_fp8_gate64": 81.8,
+     "sparse_fp8_gate64_paired_pct": -40.5
+    },
+    {
+     "tokens": 8,
+     "v1": 159.4,
+     "sparse": 95.3,
+     "sparse_paired_pct": -40.2,
+     "sparse_fp8_gate64": 95.5,
+     "sparse_fp8_gate64_paired_pct": -40.1
+    },
+    {
+     "tokens": 32,
+     "v1": 171.9,
+     "sparse": 109.2,
+     "sparse_paired_pct": -36.5,
+     "sparse_fp8_gate64": 109.1,
+     "sparse_fp8_gate64_paired_pct": -36.5
+    },
+    {
+     "tokens": 64,
+     "v1": 186.4,
+     "sparse": 145.4,
+     "sparse_paired_pct": -22.0,
+     "sparse_fp8_gate64": 139.3,
+     "sparse_fp8_gate64_paired_pct": -25.3
+    },
+    {
+     "tokens": 128,
+     "v1": 249.7,
+     "sparse": 239.3,
+     "sparse_paired_pct": -4.1,
+     "sparse_fp8_gate64": 224.2,
+     "sparse_fp8_gate64_paired_pct": -10.2
+    },
+    {
+     "tokens": 256,
+     "v1": 399.7,
+     "sparse": 418.6,
+     "sparse_paired_pct": 4.7,
+     "sparse_fp8_gate64": 383.3,
+     "sparse_fp8_gate64_paired_pct": -4.1
+    },
+    {
+     "tokens": 512,
+     "v1": 728.2,
+     "sparse": 748.6,
+     "sparse_paired_pct": 2.8,
+     "sparse_fp8_gate64": 642.6,
+     "sparse_fp8_gate64_paired_pct": -11.7
+    }
+   ]
+  }
+ },
+ "kernel_trace_4F_20A": {
+  "method": "nsys, graph replays, median over devices; sparse vs sparse + FP8 on 024e98b0",
+  "attention_reduce_epilogue_us": {
+   "8_tokens": [
+    3.9,
+    7.87
+   ],
+   "64_tokens": [
+    4.03,
+    7.9
+   ],
+   "512_tokens": [
+    4.74,
+    8.32
+   ]
+  },
+  "attention_collect_wait_us": {
+   "8_tokens": [
+    72.46,
+    72.19
+   ],
+   "64_tokens": [
+    161.31,
+    151.14
+   ],
+   "512_tokens": [
+    967.55,
+    779.98
+   ]
+  },
+  "ffn_combine_kernel_us": {
+   "8_tokens": [
+    46.62,
+    47.86
+   ],
+   "64_tokens": [
+    80.53,
+    81.65
+   ],
+   "512_tokens": [
+    318.85,
+    320.89
+   ]
+  },
+  "registers": "afdep_ffn_fp8_hybrid_combine and its sparse copy 120, afdep_fp8_combine_reduce_epilogue 72; no spills"
+ },
+ "fault_injection": {
+  "method": "the section 11 deferred-put patches ported to the FP8 (and BF16) FFN combines and the Attention dispatch copies; replies to the last Attention domain held 300 us, dispatch to the last FFN domain 3 ms; device counters mark each deferral",
+  "positive": "17 runs pass on 4F:12A and 8F:8A (hidden 2048/4096, capacity 64/2048, FP8, FP8 + sparse switches, minimum bucket 32 so formats switch under the fault) with 16k-65k deferrals per FFN rank",
+  "negative": "dropping the deferred FP8 replies fails 2/2 runs: the last Attention domain's outputs mismatch (100%)",
+  "limits": "a pass shows no failure under this delay, not that the delay reaches the section 11 overlap window here; BF16 dispatch and the section 17 read delay were not fault-tested"
+ },
+ "serving_16A_8F_4k": {
+  "setup": "six 4-GPU pods: FFN DP8 over two pods, Attention DP16 over four; sparse switches; 4,096 in / 2,048 out; tree 2cee2f51; one arm after another",
+  "fp8_off": [
+   {
+    "concurrency": 64,
+    "requests_per_attention_gpu": 4.0,
+    "tok_s_per_gpu": 107.0,
+    "tpot_ms": 24.93
+   },
+   {
+    "concurrency": 256,
+    "requests_per_attention_gpu": 16.0,
+    "tok_s_per_gpu": 346.7,
+    "tpot_ms": 30.77
+   },
+   {
+    "concurrency": 1536,
+    "requests_per_attention_gpu": 96.0,
+    "tok_s_per_gpu": 958.3,
+    "tpot_ms": 66.79
+   }
+  ],
+  "fp8_always": [
+   {
+    "concurrency": 64,
+    "requests_per_attention_gpu": 4.0,
+    "tok_s_per_gpu": 103.9,
+    "tpot_ms": 25.66
+   },
+   {
+    "concurrency": 256,
+    "requests_per_attention_gpu": 16.0,
+    "tok_s_per_gpu": 339.4,
+    "tpot_ms": 31.42
+   },
+   {
+    "concurrency": 1536,
+    "requests_per_attention_gpu": 96.0,
+    "tok_s_per_gpu": 968.2,
+    "tpot_ms": 65.82
+   }
+  ],
+  "fp8_min_bucket_64": [
+   {
+    "concurrency": 64,
+    "requests_per_attention_gpu": 4.0,
+    "tok_s_per_gpu": 106.0,
+    "tpot_ms": 25.15
+   },
+   {
+    "concurrency": 256,
+    "requests_per_attention_gpu": 16.0,
+    "tok_s_per_gpu": 345.4,
+    "tpot_ms": 30.88
+   },
+   {
+    "concurrency": 1536,
+    "requests_per_attention_gpu": 96.0,
+    "tok_s_per_gpu": 970.8,
+    "tpot_ms": 65.88
+   }
+  ],
+  "note": "a first A/B on 024e98b0 showed +36% TPOT at 4 and 16 requests per Attention GPU and +15% at 96, 0% at 32. It ran while wide EP32 prefilled 16K prompts on the same InfiniBand fabric and did not reproduce in the repeat above; its control's 64-request point also moved from 51.4 to 58.5 ms between runs"
+ },
+ "scope": "communication-only correctness with synthetic expert outputs, transport timing, and serving TPOT; no model-accuracy evidence (per-layer error, next-token KL, task scores) yet"
+}

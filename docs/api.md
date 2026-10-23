@@ -87,7 +87,7 @@ section 17) and the mixed-role path (`AFDEP_MIXED_HYBRID`, section 18). Set them
 every rank before constructing the `Buffer` and keep them; construction gathers every
 rank's resolved values once and rejects a mismatch.
 
-`AFDEP_HYBRID_FP8_COMBINE=1` (section 19, draft, not yet validated on GPU) sends the
+`AFDEP_HYBRID_FP8_COMBINE=1` (section 19; validated on H200, no accuracy check yet) sends the
 directional hybrid's combine replies across NVLink domains as FP8: set it alike before
 construction, which latches it (later changes have no effect), checks it on every rank and
 reports it as `Buffer.fp8_combine`; it is off outside the directional hybrid. It is lossy:
