@@ -224,6 +224,14 @@ static bool afdep_hybrid_fp8_combine() {
     return afdep_role_suites() and deep_ep::get_env<int>("AFDEP_HYBRID_FP8_COMBINE", 0) != 0;
 }
 
+// AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET=b (with the switch above): FP8 replies only for exchanges whose
+// bucket is at least b tokens; smaller buckets keep BF16 replies, where the round trip is bound by
+// latency and the Attention dequantize epilogue's fixed cost outweighs the bytes saved. Every rank
+// passes the same bucket per exchange, so both roles pick the same row format. Latched with the switch.
+static int afdep_hybrid_fp8_combine_min_bucket() {
+    return std::max(deep_ep::get_env<int>("AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET", 0), 0);
+}
+
 // Mixed-role hybrid (AFDEP_MIXED_HYBRID=1, afdep_roles.hpp): when FFN ranks fill only part of
 // NVLink domain 0, every rank runs the generated afdep_mixed_hybrid_dispatch/combine copies with
 // per-rank roles; pure-Attention domains keep the send block and the collect, domain 0 the full

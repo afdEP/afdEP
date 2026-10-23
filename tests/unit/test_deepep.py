@@ -75,7 +75,7 @@ def runtime(monkeypatch):
     native = Mock()
     native.get_logical_domain_size.return_value = (1, 4)
     native.get_afd_count_first_config.return_value = (0, "full")
-    native.get_afd_sparse_hybrid_config.return_value = (0, False, False, 0, False)
+    native.get_afd_sparse_hybrid_config.return_value = (0, False, False, 0, False, 0)
     native.combine.return_value = (Tensor((2, 256)), None, None)
 
     def dispatch(*args):
@@ -200,14 +200,14 @@ def disagree_on_hybrid_configuration(runtime, other):
 
     def split(values, value, group):
         gather(values, value, group)
-        if value == (0, False, False, 0, False):
+        if value == (0, False, False, 0, False, 0):
             values[1] = other
 
     runtime.dist.all_gather_object = split
 
 
 def test_sparse_hybrid_configuration_must_agree(runtime):
-    disagree_on_hybrid_configuration(runtime, (0, False, False, 2, False))
+    disagree_on_hybrid_configuration(runtime, (0, False, False, 2, False, 0))
     with pytest.raises(ValueError, match="same hybrid configuration"):
         elastic(runtime, role_aware=True, ffn_ranks=2)
     runtime.native.destroy.assert_called_once()
@@ -216,7 +216,7 @@ def test_sparse_hybrid_configuration_must_agree(runtime):
 
 def test_fp8_combine_configuration_must_agree(runtime):
     # A rank that latched FP8 combine replies would mis-decode its peers' BF16 rows.
-    disagree_on_hybrid_configuration(runtime, (0, False, False, 0, True))
+    disagree_on_hybrid_configuration(runtime, (0, False, False, 0, True, 0))
     with pytest.raises(ValueError, match="same hybrid configuration"):
         elastic(runtime, role_aware=True, ffn_ranks=2)
     runtime.native.destroy.assert_called_once()
@@ -225,10 +225,40 @@ def test_fp8_combine_configuration_must_agree(runtime):
 
 def test_fp8_combine_is_reported_when_every_rank_latched_it(runtime):
     assert elastic(runtime, role_aware=True, ffn_ranks=2).fp8_combine is False
-    runtime.native.get_afd_sparse_hybrid_config.return_value = (0, True, True, 0, True)
-    assert elastic(runtime, role_aware=True, ffn_ranks=2).fp8_combine is True
+    runtime.native.get_afd_sparse_hybrid_config.return_value = (
+        0,
+        True,
+        True,
+        0,
+        True,
+        64,
+    )
+    transport = elastic(runtime, role_aware=True, ffn_ranks=2)
+    assert transport.fp8_combine is True and transport.fp8_combine_min_bucket == 64
     buffer = deepep.DeepEPBuffer(group=runtime.group, config=config(role_aware=True))
-    assert buffer.fp8_combine is True
+    assert buffer.fp8_combine is True and buffer.fp8_combine_min_bucket == 64
+
+
+def test_fp8_combine_min_bucket_must_agree(runtime):
+    runtime.native.get_afd_sparse_hybrid_config.return_value = (
+        0,
+        False,
+        False,
+        0,
+        True,
+        0,
+    )
+    gather = runtime.dist.all_gather_object
+
+    def split(values, value, group):
+        gather(values, value, group)
+        if value == (0, False, False, 0, True, 0):
+            values[1] = (0, False, False, 0, True, 64)
+
+    runtime.dist.all_gather_object = split
+    with pytest.raises(ValueError, match="same hybrid configuration"):
+        elastic(runtime, role_aware=True, ffn_ranks=2)
+    runtime.native.destroy.assert_called_once()
 
 
 def test_count_first_arm_is_rejected_collectively(runtime):

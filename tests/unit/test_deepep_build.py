@@ -277,14 +277,23 @@ def test_fp8_combine_switch_is_latched_and_agreement_checked():
     assert buffer.index("afd_fp8_combine = afd_ffn_ranks > 0") < buffer.index(
         "// Timeout\n"
     )
-    assert "std::tuple<int, bool, bool, int, bool> get_afd_sparse_hybrid_config()" in (
-        buffer
+    assert (
+        "std::tuple<int, bool, bool, int, bool, int> get_afd_sparse_hybrid_config()"
+        in (buffer)
     )
-    assert "return {0, false, false, mixed, false};" in buffer
-    assert "return {0, false, false, 0, false};" in buffer
-    # combine() passes the latched value to both launches; the kernels never re-read it.
-    assert "afd_mixed_ffn_ranks,\n            afd_fp8_combine);" in buffer
-    assert "comm_stream, afd_fp8_combine);" in buffer
+    assert "return {0, false, false, mixed, false, 0};" in buffer
+    assert "return {0, false, false, 0, false, 0};" in buffer
+    # The minimum bucket is latched with the switch and reported next to it.
+    assert buffer.count("afdep_hybrid_fp8_combine_min_bucket()") == 1
+    assert "afd_fp8_combine, afd_fp8_min_bucket};" in buffer
+    # combine() passes the latched value, gated by this exchange's bucket, to both
+    # launches; the kernels never re-read it.
+    assert (
+        "const bool afd_fp8_replies = afd_fp8_combine and "
+        "num_max_tokens_per_rank >= afd_fp8_min_bucket;"
+    ) in buffer
+    assert "afd_mixed_ffn_ranks,\n            afd_fp8_replies);" in buffer
+    assert "comm_stream, afd_fp8_replies);" in buffer
     combine = (elastic / "combine.hpp").read_text()
     assert "afdep_hybrid_fp8_combine" not in combine
 

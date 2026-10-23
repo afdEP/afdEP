@@ -390,8 +390,10 @@ class ElasticBuffer:
                 "Every DeepEP rank must use the same hybrid configuration "
                 "(AFDEP_HYBRID_* and AFDEP_MIXED_HYBRID switches)"
             )
-        # Lossy FP8 combine replies across NVLink domains (AFDEP_HYBRID_FP8_COMBINE=1).
+        # Lossy FP8 combine replies across NVLink domains (AFDEP_HYBRID_FP8_COMBINE=1),
+        # for buckets of at least fp8_combine_min_bucket tokens.
         self.fp8_combine = bool(sparse[0][4])
+        self.fp8_combine_min_bucket = int(sparse[0][5])
 
     def _gather(self, value) -> list:
         values = [None] * self._group.size()
@@ -616,6 +618,7 @@ class Buffer:
         self.num_buffer_bytes = self.transport.num_buffer_bytes
         self.topk_idx_dtype = self.transport.topk_idx_dtype
         self.fp8_combine = self.transport.fp8_combine
+        self.fp8_combine_min_bucket = self.transport.fp8_combine_min_bucket
         self._torch, self.device = self.transport._torch, self.transport.device
         self._payload_dtype = (
             self._torch.float8_e4m3fn

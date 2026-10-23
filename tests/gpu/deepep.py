@@ -289,19 +289,22 @@ def fp8_error_bound(x, ids, weights, config: Config, scaleup_ranks: int):
     return FP8_GROUP_ERROR * amax_sum.reshape_as(exact) + BF16_SLACK * exact.abs()
 
 
-def verify(snapshot, case: Case, buffer: Buffer, rows: int, *, sign=1) -> None:
+def verify(
+    snapshot, case: Case, buffer: Buffer, rows: int, *, sign=1, bucket=None
+) -> None:
     value, host_counts = snapshot
     config = buffer.config
+    # FP8 replies apply to buckets of at least the latched minimum (default: capacity).
+    bucket = bucket or config.capacity_tokens_per_rank
+    fp8 = buffer.fp8_combine and bucket >= buffer.fp8_combine_min_bucket
     if buffer.role == "attention":
         x, ids, weights = inputs(case, buffer.role_rank, rows, config)
         scaleout, scaleup = buffer.logical_domain
         scaleup_ranks = scaleup if scaleout > 1 else None
         x = sign * x.float()
-        expected = combined_reference(
-            x, ids, weights, config, scaleup_ranks, buffer.fp8_combine
-        )
+        expected = combined_reference(x, ids, weights, config, scaleup_ranks, fp8)
         torch.testing.assert_close(value, expected, rtol=0, atol=0)
-        if buffer.fp8_combine:
+        if fp8:
             # The FP8-aware reference itself stays within E4M3's bound of BF16.
             bf16 = combined_reference(x, ids, weights, config, scaleup_ranks)
             bound = fp8_error_bound(x, ids, weights, config, scaleup_ranks)
@@ -445,9 +448,13 @@ def bucket_checks(buffer, graph):
                 exchange.update(Case(case.name, case.counts, case.epoch + 10))
             cuda_graph.replay()
         torch.cuda.synchronize()
-        for (_, case, exchange), (value, counts) in zip(plans, captured, strict=True):
+        for (bucket, case, exchange), (value, counts) in zip(
+            plans, captured, strict=True
+        ):
             replayed = Case(case.name, case.counts, case.epoch + 10)
-            verify((value.clone(), counts), replayed, buffer, exchange.rows)
+            verify(
+                (value.clone(), counts), replayed, buffer, exchange.rows, bucket=bucket
+            )
         cuda_graph.reset()
     else:
         snapshots = []
@@ -457,8 +464,8 @@ def bucket_checks(buffer, graph):
             role_host_counts = ffn if buffer.role == "ffn" else attention
             snapshots.append(exchange.run(host_counts=role_host_counts, bucket=bucket))
         torch.cuda.synchronize()
-        for (_, case, exchange), snapshot in zip(plans, snapshots, strict=True):
-            verify(snapshot, case, buffer, exchange.rows)
+        for (bucket, case, exchange), snapshot in zip(plans, snapshots, strict=True):
+            verify(snapshot, case, buffer, exchange.rows, bucket=bucket)
     dist.barrier()
 
 
@@ -608,6 +615,7 @@ def main() -> None:
         "config": asdict(config),
         "physical_domain": buffer.physical_domain,
         "fp8_combine": buffer.fp8_combine,
+        "fp8_combine_min_bucket": buffer.fp8_combine_min_bucket,
         "gpu": torch.cuda.get_device_name(),
         "native_source_sha256": source_digest(),
         "env": {

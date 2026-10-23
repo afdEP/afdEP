@@ -95,6 +95,9 @@ each FFN domain's BF16 partial is rounded to E4M3 with a power-of-two scale per 
 (error at most 2^-4 of the group's largest magnitude; tiny elements flush to zero; NaN stays
 in place; an infinity zeroes its group's finite elements unless they are near the BF16 range
 limit) before the source sums the domains in FP32. `source_collect` still returns BF16.
+`AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET=b`, latched and checked with it and reported as
+`Buffer.fp8_combine_min_bucket`, keeps BF16 replies for exchanges whose bucket is below b
+tokens (every rank passes the same bucket, so both roles agree on the row format).
 
 Native compilation is lazy and process-locked. `AFDEP_CACHE_DIR` controls the
 extension cache; `EP_JIT_CACHE_DIR` controls DeepEP kernel JIT cache. Both must be
