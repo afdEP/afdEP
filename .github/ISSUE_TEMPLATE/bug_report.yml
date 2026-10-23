@@ -1,0 +1,54 @@
+name: Bug report
+description: Wrong values, a hang, a crash or a build failure
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        A failing `tests.gpu.deepep` or `benchmarks.comm` command is the most useful
+        reproduction. Do not paste credentials or private cluster details.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what you saw (error text, where it hangs, which values differ).
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: The exact commands, including torchrun flags and every AFDEP_*, EP_* and NCCL_* variable you set.
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: path
+    attributes:
+      label: Path
+      options:
+        - Role path (role_aware=True, the default)
+        - Masked (role_aware=False)
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: layout
+    attributes:
+      label: Layout
+      description: Attention and FFN ranks and the NVLink domains they span, for example "6A:2F in one domain of 8" or "2F:22A over 12 domains of 2".
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: payload, capacity_tokens_per_rank, hidden_size, num_experts, top_k, bucket, num_sms, eager or CUDA graphs.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Output of `python -m afdep doctor --build` on one rank (it includes the afdEP version and native source digest).
+      render: json
+    validations:
+      required: true
