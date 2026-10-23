@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "afdep"
-version = "1.0.0.dev0"
+version = "1.0.0"
 description = "Expert-parallel communication for Attention-FFN Disaggregation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,9 +31,9 @@ classifiers = [
 dev = ["pytest>=8", "ruff>=0.9", "build>=1.2"]
 
 [project.urls]
-Homepage = "https://github.com/ms-llmd/afdEP"
-Repository = "https://github.com/ms-llmd/afdEP"
-Issues = "https://github.com/ms-llmd/afdEP/issues"
+Homepage = "https://github.com/afdEP/afdEP"
+Repository = "https://github.com/afdEP/afdEP"
+Issues = "https://github.com/afdEP/afdEP/issues"
 
 [tool.setuptools.packages.find]
 include = ["afdep*"]
@@ -43,6 +43,7 @@ afdep = ["py.typed", "third_party/deepep_v2/**/*", "third_party/deepep_v2/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
+pythonpath = ["."]
 addopts = "-ra"
 
 [tool.ruff]
