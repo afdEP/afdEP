@@ -1,36 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="510" viewBox="0 0 1120 510" role="img" aria-labelledby="title desc">
-<title id="title">Masked DeepEP and afdEP v1 reuse</title><desc id="desc">Both use the same DeepEP dispatch and combine collective transport. Masked DeepEP allocates generic receive capacity on Attention and FFN ranks. afdEP v1 removes Attention receive payload tensors and unused copy epilogues and bounds FFN receive tensors by Attention sources. Logical dummy expert slots, registered transport capacity, synchronization and Attention output reduction remain.</desc>
-<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#52657b" stroke-width="1.5"/></marker></defs>
-<rect width="1120" height="510" fill="#fff"/><g font-family="Arial, sans-serif" fill="#15243b">
-<text x="28" y="38" font-size="26" font-weight="700">Same transport. AFD roles remove unused local work.</text>
-<rect x="28" y="62" width="518" height="346" rx="14" fill="#f7f8fa" stroke="#ccd5e0"/><text x="50" y="98" font-size="23" font-weight="700">Masked DeepEP</text>
-<rect x="50" y="134" width="208" height="142" rx="12" fill="white" stroke="#a5b9d0"/><text x="154" y="164" text-anchor="middle" font-size="18" font-weight="700">Attention sources</text>
-<text x="154" y="191" text-anchor="middle" font-size="15" fill="#52657b">Send routed tokens</text>
-<text x="154" y="220" text-anchor="middle" font-size="15" fill="#52657b">Receive combined output</text>
-<text x="154" y="249" text-anchor="middle" font-size="13" fill="#52657b">Unused receive payload arena</text>
-<rect x="316" y="134" width="208" height="142" rx="12" fill="white" stroke="#a5b9d0"/><text x="420" y="164" text-anchor="middle" font-size="18" font-weight="700">FFN expert workers</text>
-<text x="420" y="191" text-anchor="middle" font-size="15" fill="#52657b">Own real experts</text>
-<text x="420" y="220" text-anchor="middle" font-size="15" fill="#52657b">Originate zero tokens</text>
-<text x="420" y="249" text-anchor="middle" font-size="13" fill="#52657b">All-rank receive bounds</text>
-<path d="M261 192 H312" stroke="#52657b" stroke-width="2" marker-end="url(#arrow)"/><path d="M312 239 H261" stroke="#52657b" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="287" y="185" text-anchor="middle" font-size="11">dispatch</text><text x="287" y="260" text-anchor="middle" font-size="11">combine</text>
-<text x="50" y="317" font-size="17" fill="#52657b">Generic dispatch copy on Attention</text>
-<text x="50" y="345" font-size="17" fill="#52657b">Generic combine epilogue on FFN</text>
-<text x="50" y="384" font-size="14" fill="#52657b">Useful payload: Attention → FFN → Attention</text>
-<rect x="574" y="62" width="518" height="346" rx="14" fill="#f2f7ff" stroke="#ccd5e0"/><text x="596" y="98" font-size="23" font-weight="700">afdEP v1 · DeepEP reuse</text>
-<rect x="596" y="134" width="208" height="142" rx="12" fill="white" stroke="#a5b9d0"/><text x="700" y="164" text-anchor="middle" font-size="18" font-weight="700">Attention sources</text>
-<text x="700" y="191" text-anchor="middle" font-size="15" fill="#52657b">Send routed tokens</text>
-<text x="700" y="220" text-anchor="middle" font-size="15" fill="#52657b">Receive combined output</text>
-<text x="700" y="249" text-anchor="middle" font-size="13" fill="#147849">No receive payload arena</text>
-<rect x="862" y="134" width="208" height="142" rx="12" fill="white" stroke="#a5b9d0"/><text x="966" y="164" text-anchor="middle" font-size="18" font-weight="700">FFN expert workers</text>
-<text x="966" y="191" text-anchor="middle" font-size="15" fill="#52657b">Own real experts</text>
-<text x="966" y="220" text-anchor="middle" font-size="15" fill="#52657b">Receive only from sources</text>
-<text x="966" y="249" text-anchor="middle" font-size="13" fill="#147849">Source-count receive bounds</text>
-<path d="M807 192 H858" stroke="#52657b" stroke-width="2" marker-end="url(#arrow)"/><path d="M858 239 H807" stroke="#52657b" stroke-width="2" marker-end="url(#arrow)"/>
-<text x="833" y="185" text-anchor="middle" font-size="11">dispatch</text><text x="833" y="260" text-anchor="middle" font-size="11">combine</text>
-<text x="596" y="317" font-size="17" fill="#147849">Skip unused Attention dispatch-copy epilogue</text>
-<text x="596" y="345" font-size="17" fill="#147849">Skip unused FFN combine-output epilogue</text>
-<text x="596" y="384" font-size="14" fill="#52657b">Useful payload: Attention → FFN → Attention</text>
-<text x="28" y="443" font-size="17" font-weight="700">Both retain DeepEP collective participation, logical expert slots, transport buffers and credits.</text>
-<text x="28" y="474" font-size="15" fill="#52657b">V1 optimizes local buffers and epilogues. Attention output reduction remains. Validated within one NVLink domain.</text>
-</g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="530" viewBox="0 0 1120 530" role="img" aria-labelledby="title desc" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="title">Masked DeepEP and afdEP v1</title>
+<desc id="desc">Masked DeepEP runs DeepEP V2 as a union world: every rank sends and receives, joins all-rank barriers and exchanges counts with every rank, and Attention ranks hold dummy expert slots. afdEP v1 gives each rank its role: counts and tokens flow from Attention to FFN in dispatch and replies flow back in combine, only receivers wait, buffers are sized per role, each role launches only the warps it uses, and across NVLink domains a directional protocol runs when every domain holds one role.</desc>
+<defs><marker id="a898781" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#898781" stroke-width="1.6"/></marker></defs>
+<rect width="1120" height="530" fill="#fcfcfb"/>
+<text x="28" y="44" font-size="24" font-weight="700" fill="#0b0b0b" text-anchor="start">Same transport. Roles decide who sends, who receives and who waits.</text>
+<rect x="28" y="70" width="520" height="392" rx="14" fill="#f4f3ef"/>
+<rect x="28" y="70" width="6" height="392" rx="3" fill="#eb6834"/>
+<text x="54" y="108" font-size="22" font-weight="700" fill="#0b0b0b" text-anchor="start">Masked DeepEP (DeepEP V2, role_aware=False)</text>
+<rect x="54" y="132" width="190" height="128" rx="12" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="149" y="162" font-size="17" font-weight="700" fill="#0b0b0b" text-anchor="middle">Attention GPUs</text>
+<text x="149" y="188" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">send tokens</text>
+<text x="149" y="210" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">hold dummy expert slots</text>
+<text x="149" y="232" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">also receive and forward</text>
+<rect x="332" y="132" width="190" height="128" rx="12" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="427" y="162" font-size="17" font-weight="700" fill="#0b0b0b" text-anchor="middle">FFN GPUs</text>
+<text x="427" y="188" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">hold the experts</text>
+<text x="427" y="210" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">also run send warps</text>
+<text x="427" y="232" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">with no tokens to send</text>
+<path d="M252 186 L324 186" stroke="#898781" stroke-width="2" fill="none" stroke-linecap="round" marker-end="url(#a898781)" marker-start="url(#a898781)"/>
+<text x="288" y="177" font-size="12" font-weight="400" fill="#52514e" text-anchor="middle">dispatch</text>
+<path d="M324 230 L252 230" stroke="#898781" stroke-width="2" fill="none" stroke-linecap="round" marker-end="url(#a898781)" marker-start="url(#a898781)"/>
+<text x="288" y="221" font-size="12" font-weight="400" fill="#52514e" text-anchor="middle">combine</text>
+<circle cx="62" cy="295" r="4" fill="#eb6834"/>
+<text x="76" y="300" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">All-rank entry and exit barriers in both phases</text>
+<circle cx="62" cy="329" r="4" fill="#eb6834"/>
+<text x="76" y="334" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">Counts exchanged with every rank, dummy slots included</text>
+<circle cx="62" cy="363" r="4" fill="#eb6834"/>
+<text x="76" y="368" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">Every rank launches every warp class</text>
+<circle cx="62" cy="397" r="4" fill="#eb6834"/>
+<text x="76" y="402" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">Across nodes, every domain sends, receives and waits</text>
+<circle cx="62" cy="431" r="4" fill="#eb6834"/>
+<text x="76" y="436" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">Receive buffers sized for the whole world</text>
+<rect x="572" y="70" width="520" height="392" rx="14" fill="#eef4fc"/>
+<rect x="572" y="70" width="6" height="392" rx="3" fill="#2a78d6"/>
+<text x="598" y="108" font-size="22" font-weight="700" fill="#0b0b0b" text-anchor="start">afdEP v1 (role path)</text>
+<rect x="598" y="132" width="190" height="128" rx="12" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="693" y="162" font-size="17" font-weight="700" fill="#0b0b0b" text-anchor="middle">Attention GPUs</text>
+<text x="693" y="188" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">send tokens and counts</text>
+<text x="693" y="210" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">collect replies</text>
+<text x="693" y="232" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">never receive tokens</text>
+<rect x="876" y="132" width="190" height="128" rx="12" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="971" y="162" font-size="17" font-weight="700" fill="#0b0b0b" text-anchor="middle">FFN GPUs</text>
+<text x="971" y="188" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">hold the experts</text>
+<text x="971" y="210" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">receive and reply</text>
+<text x="971" y="232" font-size="13.5" font-weight="400" fill="#52514e" text-anchor="middle">never originate tokens</text>
+<path d="M796 186 L868 186" stroke="#898781" stroke-width="2" fill="none" stroke-linecap="round" marker-end="url(#a898781)"/>
+<text x="832" y="177" font-size="12" font-weight="400" fill="#52514e" text-anchor="middle">dispatch</text>
+<path d="M868 230 L796 230" stroke="#898781" stroke-width="2" fill="none" stroke-linecap="round" marker-end="url(#a898781)"/>
+<text x="832" y="221" font-size="12" font-weight="400" fill="#52514e" text-anchor="middle">combine</text>
+<circle cx="606" cy="295" r="4" fill="#2a78d6"/>
+<text x="620" y="300" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">One NVLink domain: no entry barriers; only receivers wait</text>
+<circle cx="606" cy="329" r="4" fill="#2a78d6"/>
+<text x="620" y="334" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">Counts flow Attention → FFN only</text>
+<circle cx="606" cy="363" r="4" fill="#2a78d6"/>
+<text x="620" y="368" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">Each role launches only the warps it uses</text>
+<circle cx="606" cy="397" r="4" fill="#2a78d6"/>
+<text x="620" y="402" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">Across nodes, a directional protocol (one role per domain)</text>
+<circle cx="606" cy="431" r="4" fill="#2a78d6"/>
+<text x="620" y="436" font-size="14.5" font-weight="400" fill="#0b0b0b" text-anchor="start">One NVLink domain: receive buffers sized per role</text>
+<text x="28" y="500" font-size="14" font-weight="400" fill="#52514e" text-anchor="start">Both use DeepEP V2&#x27;s kernels over NVLink and NCCL GIN. Routing, quantization and expert compute stay with the caller.</text>
+</svg>
