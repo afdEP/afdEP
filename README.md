@@ -2,70 +2,88 @@
 
 <img src="docs/assets/afdep-logo.png" alt="afdEP" width="60%"/>
 
-<p><b>Expert-parallel communication for Attention–FFN Disaggregation (AFD).</b></p>
-
 </div>
 
-afdEP connects Attention token sources to FFN expert workers: dispatch routed
-tokens, receive expert inputs, and return combined results. Routing, quantization,
-expert compute, and serving scheduling stay with the caller.
+# afdEP
 
-![afdEP round trip: Attention GPUs dispatch tokens to FFN expert GPUs and collect replies, compared with Masked DeepEP](docs/assets/communication.svg)
+Expert-parallel communication for **Attention–FFN Disaggregation**:
+N Attention token sources exchange work with M FFN expert workers.
 
-The current backend uses NCCL GPU-Initiated Networking (GIN) and NVLink, with
-afdEP's own request/reply kernels. No DeepEP or vLLM runtime package is required.
+![Masked DeepEP and afdEP v1](docs/assets/communication.svg)
 
-## Support
+**V1 reuses DeepEP V2 dispatch/combine.** Explicit AFD roles eliminate unused
+Attention receive payloads and empty-side epilogues; FFN receive tensors are
+bounded by Attention source count. The collective protocol, logical expert
+slots, registered transport capacity and required synchronization remain.
 
-| Architecture | Backend | Validated hardware and modes |
-|---|---|---|
-| Hopper (SM90) | **Implemented** | Eight H100 80GB GPUs; BF16/FP8; eager and CUDA graphs |
-| Blackwell | Not implemented | — |
+**v2.1 (in progress) specializes those kernels for AFD**, measured against
+Masked DeepEP: [changes and communication-only evidence](docs/v2.1.md).
 
-The current backend implements **four Attention + four FFN ranks**, each role in
-its own four-GPU NVLink domain, with one in-flight lane. Other N/M layouts and
-concurrent lanes require further implementation and validation.
+## Use
 
-## Quick start
-
-In a provisioned PyTorch/CUDA environment, from the checkout:
+Linux, PyTorch ≥2.6, CUDA toolkit with `nvcc`, and NCCL ≥2.30.7 with device
+headers are required. The validated toolchain is in [validation](docs/validation.md).
 
 ```bash
-python -m pip install --no-build-isolation --no-deps -e .
+pip install .
+# Set these before starting Python; select the same NCCL headers and runtime.
+export AFDEP_NCCL_ROOT=/path/to/nccl
+export LD_LIBRARY_PATH="$AFDEP_NCCL_ROOT/lib:$LD_LIBRARY_PATH"
+# For a single NVLink domain, without network communication:
+export EP_DISABLE_GIN=1
 python -m afdep doctor --build
 ```
 
-After constructing a buffer on each rank, the roles use separate operations:
-
 ```python
-# Attention ranks:
-buffer.source_dispatch(x, expert_ids, weights, bucket=bucket)
-buffer.source_collect(out)
+from afdep import Buffer, Config
 
-# FFN ranks:
-received = buffer.worker_receive(bucket=bucket)
-buffer.worker_reply(weighted_expert_outputs, received.receipt)
+# Set the CUDA device and initialize a CPU Gloo group first.
+# Group ranks [0, 2) own experts; [2, 4) originate tokens.
+comm = Buffer(
+    group=group,
+    config=Config(
+        capacity_tokens_per_rank=2048,
+        hidden_size=4096,
+        num_experts=128,
+        top_k=8,
+        ffn_ranks=2,
+        attention_ranks=2,
+    ),
+)
+if comm.role == "attention":
+    comm.source_dispatch(x, expert_ids, weights, bucket=2048)
+    output = comm.source_collect()
+else:
+    received = comm.worker_receive(bucket=2048)
+    weighted_rows = run_experts(received)  # Caller applies each routing weight once.
+    comm.worker_reply(weighted_rows, received.receipt)
+comm.close()  # Collective, after all exchanges and graph replays finish.
 ```
 
-Apply routing weights **once** before `worker_reply`.
-[Installation and API](docs/api.md) · [Runnable example](examples/round_trip.py)
+Routing, quantization and expert computation belong to the caller. BF16 and
+prequantized FP8 dispatch return BF16 combined outputs. See the
+[tensor, graph and lifecycle contract](docs/api.md).
 
-## H100 experiment
+## Support
 
-Eight H100s, four Attention + four FFN ranks, CUDA graphs, communication only:
+| Architecture | Evidence | Current v1 scope |
+|---|---|---|
+| Hopper (SM90) | H100 GPU suite; H200 two-domain suite | BF16/FP8; eager/CUDA graphs; one NVLink domain, or two joined by GIN |
+| Blackwell | Not validated | No support claim yet |
+| Other architectures | Not validated | No support claim yet |
 
-![H100 communication latency and registered buffer comparison](docs/assets/h100-performance.svg)
+v1 validation uses 2 Attention + 2 FFN ranks with partitioned experts. The v2.1
+role path is also validated with 3 Attention + 1 FFN and 1 Attention + 3 FFN in
+one four-GPU NVLink domain ([evidence](docs/validation-v2.1-clean.json)), and
+across two to four NVLink domains of two H200 GPUs (up to 8 ranks), and four and five single-GPU domains, joined by InfiniBand GIN (FFN domain +
+Attention domain, plus 3:1 and 1:3 layouts that mix roles in a domain;
+[evidence](docs/validation-v2.1-cross-node.json)). When each domain holds a single
+role, a directional hybrid protocol is 17% (two nodes) to 21% (three nodes) faster than Masked at one token
+([evidence](docs/validation-v2.1-directional-hybrid.json)); mixed-role domains keep
+DeepEP's hybrid protocol. Other group layouts and larger multi-domain worlds
+require validation.
+`allow_hybrid_mode` retains DeepEP's meaning; it does not enable an unvalidated
+topology.
 
-- At 512 tokens/source, BF16 and FP8 round-trip latencies were about **30% lower**.
-- At 2048, BF16 was approximately tied; FP8 latency was **12% lower**.
-- Registered transport buffers were **68–72% smaller**.
-
-October 15: directional prototype vs **Masked DeepEP**,
-with different tuned execution budgets. The standalone wheel passed separate
-eight-H100 checks on October 18. [H100 experiment details](docs/performance.md).
-
-## Development
-
-[Contributing](CONTRIBUTING.md) · [CI](https://github.com/ms-llmd/afdEP/actions/workflows/ci.yml)
-
-Apache-2.0; upstream-derived components retain their [original notices](THIRD_PARTY_NOTICES.md).
+[Validation](docs/validation.md) · [Contributing](CONTRIBUTING.md) ·
+[Licenses and provenance](THIRD_PARTY_NOTICES.md)

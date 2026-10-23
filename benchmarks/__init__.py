@@ -1,1 +1,1 @@
-"""Communication benchmarks; execute from the repository root."""
+# SPDX-License-Identifier: Apache-2.0
