@@ -16,6 +16,11 @@ epoch-tagged counts, a payload gate and per-row flags), the FFN stream receive
 releases P after the prefix sums) and the FFN stream copy epilogue
 (dispatch_copy_epilogue.cuh with claimed units of flag-guarded rows).
 
+FP8 combine replies (afdep_fp8_combine.cuh; AFDEP_HYBRID_FP8_COMBINE=1) add four:
+the FFN hybrid combine and its sparse copy with FP8 reply rows, combine_reduce
+(combine_utils.cuh) storing its BF16 result as FP8, and the Attention reduce
+epilogue (combine_reduce_epilogue.cuh) dequantizing them.
+
 tests/unit/test_deepep_build.py re-derives every copy and requires byte
 equality, so a fix to a shared kernel fails the test until the copies are
 regenerated: python -m tests.role_kernels
@@ -40,6 +45,10 @@ FFN_SPARSE_HYBRID_COMBINE = "afdep_ffn_sparse_hybrid_combine.cuh"
 SPARSE_HYBRID_COLLECT = "afdep_sparse_hybrid_collect.cuh"
 MIXED_HYBRID_DISPATCH = "afdep_mixed_hybrid_dispatch.cuh"
 MIXED_HYBRID_COMBINE = "afdep_mixed_hybrid_combine.cuh"
+FFN_FP8_HYBRID_COMBINE = "afdep_ffn_fp8_hybrid_combine.cuh"
+FFN_SPARSE_FP8_HYBRID_COMBINE = "afdep_ffn_sparse_fp8_hybrid_combine.cuh"
+FP8_COMBINE_REDUCE = "afdep_fp8_combine_reduce.cuh"
+FP8_COMBINE_EPILOGUE = "afdep_fp8_combine_reduce_epilogue.cuh"
 
 FFN_DISPATCH_EDITS = (
     (
@@ -803,6 +812,169 @@ MIXED_HYBRID_COMBINE_EDITS = (
 )
 
 
+# FP8 combine replies (AFDEP_HYBRID_FP8_COMBINE=1, afdep_fp8_combine.cuh): an FFN
+# forwarder reduces each reply row as before (combine_reduce, so the BF16 row it rounds
+# is unchanged), quantizes it in registers to E4M3 with a power-of-two scale per 128
+# elements, stores it in the first part of the same shared-memory TMA row, and stages
+# and puts H + align32(H / 128) bytes instead of 2H into the same (slot, token) row of
+# the Attention inbox. Both FP8 regions keep their BF16 base addresses, so every FP8
+# byte lies inside the BF16 region it replaces, and the staging and ordering arguments
+# (docs/v1.md sections 7, 11 and 17) hold unchanged. The Attention reduce epilogue
+# dequantizes and sums each FFN domain's row in FP32.
+FP8_COMBINE_REDUCE_STORE = (
+    "dst_buffer_ptr[i * (kUnrollFactor * 32) + j * 32 + lane_idx] = {0};\n",
+    "afdep_fp8_store_vec<kHiddenVec>({0}, "
+    "i * (kUnrollFactor * 32) + j * 32 + lane_idx, lane_idx, dst_buffer_ptr);\n",
+)
+FP8_COMBINE_REDUCE_EDITS = (
+    (
+        "#pragma once\n",
+        "#pragma once  // afdEP: generated from combine_utils.cuh (combine_reduce "
+        "with an FP8 store) by tests/role_kernels.py; do not edit\n",
+    ),
+    ("#include <stdexcept>\n", "#include <deep_ep/impls/afdep_fp8_combine.cuh>\n"),
+    ("void combine_reduce(", "void afdep_fp8_combine_reduce("),
+    (
+        "                " + FP8_COMBINE_REDUCE_STORE[0].format("values_0[j]"),
+        "                " + FP8_COMBINE_REDUCE_STORE[1].format("values_0[j]"),
+    ),
+    (
+        "                " + FP8_COMBINE_REDUCE_STORE[0].format("casted_value"),
+        "                " + FP8_COMBINE_REDUCE_STORE[1].format("casted_value"),
+    ),
+)
+# combine_utils.cuh keeps the helpers before combine_reduce; every includer includes it.
+FP8_COMBINE_REDUCE_HELPERS = (
+    "template <bool kAllowMultipleReduction, int kNumRanks, int kNumTopk>\n"
+    "constexpr bool use_rank_layout() {",
+    "        topk_slot_idx[k] = lowest_idx >= 0 ? fetched : -1;\n    }\n}\n\n",
+)
+
+# Both FFN copies (plain and sparse): the reply rows' layout, staging, put and store.
+FP8_COMBINE_BODY_EDITS = (
+    (
+        "#include <deep_ep/impls/combine_utils.cuh>\n",
+        "#include <deep_ep/impls/combine_utils.cuh>\n"
+        "#include <deep_ep/impls/afdep_fp8_combine_reduce.cuh>\n",
+    ),
+    (
+        "    constexpr bool kDoExpandedSend = not kAllowMultipleReduction and "
+        "kUseExpandedLayout;\n",
+        "    constexpr bool kDoExpandedSend = not kAllowMultipleReduction and "
+        "kUseExpandedLayout;\n"
+        "    EP_STATIC_ASSERT(kAfdFfnScaleoutRanks > 0 and kUseExpandedLayout and "
+        "kAllowMultipleReduction and kEnableSM90Features,\n"
+        '                     "FP8 combine: directional hybrid, expanded layout, '
+        'multiple reduction");\n',
+    ),
+    (
+        "    const auto token_layout = layout::TokenLayout(kNumHiddenBytes, 0, "
+        "kNumTopk, false);\n",
+        "    const auto token_layout = layout::TokenLayout(kNumHiddenBytes, 0, "
+        "kNumTopk, false);\n"
+        "    // afdEP FP8 combine: the reply rows sent across NVLink domains\n"
+        "    const layout::TokenLayout afd_fp8_layout = "
+        "afdep_fp8_combine_layout<kHidden>();\n",
+    ),
+    (
+        "    auto scaleout_send_buffer = layout::BufferLayout<false>(\n"
+        "        token_layout,",
+        "    auto scaleout_send_buffer = layout::BufferLayout<false>(\n"
+        "        afd_fp8_layout,",
+    ),
+    (
+        "        scaleout_send_buffer = layout::BufferLayout<false>(\n"
+        "            token_layout,",
+        "        scaleout_send_buffer = layout::BufferLayout<false>(\n"
+        "            afd_fp8_layout,",
+    ),
+    (
+        "            afd_scaleout_send_base);\n    }\n",
+        "            afd_scaleout_send_base);\n    }\n"
+        "    // afdEP FP8 combine: the reply inbox keeps its base (the staging base "
+        "above is the BF16 inbox's\n"
+        "    // end), so both FP8 regions lie inside the BF16 regions they replace\n"
+        "    EP_DEVICE_ASSERT(afd_ffn_domain);\n"
+        "    scaleout_recv_buffer = layout::BufferLayout<false>(\n"
+        "        afd_fp8_layout, kNumTokensInScaleoutLayout, kNumMaxTokensPerRank, "
+        "scaleup_buffer.get_buffer_end_ptr());\n",
+    ),
+    (
+        "                        token_layout.get_num_bytes<false>(),\n"
+        "                        last_src_scaleout_rank_idx,",
+        "                        afd_fp8_layout.get_num_bytes<false>(),\n"
+        "                        last_src_scaleout_rank_idx,",
+    ),
+    (
+        "                combine_reduce<kHiddenVec, kUnrollFactor, "
+        "math::constexpr_ceil_div(kNumTopk, kNumScaleoutRanks)>(\n",
+        "                afdep_fp8_combine_reduce<kHiddenVec, kUnrollFactor, "
+        "math::constexpr_ceil_div(kNumTopk, kNumScaleoutRanks)>(\n",
+    ),
+    (
+        "                    ptx::tma_store_1d(send_token_buffer.get_base_ptr(), "
+        "tma_buffer.get_base_ptr(),\n"
+        "                                    token_layout.get_num_bytes<false>());",
+        "                    ptx::tma_store_1d(send_token_buffer.get_base_ptr(), "
+        "tma_buffer.get_base_ptr(),\n"
+        "                                    afd_fp8_layout.get_num_bytes<false>());",
+    ),
+)
+FFN_FP8_HYBRID_COMBINE_EDITS = (
+    (
+        "#pragma once\n",
+        "#pragma once  // afdEP: generated from hybrid_combine.cuh (FP8 combine "
+        "edits) by tests/role_kernels.py; do not edit\n",
+    ),
+    ("hybrid_combine_impl(", "afdep_ffn_fp8_hybrid_combine_impl("),
+    *FP8_COMBINE_BODY_EDITS,
+)
+# The sparse copy's edits (replied mask, DONE count, witness) pass through untouched.
+FFN_SPARSE_FP8_HYBRID_COMBINE_EDITS = (
+    (
+        "generated from hybrid_combine.cuh by tests/role_kernels.py; do not edit\n",
+        "generated from hybrid_combine.cuh (sparse, then FP8 combine edits) by "
+        "tests/role_kernels.py; do not edit\n",
+    ),
+    (
+        "afdep_ffn_sparse_hybrid_combine_impl(",
+        "afdep_ffn_sparse_fp8_hybrid_combine_impl(",
+    ),
+    *FP8_COMBINE_BODY_EDITS,
+)
+# Attention: the same epilogue (launch shape, slot deduplication, output TMA) over FP8.
+FP8_COMBINE_EPILOGUE_EDITS = (
+    (
+        "#pragma once\n",
+        "#pragma once  // afdEP: generated from combine_reduce_epilogue.cuh (FP8 "
+        "combine edits) by tests/role_kernels.py; do not edit\n",
+    ),
+    (
+        "#include <deep_ep/impls/combine_utils.cuh>\n",
+        "#include <deep_ep/impls/combine_utils.cuh>\n"
+        "#include <deep_ep/impls/afdep_fp8_combine.cuh>\n",
+    ),
+    ("combine_reduce_epilogue_impl(", "afdep_fp8_combine_reduce_epilogue_impl("),
+    (
+        "    const auto comm_token_layout = layout::TokenLayout(kNumHiddenBytes, 0, "
+        "kNumTopk, false);\n",
+        "    // afdEP FP8 combine: FFN domains reply in FP8 rows without metadata\n"
+        "    EP_STATIC_ASSERT(kNumScaleoutRanks > 1 and kUseExpandedLayout and "
+        "kAllowMultipleReduction and kEnableSM90Features,\n"
+        '                     "FP8 combine: hybrid, expanded layout, multiple '
+        'reduction");\n'
+        "    EP_DEVICE_ASSERT(combined_topk_weights == nullptr);\n"
+        "    const layout::TokenLayout comm_token_layout = "
+        "afdep_fp8_combine_layout<kHidden>();\n",
+    ),
+    (
+        "        combine_reduce<kHiddenVec, kUnrollFactor, kNumTokensInLayout>(\n",
+        "        afdep_fp8_combine_dequant_reduce<kHiddenVec, kUnrollFactor, "
+        "kNumTokensInLayout>(\n",
+    ),
+)
+
+
 def apply_edits(shared: str, edits) -> str:
     """Apply each edit exactly once."""
     for old, new in edits:
@@ -872,6 +1044,30 @@ def mixed_hybrid_combine(shared: str) -> str:
     return apply_edits(shared, MIXED_HYBRID_COMBINE_EDITS)
 
 
+def ffn_fp8_hybrid_combine(shared: str) -> str:
+    """The hybrid combine whose forwarders send FP8 reply rows across NVLink domains."""
+    return apply_edits(shared, FFN_FP8_HYBRID_COMBINE_EDITS)
+
+
+def ffn_sparse_fp8_hybrid_combine(shared: str) -> str:
+    """The sparse FFN combine copy with the same FP8 reply rows."""
+    return apply_edits(
+        ffn_sparse_hybrid_combine(shared), FFN_SPARSE_FP8_HYBRID_COMBINE_EDITS
+    )
+
+
+def fp8_combine_reduce(utils: str) -> str:
+    """combine_reduce (combine_utils.cuh) storing its BF16 result row as FP8."""
+    return replace_span(
+        apply_edits(utils, FP8_COMBINE_REDUCE_EDITS), *FP8_COMBINE_REDUCE_HELPERS, ""
+    )
+
+
+def fp8_combine_reduce_epilogue(epilogue: str) -> str:
+    """The reduce epilogue dequantizing FP8 reply rows; shape and slots unchanged."""
+    return apply_edits(epilogue, FP8_COMBINE_EPILOGUE_EDITS)
+
+
 def ffn_dispatch(shared: str) -> str:
     """Same template, launch shape and statements; only the notify warps trigger."""
     return apply_edits(shared, FFN_DISPATCH_EDITS)
@@ -904,6 +1100,16 @@ if __name__ == "__main__":
     (IMPLS / FFN_SPARSE_HYBRID_COMBINE).write_text(ffn_sparse_hybrid_combine(combine))
     (IMPLS / MIXED_HYBRID_DISPATCH).write_text(mixed_hybrid_dispatch(hybrid))
     (IMPLS / MIXED_HYBRID_COMBINE).write_text(mixed_hybrid_combine(combine))
+    (IMPLS / FFN_FP8_HYBRID_COMBINE).write_text(ffn_fp8_hybrid_combine(combine))
+    (IMPLS / FFN_SPARSE_FP8_HYBRID_COMBINE).write_text(
+        ffn_sparse_fp8_hybrid_combine(combine)
+    )
+    utils = (IMPLS / "combine_utils.cuh").read_text()
+    (IMPLS / FP8_COMBINE_REDUCE).write_text(fp8_combine_reduce(utils))
+    reduce_epilogue = (IMPLS / "combine_reduce_epilogue.cuh").read_text()
+    (IMPLS / FP8_COMBINE_EPILOGUE).write_text(
+        fp8_combine_reduce_epilogue(reduce_epilogue)
+    )
     collect = (IMPLS / "afdep_hybrid_collect.cuh").read_text()
     (IMPLS / SPARSE_HYBRID_COLLECT).write_text(sparse_hybrid_collect(collect))
     direct = (IMPLS / "dispatch.cuh").read_text()

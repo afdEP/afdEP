@@ -262,6 +262,14 @@ domains only (6 × 4 H200, F = 1 to 3, one FFN-holding domain); 8-GPU nodes, fau
 injection for its reply and staging orderings and a two-buffer interleave are not yet
 run. The sparse switches do not apply to this path yet.
 
+**FP8 combine replies** (`AFDEP_HYBRID_FP8_COMBINE=1` on every rank, draft, not yet run on
+GPU). From about 64 tokens per Attention GPU the directional round trip is bound by bytes
+through the FFN node's NICs, and BF16 replies are two thirds of them. With the switch, FFN
+forwarders send each reduced reply row across NVLink domains as E4M3 with one power-of-two
+scale per 128 elements (4,128 instead of 8,256 bytes at hidden 4096), and the Attention side
+sums the decoded rows in FP32. It is lossy and needs a model-level accuracy check before any
+serving use ([docs/v1.md §19](docs/v1.md#19-fp8-combine-replies-opt-in-across-nvlink-domains-draft-not-yet-run-on-gpu)).
+
 <details><summary>Cross-node proposal numbers</summary>
 
 H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; v1 on 958652a3, the proposal on the tree each dataset's digests name (64 experts at 23:1).
