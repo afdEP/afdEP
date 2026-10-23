@@ -9,7 +9,7 @@
   "control_tree_final_role_suites": "9675783bee5e9a41c3239cb0e8f2342dc5cbac8feb459f72d75f6d6f2700425a"
  },
  "setup": "4 x H200 (kermit), BF16, hidden 2048, top-k 8 of 128 experts (96 at 1A:3F), capacity 2048, CUDA graphs, 24 transport SMs; 3A:1F with the single-FFN collect view; benchmark bucket = token count",
- "design": "three independent designs, three adversarial reviews and a synthesis (workflow wf_3dc04789-149); stage A implemented and reviewed by ordering/PTX and host/JIT reviewers (wf_e537e08b-ca2: 4 minor findings, all fixed)",
+ "design": "three independent designs, three adversarial reviews and a synthesis; stage A implemented and reviewed by ordering/PTX and host/JIT reviewers (4 minor findings, all fixed)",
  "correctness_shipped": {
   "native_source_sha256": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",
   "min_bucket": 1,

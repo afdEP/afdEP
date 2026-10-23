@@ -12,7 +12,7 @@ namespace deep_ep::elastic {
 // Role suites. On the role path an Attention rank runs {dispatch send, combine
 // receive} and an FFN rank {dispatch receive, combine send}; a Masked rank sends
 // and receives in every phase. Each suite picks its role's kernel and launch shape
-// per phase. kShared and kSendBlock run v1's kernel generated from the shared
+// per phase. kShared and kSendBlock run the kernel generated from the shared
 // launch arguments (same code, include hash, cache key and cubin; kSendBlock only
 // launches fewer threads). kRoleKernel runs a separate kernel: the FFN dispatch is a
 // generated copy of hybrid_dispatch.cuh (the edits in tests/role_kernels.py) and the
@@ -20,7 +20,7 @@ namespace deep_ep::elastic {
 // on the wire: no rank reads a peer's grid, and every protocol word is unchanged.
 // kCountFirst is not: its count words carry an epoch and its sources write row flags.
 enum class AfdLaunchShape {
-    // v1's launch, identical on every role.
+    // The shared launch, identical on every role.
     kShared,
     // Directional hybrid Attention dispatch: the shared kernel without its forward warps.
     kSendBlock,
@@ -33,13 +33,14 @@ enum class AfdLaunchShape {
     kCountFirst,
 };
 
-// AFDEP_SHARED_ROLE_KERNELS=1 launches every role kernel in v1's shared shape:
-// one switch back to v1. Each shape also has its own control.
+// AFDEP_SHARED_ROLE_KERNELS=1 launches every role kernel in the shared shape: one
+// switch back to the launches before the role suites. Each shape also has its own
+// control.
 static bool afdep_role_suites() {
     return deep_ep::get_env<int>("AFDEP_SHARED_ROLE_KERNELS", 0) == 0;
 }
 
-// One NVLink domain keeps v1's launch shapes on both roles. Its receive-only kernels
+// One NVLink domain keeps the shared launch shapes on both roles. Its receive-only kernels
 // (FFN dispatch, Attention combine) launch the senders' grid, but CTAs 1.. exit about
 // 0.6 us after launch (measured on H100), so only CTA 0 stays resident, and it owns
 // its SM either way. A one-CTA receive therefore frees almost nothing, and it moved

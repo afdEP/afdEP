@@ -44,7 +44,7 @@
       "sha256": "af22ad6a205d994645700bf5d3ac3f921cf51b5bf426a7190a0b8f3600b3eb92"
     },
     "csrc/kernels/elastic/afdep_suites.hpp": {
-      "sha256": "14c2fb1f3dd56c33d686fa457fdec9e555196d105c4044db35225d3375ff12b4"
+      "sha256": "067d01d37ab71462cc87dfa21f658e665f0d32a571d019d4acd93802cd417976"
     },
     "deep_ep/include/deep_ep/impls/afdep_count_first.cuh": {
       "sha256": "a7779f4bf9c270f2b6af935ec012b104a1968d4e71c989dad1c054a60a317694"
@@ -98,5 +98,5 @@
     "version": "v2-source-host-count-skip",
     "source_manifest_sha256": "4211c4b4f72cf2c06d1e2177eb024438382968cbcb84414baa73c80b79304a4d"
   },
-  "scope_version": "afdEP v0 role specialization + v1 entry barriers, directional counts, directed exit, per-CTA arrival release, role-sized buffers and the directional hybrid protocol"
+  "scope_version": "afdEP v0 role specialization + v1 entry barriers, directional counts, directed exit, per-CTA arrival release, role-sized buffers, the directional hybrid protocol, single-FFN reduction and collect view, and role suites"
 }

@@ -10,7 +10,7 @@
   "intermediary_commit": "3c7161949310b6d59d6b4cf9bf997a4935c8113b",
   "pin_limit": "The original DeepEP revision is not recorded in the FastAFD snapshot; the immutable plugin revision and complete file hashes identify this vendored input.",
   "local_changes": [
-    "Opt-in afdEP role specialization: receive allocation, fused direct-dispatch route checks and empty-side completion through normal stream events; exact added and modified hashes in LOCAL_CHANGES.json. Frozen file_sha256 identifies the unchanged origin snapshot."
+    "Opt-in afdEP role specialization: receive allocation, fused direct-dispatch route checks and empty-side completion through normal stream events (v0); entry-barrier removal, directional counts, directed per-CTA exit, role-sized buffers, the directional hybrid protocol and generated role kernels (v1). Exact added and modified hashes in LOCAL_CHANGES.json. Frozen file_sha256 identifies the unchanged origin snapshot."
   ],
   "inherited_changes": [
     "AFD_DEEPEP_PER_BUFFER_COMM_STREAM environment variable naming.",
@@ -93,6 +93,6 @@
   "host_adapter_changes": [
     "afdep/deepep.py retains the original ElasticBuffer constructor, dispatch/combine arguments, stream joins and native handles; it owns one bootstrap communicator per instance instead of a process-global registry.",
     "Add explicit AFD real-expert topology and role endpoints over that single shared facade; preserve native receive allocations and return native combine outputs directly.",
-    "Add collective configuration/source checks, physical-domain visibility, handle ownership/order checks and capture guards; do not change the process environment, native kernels, barriers or credits."
+    "Add collective configuration/source checks, physical-domain visibility, handle ownership/order checks and capture guards; do not change the process environment. The role path's native kernels, barriers and credits change only as LOCAL_CHANGES.json records; Masked DeepEP keeps them."
   ]
 }

@@ -67,9 +67,10 @@ def test_role_template_parameters_default_to_upstream_kernels():
     assert "bool kAfdSkipAttentionEntrySync = false," in hybrid_dispatch
 
 
-# Device sources of v1 (native digest 8205d02b). The role suites size launches of
-# these kernels and add separate role kernels; they never edit a shared kernel, so
-# Masked and every shared instantiation keep their code, include hash and cubin.
+# Device sources before the role suites (native digest 8205d02b). The role suites
+# size launches of these kernels and add separate role kernels; they never edit a
+# shared kernel, so Masked and every shared instantiation keep their code, include
+# hash and cubin.
 V1_KERNEL_SHA256 = {
     "dispatch.cuh": (
         "81e189fab1985fba3f8c772ecfe0b2efbfe4618744c0ae0195566ae20326ce6a"

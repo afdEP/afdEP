@@ -25,7 +25,7 @@
   "AFDEP_SHARED_HYBRID_COLLECT=1"
  ],
  "self_audit": {
-  "workflow": "wf_095ac918-aef (4 auditors + 1 adversarial verifier)",
+  "review": "4 independent auditors and 1 adversarial verifier",
   "verdicts": [
    {
     "id": "H1",
@@ -144,7 +144,7 @@
     "verdict": "confirmed"
    }
   ],
-  "addressed": "H1/VG6 screen output resolved; H5 --role-env limited to launch-shape controls; H2/H3/DE-1/DE-2/H4/K comments; A/B/F/H docs; C cscreen checks every rank's digest per repeat; D/DE-3/VG4 fault markers, tree digests and negative controls; VG1/VG3/VG9 multi-domain layouts, hidden 7168/8192 and controls; VG2/VG5 suite records digest/env and cycles buckets"
+  "addressed": "H1/VG6 screen output resolved; H5 --role-env limited to launch-shape controls; H2/H3/DE-1/DE-2/H4/K comments; A/B/F/H docs; C the screen driver checks every rank's digest per repeat; D/DE-3/VG4 fault markers, tree digests and negative controls; VG1/VG3/VG9 multi-domain layouts, hidden 7168/8192 and controls; VG2/VG5 suite records digest/env and cycles buckets"
  },
  "baseline_profiles_v1": {
   "native_source_sha256": "8205d02bfc622ba98c680c977d8cfef4e47f9394afea26fc5828d29e3589b879",

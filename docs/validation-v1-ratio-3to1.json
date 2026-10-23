@@ -5391,7 +5391,7 @@
     "Readers 2 (claim 10) and 3 (claim 10) say the FFN could simply skip combine signals on empty channels. As stated, this is incomplete. Those signals are also the release for exchange N+1 cross-domain writes (afdep_roles.hpp:48-52), and the FFN clears tail[c][s] with a plain store (afdep_ffn_hybrid_dispatch.cuh:713-714). So each (FFN GPU, Attention GPU) pair must keep at least one signal sent after the FFN dispatch-N kernel completes, and the Attention collect must stop waiting on the skipped words. Otherwise a zero-token source's dispatch N+1 atomic can race the clear.",
     "All readers state per-signal sender cost as reserve, WQE, ready, submit. They omit the SQ availability check. With GIN_GDAKI_QP_DEPTH=128 (gdaki_gin_host_gdaki.cc:55, 580, 585), every reserve after a QP's first 128 WQEs polls the CQ entry 128 back (doca_gpunetio_dev_verbs_qp.cuh:77-81, 95-101). That is steady state in a benchmark loop. Reader 1's SM-doorbell submit chain is also only conditional: the handler is AUTO (gdaki_gin_host_gdaki.cc:54, 586), resolved host-side, and on the CPU-proxy path a submit only fetch_maxes a proxy counter (qp.cuh:557-566, 585-586)."
    ],
-   "_note": "read-only code analysis (workflow wf_930aa5c2-bdd, 3 readers + skeptical synthesizer); predictions, not measurements"
+   "_note": "read-only code analysis (3 independent readers and a skeptical synthesis); predictions, not measurements"
   }
  },
  "cross_node_4f12a": {
