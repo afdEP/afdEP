@@ -689,5 +689,1035 @@
     }
    }
   }
+ },
+ "cross_node_proposal": {
+  "setup": "H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; v1 on 958652a3, the proposal on the tree each dataset's digests name (64 experts at 23:1)",
+  "in_node_setup": "one NVLink domain of 8 × H200 (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks",
+  "sparse_11to1": {
+   "all_three": {
+    "tokens": [
+     1,
+     8,
+     16,
+     32,
+     64,
+     128,
+     256,
+     512
+    ],
+    "series": {
+     "afdEP v1": [
+      231.5,
+      259.5,
+      266.3,
+      285.0,
+      320.9,
+      461.0,
+      712.4,
+      1220.1
+     ],
+     "Cross-node: all three sparse switches": [
+      73.8,
+      86.2,
+      100.4,
+      140.5,
+      235.1,
+      428.1,
+      691.2,
+      1221.1
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Cross-node: all three sparse switches": [
+      "200944ce"
+     ]
+    },
+    "screen": "xn-final-f2",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Cross-node: all three sparse switches": [
+      0.31888,
+      0.33199,
+      0.37682,
+      0.49315,
+      0.73275,
+      0.92883,
+      0.9703,
+      1.0008
+     ]
+    }
+   },
+   "switches": {
+    "stagger": {
+     "tokens": [
+      1,
+      8,
+      16,
+      32,
+      64,
+      128
+     ],
+     "series": {
+      "afdEP v1": [
+       231.3,
+       259.9,
+       266.8,
+       285.2,
+       321.4,
+       460.7
+      ],
+      "Stagger only": [
+       202.7,
+       215.0,
+       225.9,
+       260.8,
+       323.5,
+       470.8
+      ],
+      "Sparse dispatch only": [
+       153.1,
+       183.8,
+       194.7,
+       221.5,
+       277.6,
+       441.0
+      ],
+      "Stagger + sparse dispatch": [
+       131.0,
+       144.3,
+       154.2,
+       197.9,
+       280.8,
+       452.3
+      ]
+     },
+     "digests": {
+      "afdEP v1": [
+       "958652a3"
+      ],
+      "Stagger only": [
+       "c301de5b"
+      ],
+      "Sparse dispatch only": [
+       "c301de5b"
+      ],
+      "Stagger + sparse dispatch": [
+       "c301de5b"
+      ]
+     },
+     "screen": "xn-sparse-f2",
+     "repeats": 2,
+     "control": "afdEP v1",
+     "paired_ratio": {
+      "afdEP v1": [
+       1.0,
+       1.0,
+       1.0,
+       1.0,
+       1.0,
+       1.0
+      ],
+      "Stagger only": [
+       0.87618,
+       0.82718,
+       0.84667,
+       0.91458,
+       1.00662,
+       1.0219
+      ],
+      "Sparse dispatch only": [
+       0.66198,
+       0.70743,
+       0.72969,
+       0.77654,
+       0.86384,
+       0.95717
+      ],
+      "Stagger + sparse dispatch": [
+       0.56611,
+       0.55516,
+       0.57789,
+       0.69379,
+       0.87362,
+       0.98171
+      ]
+     }
+    },
+    "combine": {
+     "tokens": [
+      1,
+      8,
+      16,
+      32,
+      64,
+      128
+     ],
+     "series": {
+      "afdEP v1": [
+       231.7,
+       260.0,
+       266.2,
+       285.1,
+       321.1,
+       460.9
+      ],
+      "Sparse combine only": [
+       226.0,
+       255.7,
+       264.8,
+       284.5,
+       320.4,
+       460.3
+      ],
+      "Sparse dispatch + combine": [
+       151.5,
+       180.8,
+       194.0,
+       221.1,
+       276.5,
+       440.9
+      ],
+      "Cross-node: all three sparse switches": [
+       74.3,
+       86.3,
+       100.4,
+       140.8,
+       235.5,
+       428.0
+      ]
+     },
+     "digests": {
+      "afdEP v1": [
+       "958652a3"
+      ],
+      "Sparse combine only": [
+       "841bc731"
+      ],
+      "Sparse dispatch + combine": [
+       "841bc731"
+      ],
+      "Cross-node: all three sparse switches": [
+       "841bc731"
+      ]
+     },
+     "screen": "xn-combine-f2",
+     "repeats": 2,
+     "control": "afdEP v1",
+     "paired_ratio": {
+      "afdEP v1": [
+       1.0,
+       1.0,
+       1.0,
+       1.0,
+       1.0,
+       1.0
+      ],
+      "Sparse combine only": [
+       0.97567,
+       0.98351,
+       0.99462,
+       0.99791,
+       0.9979,
+       0.99871
+      ],
+      "Sparse dispatch + combine": [
+       0.65387,
+       0.69539,
+       0.72887,
+       0.7756,
+       0.86134,
+       0.95673
+      ],
+      "Cross-node: all three sparse switches": [
+       0.32088,
+       0.33191,
+       0.37702,
+       0.49388,
+       0.73354,
+       0.92875
+      ]
+     }
+    },
+    "stagger_bound": {
+     "tokens": [
+      1,
+      8,
+      16,
+      32,
+      48,
+      64,
+      128
+     ],
+     "series": {
+      "afdEP v1": [
+       231.6,
+       260.2,
+       266.3,
+       285.0,
+       300.1,
+       321.5,
+       460.7
+      ],
+      "Sparse dispatch + combine": [
+       148.3,
+       179.8,
+       193.4,
+       221.2,
+       247.7,
+       277.3,
+       441.0
+      ],
+      "+ stagger up to 48 tokens": [
+       74.2,
+       86.2,
+       100.2,
+       140.6,
+       188.8,
+       277.5,
+       440.8
+      ],
+      "+ stagger at every size": [
+       74.0,
+       86.3,
+       100.4,
+       140.6,
+       188.5,
+       236.1,
+       428.6
+      ]
+     },
+     "digests": {
+      "afdEP v1": [
+       "958652a3"
+      ],
+      "Sparse dispatch + combine": [
+       "0c22f278"
+      ],
+      "+ stagger up to 48 tokens": [
+       "0c22f278"
+      ],
+      "+ stagger at every size": [
+       "0c22f278"
+      ]
+     },
+     "screen": "xn-thresh-f2",
+     "repeats": 2,
+     "control": "afdEP v1",
+     "paired_ratio": {
+      "afdEP v1": [
+       1.0,
+       1.0,
+       1.0,
+       1.0,
+       1.0,
+       1.0,
+       1.0
+      ],
+      "Sparse dispatch + combine": [
+       0.64007,
+       0.69104,
+       0.72616,
+       0.77596,
+       0.82545,
+       0.86254,
+       0.95722
+      ],
+      "+ stagger up to 48 tokens": [
+       0.32028,
+       0.33128,
+       0.3763,
+       0.4934,
+       0.62904,
+       0.86339,
+       0.95692
+      ],
+      "+ stagger at every size": [
+       0.31963,
+       0.33179,
+       0.37712,
+       0.4933,
+       0.62819,
+       0.73445,
+       0.93034
+      ]
+     }
+    }
+   },
+   "masked_unpaired": {
+    "tokens": [
+     1,
+     8,
+     16,
+     32,
+     64,
+     128
+    ],
+    "series": {
+     "Masked DeepEP": [
+      339.4,
+      354.3,
+      352.2,
+      361.8,
+      399.7,
+      494.5
+     ]
+    },
+    "digests": {
+     "Masked DeepEP": [
+      "958652a3"
+     ]
+    },
+    "screen": "xn-pure-f2",
+    "repeats": 2
+   }
+  },
+  "sparse_scaling": {
+   "Two FFN domains, 4F:20A (12 × 2 H200)": {
+    "tokens": [
+     1,
+     8,
+     16,
+     32,
+     64,
+     128,
+     256
+    ],
+    "series": {
+     "afdEP v1": [
+      207.9,
+      221.0,
+      224.4,
+      240.0,
+      288.7,
+      403.5,
+      615.1
+     ],
+     "Cross-node: all three sparse switches": [
+      68.5,
+      79.0,
+      90.9,
+      127.2,
+      209.0,
+      368.8,
+      604.6
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Cross-node: all three sparse switches": [
+      "200944ce"
+     ]
+    },
+    "screen": "xn-final-f4",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Cross-node: all three sparse switches": [
+      0.32939,
+      0.35749,
+      0.40536,
+      0.52985,
+      0.72398,
+      0.91414,
+      0.98299
+     ]
+    }
+   },
+   "Three Attention domains, 2F:6A (4 × 2 H200)": {
+    "tokens": [
+     1,
+     8,
+     16,
+     32,
+     64,
+     128,
+     256
+    ],
+    "series": {
+     "afdEP v1": [
+      99.7,
+      115.7,
+      118.8,
+      121.2,
+      132.1,
+      166.8,
+      244.4
+     ],
+     "Cross-node: all three sparse switches": [
+      65.9,
+      74.4,
+      77.0,
+      85.5,
+      103.2,
+      156.8,
+      235.6
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Cross-node: all three sparse switches": [
+      "200944ce"
+     ]
+    },
+    "screen": "xn-final-s3",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Cross-node: all three sparse switches": [
+      0.66115,
+      0.64325,
+      0.64777,
+      0.70517,
+      0.78132,
+      0.94035,
+      0.96387
+     ]
+    }
+   },
+   "5:1, 6 single-role domains (6 × 4 H200)": {
+    "tokens": [
+     1,
+     8,
+     32,
+     128,
+     512
+    ],
+    "series": {
+     "afdEP v1": [
+      137.8,
+      155.3,
+      165.0,
+      235.1,
+      604.8
+     ],
+     "Cross-node: all three sparse switches": [
+      70.5,
+      76.8,
+      97.7,
+      229.4,
+      604.8
+     ],
+     "Masked DeepEP": [
+      185.4,
+      193.6,
+      210.7,
+      277.9,
+      636.0
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Cross-node: all three sparse switches": [
+      "2d22e5e9"
+     ],
+     "Masked DeepEP": [
+      "958652a3"
+     ]
+    },
+    "screen": "xn-k4-dom-f4",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Cross-node: all three sparse switches": [
+      0.51178,
+      0.4948,
+      0.59203,
+      0.97566,
+      0.99999
+     ],
+     "Masked DeepEP": [
+      1.34549,
+      1.24704,
+      1.27702,
+      1.18176,
+      1.05159
+     ]
+    }
+   }
+  },
+  "done_witness_cost": {
+   "tokens": [
+    1,
+    8,
+    32,
+    128,
+    512
+   ],
+   "series": {
+    "afdEP v1": [
+     138.0,
+     155.5,
+     164.6,
+     235.2,
+     604.3
+    ],
+    "Sparse, earlier witness on channel 0 only (unsafe)": [
+     70.8,
+     77.3,
+     97.6,
+     229.5,
+     605.0
+    ],
+    "Sparse, done witness after every forward warp": [
+     70.7,
+     82.3,
+     97.7,
+     226.8,
+     603.8
+    ]
+   },
+   "digests": {
+    "afdEP v1": [
+     "958652a3"
+    ],
+    "Sparse, earlier witness on channel 0 only (unsafe)": [
+     "2d22e5e9"
+    ],
+    "Sparse, done witness after every forward warp": [
+     "7b8ed8b5"
+    ]
+   },
+   "screen": "xn-k4-done-cost",
+   "repeats": 2,
+   "control": "afdEP v1",
+   "paired_ratio": {
+    "afdEP v1": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "Sparse, earlier witness on channel 0 only (unsafe)": [
+     0.51268,
+     0.49692,
+     0.59313,
+     0.97583,
+     1.00107
+    ],
+    "Sparse, done witness after every forward warp": [
+     0.51214,
+     0.52947,
+     0.59333,
+     0.96417,
+     0.99919
+    ]
+   }
+  },
+  "mixed_role": {
+   "11:1, 2F:22A, 128 experts (6 × 4 H200)": {
+    "tokens": [
+     1,
+     8,
+     32,
+     128,
+     512
+    ],
+    "series": {
+     "afdEP v1": [
+      212.1,
+      235.4,
+      265.0,
+      333.5,
+      763.8
+     ],
+     "Cross-node: mixed-role directional": [
+      163.0,
+      189.0,
+      207.5,
+      284.1,
+      701.6
+     ],
+     "Masked DeepEP": [
+      211.3,
+      235.7,
+      264.6,
+      332.4,
+      760.4
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Cross-node: mixed-role directional": [
+      "81b71eb0"
+     ],
+     "Masked DeepEP": [
+      "958652a3"
+     ]
+    },
+    "screen": "xn-k4-mixed-f2",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Cross-node: mixed-role directional": [
+      0.76834,
+      0.80291,
+      0.783,
+      0.85186,
+      0.91862
+     ],
+     "Masked DeepEP": [
+      0.99594,
+      1.00139,
+      0.99844,
+      0.99687,
+      0.9956
+     ]
+    }
+   },
+   "23:1, 1F:23A, 64 experts (6 × 4 H200)": {
+    "tokens": [
+     1,
+     8,
+     32,
+     128,
+     512
+    ],
+    "series": {
+     "afdEP v1": [
+      280.3,
+      319.4,
+      353.4,
+      437.5,
+      1082.7
+     ],
+     "Cross-node: mixed-role directional": [
+      222.2,
+      267.6,
+      294.0,
+      383.4,
+      1015.5
+     ],
+     "Masked DeepEP": [
+      279.2,
+      319.6,
+      352.9,
+      436.1,
+      1080.3
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Cross-node: mixed-role directional": [
+      "81b71eb0"
+     ],
+     "Masked DeepEP": [
+      "958652a3"
+     ]
+    },
+    "screen": "xn-k4-mixed-f1-e64",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Cross-node: mixed-role directional": [
+      0.79281,
+      0.83797,
+      0.83185,
+      0.87645,
+      0.93794
+     ],
+     "Masked DeepEP": [
+      0.99613,
+      1.00057,
+      0.99847,
+      0.99701,
+      0.99778
+     ]
+    }
+   }
+  },
+  "in_node_invariance": {
+   "6A:2F": {
+    "tokens": [
+     1,
+     8,
+     32,
+     128,
+     512,
+     2048
+    ],
+    "series": {
+     "afdEP v1": [
+      24.3,
+      29.3,
+      35.5,
+      53.2,
+      152.0,
+      502.0
+     ],
+     "Tree 200944ce, switches off": [
+      24.2,
+      29.3,
+      35.3,
+      53.2,
+      151.9,
+      501.6
+     ],
+     "Tree 200944ce, switches on": [
+      24.6,
+      28.9,
+      35.5,
+      53.2,
+      152.2,
+      501.8
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Tree 200944ce, switches off": [
+      "200944ce"
+     ],
+     "Tree 200944ce, switches on": [
+      "200944ce"
+     ]
+    },
+    "screen": "xn-innode-6a2f",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Tree 200944ce, switches off": [
+      0.99366,
+      1.00171,
+      0.99401,
+      1.00007,
+      0.99974,
+      0.99924
+     ],
+     "Tree 200944ce, switches on": [
+      1.00973,
+      0.9878,
+      1.00202,
+      1.0012,
+      1.00167,
+      0.99956
+     ]
+    }
+   },
+   "7A:1F": {
+    "tokens": [
+     1,
+     8,
+     32,
+     128,
+     512,
+     2048
+    ],
+    "series": {
+     "afdEP v1": [
+      23.8,
+      27.2,
+      34.1,
+      70.3,
+      202.0,
+      736.8
+     ],
+     "Tree 200944ce, switches off": [
+      23.9,
+      27.0,
+      34.1,
+      69.9,
+      201.6,
+      736.5
+     ],
+     "Tree 200944ce, switches on": [
+      23.9,
+      27.1,
+      33.8,
+      69.5,
+      201.9,
+      736.7
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Tree 200944ce, switches off": [
+      "200944ce"
+     ],
+     "Tree 200944ce, switches on": [
+      "200944ce"
+     ]
+    },
+    "screen": "xn-innode-7a1f",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Tree 200944ce, switches off": [
+      1.00273,
+      0.99159,
+      0.99985,
+      0.99449,
+      0.99771,
+      0.99957
+     ],
+     "Tree 200944ce, switches on": [
+      1.00509,
+      0.99641,
+      0.98849,
+      0.98967,
+      0.9995,
+      0.99986
+     ]
+    }
+   },
+   "4A:4F": {
+    "tokens": [
+     1,
+     8,
+     32,
+     128,
+     512,
+     2048
+    ],
+    "series": {
+     "afdEP v1": [
+      24.3,
+      26.6,
+      27.8,
+      39.6,
+      96.0,
+      296.3
+     ],
+     "Tree 200944ce, switches off": [
+      24.3,
+      26.5,
+      27.8,
+      39.9,
+      96.0,
+      296.5
+     ],
+     "Tree 200944ce, switches on": [
+      24.2,
+      26.5,
+      27.8,
+      39.9,
+      96.1,
+      296.9
+     ]
+    },
+    "digests": {
+     "afdEP v1": [
+      "958652a3"
+     ],
+     "Tree 200944ce, switches off": [
+      "200944ce"
+     ],
+     "Tree 200944ce, switches on": [
+      "200944ce"
+     ]
+    },
+    "screen": "xn-innode-4a4f",
+    "repeats": 2,
+    "control": "afdEP v1",
+    "paired_ratio": {
+     "afdEP v1": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "Tree 200944ce, switches off": [
+      1.00046,
+      0.99778,
+      1.00268,
+      1.00824,
+      1.00008,
+      1.00071
+     ],
+     "Tree 200944ce, switches on": [
+      0.99426,
+      0.99892,
+      1.00337,
+      1.00892,
+      1.00157,
+      1.0018
+     ]
+    }
+   }
+  }
  }
 }
