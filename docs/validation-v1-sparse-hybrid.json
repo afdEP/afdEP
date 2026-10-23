@@ -1,23 +1,24 @@
 {
  "date": "2026-10-22",
  "change": "opt-in sparse directional hybrid across NVLink domains: AFDEP_HYBRID_STAGGER, AFDEP_HYBRID_SPARSE_DISPATCH, AFDEP_HYBRID_SPARSE_COMBINE (docs/v1.md section 17); off by default",
- "decision": "opt-in until reviewed; recommended setting: all three switches. Communication-only evidence, no serving claim. Open: whether the same idea would speed up Masked (union hybrid) as well (unmeasured). The DONE witness (7b8ed8b5) costs +6.5% (5 us) at 8 tokens on kermit 4F:20A and is within 1.2% elsewhere.",
+ "decision": "opt-in until reviewed; recommended setting: all three switches. Communication-only evidence, no serving claim. Open: whether the same idea would speed up Masked (union hybrid) as well (unmeasured). The DONE witness (7b8ed8b5) costs +6.6% (paired) (5 us) at 8 tokens on kermit 4F:20A and is within 1.2% elsewhere.",
  "native_source_sha256": {
-  "control_v2_1": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",
+  "control_v1": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",
   "stagger_only": "e551ab70f1ec7398fa1667f82150b72a2578e8c1ba5cb6acb79472ac1f64a2b7",
   "sparse_dispatch": "c301de5ba7b2f0d9a161cf53fea238a787d497edfd6465c6333b6f6e75ba6251",
   "sparse_combine": "841bc731a9638e7a41f64fe150411acbef203aae51597967a3da55f1a5e516ee",
   "stagger_bound": "0c22f278c76b9b69adcf0f7541f12fda2fb7819907391031ac729b51613e9e39",
-  "final": "200944ce4bd63f6ebc6a96000fbb062cc0b769956ea4fe4285be48a34d141464",
+  "all_three_200944ce": "200944ce4bd63f6ebc6a96000fbb062cc0b769956ea4fe4285be48a34d141464",
   "fault_collect_waits_channel_0_only": "f92c479c",
-  "final_agreement_gated": "2d22e5e93f92a26fab05812b2ef26a706f6e25186d8e0564f74b42899c01b72d",
-  "done_witness": "7b8ed8b5"
+  "agreement_gated": "2d22e5e93f92a26fab05812b2ef26a706f6e25186d8e0564f74b42899c01b72d",
+  "done_witness": "7b8ed8b5",
+  "_note": "all_three_200944ce is the last tree screened at 12 domains; it predates the done witness (7b8ed8b5). Measured trees predate the rename to v1; the published branch's digests are in published_trees"
  },
- "setup": "12 pods x 2 H200 (CoreWeave piggy, InfiniBand, NCCL GIN): 2 FFN ranks in one NVLink domain, 22 Attention ranks in 11 domains (11:1, directional hybrid), FP8, hidden 2048, top-k 8 of 128 experts, capacity 2048, 24 transport SMs (C = 192 channels), CUDA graphs; benchmarks.comm via cscreen (2 fresh processes per arm, rotated order, max over Attention ranks, each Attention rank's round trip checked, per-arm digest checked)",
+ "setup": "12 pods x 2 H200 (piggy, InfiniBand, NCCL GIN): 2 FFN ranks in one NVLink domain, 22 Attention ranks in 11 domains (11:1, directional hybrid), FP8, hidden 2048, top-k 8 of 128 experts, capacity 2048, 24 transport SMs (C = 192 channels), CUDA graphs; benchmarks.comm with benchmarks.screen's pairing, one torchrun per pod (2 fresh processes per arm, rotated order, max over Attention ranks, each Attention rank's round trip checked, per-arm digest checked)",
  "screens": {
   "stagger": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "xn_off": {
@@ -33,7 +34,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 231.52160167694092,
       "paired_change_pct": [
        0.0,
@@ -63,7 +64,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 259.66912269592285,
       "paired_change_pct": [
        0.0,
@@ -93,7 +94,7 @@
     },
     {
      "tokens": 16,
-     "v21": {
+     "v1": {
       "median_us": 266.0289192199707,
       "paired_change_pct": [
        0.0,
@@ -123,7 +124,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 284.72524642944336,
       "paired_change_pct": [
        0.0,
@@ -153,7 +154,7 @@
     },
     {
      "tokens": 64,
-     "v21": {
+     "v1": {
       "median_us": 320.98283767700195,
       "paired_change_pct": [
        0.0,
@@ -183,7 +184,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 460.7655906677246,
       "paired_change_pct": [
        0.0,
@@ -213,7 +214,7 @@
     }
    ],
    "native_source_sha256": {
-    "v21": [
+    "v1": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "xn_off": [
@@ -226,7 +227,7 @@
   },
   "sparse_dispatch": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "stagger": {
@@ -252,7 +253,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 231.32952213287354,
       "paired_change_pct": [
        0.0,
@@ -291,7 +292,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 259.85899448394775,
       "paired_change_pct": [
        0.0,
@@ -330,7 +331,7 @@
     },
     {
      "tokens": 16,
-     "v21": {
+     "v1": {
       "median_us": 266.78460121154785,
       "paired_change_pct": [
        0.0,
@@ -369,7 +370,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 285.20999908447266,
       "paired_change_pct": [
        0.0,
@@ -408,7 +409,7 @@
     },
     {
      "tokens": 64,
-     "v21": {
+     "v1": {
       "median_us": 321.4114761352539,
       "paired_change_pct": [
        0.0,
@@ -447,7 +448,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 460.7441520690918,
       "paired_change_pct": [
        0.0,
@@ -486,7 +487,7 @@
     }
    ],
    "native_source_sha256": {
-    "v21": [
+    "v1": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "stagger": [
@@ -502,7 +503,7 @@
   },
   "sparse_combine": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "xc_off": {
@@ -533,7 +534,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 231.65307998657227,
       "paired_change_pct": [
        0.0,
@@ -581,7 +582,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 259.9840831756592,
       "paired_change_pct": [
        0.0,
@@ -629,7 +630,7 @@
     },
     {
      "tokens": 16,
-     "v21": {
+     "v1": {
       "median_us": 266.1874771118164,
       "paired_change_pct": [
        0.0,
@@ -677,7 +678,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 285.10364055633545,
       "paired_change_pct": [
        0.0,
@@ -725,7 +726,7 @@
     },
     {
      "tokens": 64,
-     "v21": {
+     "v1": {
       "median_us": 321.0510063171387,
       "paired_change_pct": [
        0.0,
@@ -773,7 +774,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 460.85920333862305,
       "paired_change_pct": [
        0.0,
@@ -821,7 +822,7 @@
     }
    ],
    "native_source_sha256": {
-    "v21": [
+    "v1": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "xc_off": [
@@ -840,7 +841,7 @@
   },
   "stagger_bound": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "dc": {
@@ -856,7 +857,8 @@
       "AFDEP_HYBRID_SPARSE_DISPATCH": "1",
       "AFDEP_HYBRID_SPARSE_COMBINE": "1",
       "AFDEP_HYBRID_STAGGER": "1"
-     }
+     },
+     "_note": "tree 0c22f278 defaulted AFDEP_HYBRID_STAGGER_MAX_TOKENS to C/4 = 48; the published default is any size, so reproduce this arm with AFDEP_HYBRID_STAGGER_MAX_TOKENS=48"
     },
     "dc_stall": {
      "_label": "xt",
@@ -871,7 +873,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 231.60955905914307,
       "paired_change_pct": [
        0.0,
@@ -910,7 +912,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 260.1851177215576,
       "paired_change_pct": [
        0.0,
@@ -949,7 +951,7 @@
     },
     {
      "tokens": 16,
-     "v21": {
+     "v1": {
       "median_us": 266.34220123291016,
       "paired_change_pct": [
        0.0,
@@ -988,7 +990,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 285.0104808807373,
       "paired_change_pct": [
        0.0,
@@ -1027,7 +1029,7 @@
     },
     {
      "tokens": 48,
-     "v21": {
+     "v1": {
       "median_us": 300.0867176055908,
       "paired_change_pct": [
        0.0,
@@ -1066,7 +1068,7 @@
     },
     {
      "tokens": 64,
-     "v21": {
+     "v1": {
       "median_us": 321.4609146118164,
       "paired_change_pct": [
        0.0,
@@ -1105,7 +1107,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 460.68676948547363,
       "paired_change_pct": [
        0.0,
@@ -1144,7 +1146,7 @@
     }
    ],
    "native_source_sha256": {
-    "v21": [
+    "v1": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "dc": [
@@ -1158,9 +1160,9 @@
     ]
    }
   },
-  "final": {
+  "all_three_200944ce": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "sparse": {
@@ -1175,7 +1177,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 231.4649200439453,
       "paired_change_pct": [
        0.0,
@@ -1196,7 +1198,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 259.5296812057495,
       "paired_change_pct": [
        0.0,
@@ -1217,7 +1219,7 @@
     },
     {
      "tokens": 16,
-     "v21": {
+     "v1": {
       "median_us": 266.326003074646,
       "paired_change_pct": [
        0.0,
@@ -1238,7 +1240,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 284.9646806716919,
       "paired_change_pct": [
        0.0,
@@ -1259,7 +1261,7 @@
     },
     {
      "tokens": 64,
-     "v21": {
+     "v1": {
       "median_us": 320.8979320526123,
       "paired_change_pct": [
        0.0,
@@ -1280,7 +1282,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 460.9529209136963,
       "paired_change_pct": [
        0.0,
@@ -1301,7 +1303,7 @@
     },
     {
      "tokens": 256,
-     "v21": {
+     "v1": {
       "median_us": 712.3639297485352,
       "paired_change_pct": [
        0.0,
@@ -1322,7 +1324,7 @@
     },
     {
      "tokens": 512,
-     "v21": {
+     "v1": {
       "median_us": 1220.1216888427734,
       "paired_change_pct": [
        0.0,
@@ -1343,7 +1345,7 @@
     }
    ],
    "native_source_sha256": {
-    "v21": [
+    "v1": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "sparse": [
@@ -1497,7 +1499,7 @@
   },
   "two_ffn_domains": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "sparse": {
@@ -1512,7 +1514,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 207.86468029022217,
       "paired_change_pct": [
        0.0,
@@ -1533,7 +1535,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 220.96491813659668,
       "paired_change_pct": [
        0.0,
@@ -1554,7 +1556,7 @@
     },
     {
      "tokens": 16,
-     "v21": {
+     "v1": {
       "median_us": 224.3644380569458,
       "paired_change_pct": [
        0.0,
@@ -1575,7 +1577,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 239.97948169708252,
       "paired_change_pct": [
        0.0,
@@ -1596,7 +1598,7 @@
     },
     {
      "tokens": 64,
-     "v21": {
+     "v1": {
       "median_us": 288.72931957244873,
       "paired_change_pct": [
        0.0,
@@ -1617,7 +1619,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 403.46635818481445,
       "paired_change_pct": [
        0.0,
@@ -1638,7 +1640,7 @@
     },
     {
      "tokens": 256,
-     "v21": {
+     "v1": {
       "median_us": 615.0772094726562,
       "paired_change_pct": [
        0.0,
@@ -1689,7 +1691,7 @@
   },
   "three_attention_domains": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "sparse": {
@@ -1704,7 +1706,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 99.68000173568726,
       "paired_change_pct": [
        0.0,
@@ -1725,7 +1727,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 115.73772192001343,
       "paired_change_pct": [
        0.0,
@@ -1746,7 +1748,7 @@
     },
     {
      "tokens": 16,
-     "v21": {
+     "v1": {
       "median_us": 118.83692264556885,
       "paired_change_pct": [
        0.0,
@@ -1767,7 +1769,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 121.21760129928589,
       "paired_change_pct": [
        0.0,
@@ -1788,7 +1790,7 @@
     },
     {
      "tokens": 64,
-     "v21": {
+     "v1": {
       "median_us": 132.1267604827881,
       "paired_change_pct": [
        0.0,
@@ -1809,7 +1811,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 166.7775583267212,
       "paired_change_pct": [
        0.0,
@@ -1830,7 +1832,7 @@
     },
     {
      "tokens": 256,
-     "v21": {
+     "v1": {
       "median_us": 244.3905210494995,
       "paired_change_pct": [
        0.0,
@@ -1882,7 +1884,7 @@
   },
   "innode_6a2f": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "off": {
@@ -1904,7 +1906,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 24.32472050189972,
       "paired_change_pct": [
        0.0,
@@ -1943,7 +1945,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 29.294719696044922,
       "paired_change_pct": [
        0.0,
@@ -1982,7 +1984,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 35.4693204164505,
       "paired_change_pct": [
        0.0,
@@ -2021,7 +2023,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 53.16823959350586,
       "paired_change_pct": [
        0.0,
@@ -2060,7 +2062,7 @@
     },
     {
      "tokens": 512,
-     "v21": {
+     "v1": {
       "median_us": 151.96383953094482,
       "paired_change_pct": [
        0.0,
@@ -2099,7 +2101,7 @@
     },
     {
      "tokens": 2048,
-     "v21": {
+     "v1": {
       "median_us": 502.0069980621338,
       "paired_change_pct": [
        0.0,
@@ -2166,7 +2168,7 @@
   },
   "innode_7a1f": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "off": {
@@ -2188,7 +2190,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 23.81052017211914,
       "paired_change_pct": [
        0.0,
@@ -2227,7 +2229,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 27.214239835739136,
       "paired_change_pct": [
        0.0,
@@ -2266,7 +2268,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 34.14640009403229,
       "paired_change_pct": [
        0.0,
@@ -2305,7 +2307,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 70.26659965515137,
       "paired_change_pct": [
        0.0,
@@ -2344,7 +2346,7 @@
     },
     {
      "tokens": 512,
-     "v21": {
+     "v1": {
       "median_us": 202.04676151275635,
       "paired_change_pct": [
        0.0,
@@ -2383,7 +2385,7 @@
     },
     {
      "tokens": 2048,
-     "v21": {
+     "v1": {
       "median_us": 736.8312072753906,
       "paired_change_pct": [
        0.0,
@@ -2450,7 +2452,7 @@
   },
   "innode_4a4f": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "off": {
@@ -2472,7 +2474,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 24.31764006614685,
       "paired_change_pct": [
        0.0,
@@ -2511,7 +2513,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 26.569600105285645,
       "paired_change_pct": [
        0.0,
@@ -2550,7 +2552,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 27.755680084228516,
       "paired_change_pct": [
        0.0,
@@ -2589,7 +2591,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 39.575480222702026,
       "paired_change_pct": [
        0.0,
@@ -2628,7 +2630,7 @@
     },
     {
      "tokens": 512,
-     "v21": {
+     "v1": {
       "median_us": 95.96468210220337,
       "paired_change_pct": [
        0.0,
@@ -2667,7 +2669,7 @@
     },
     {
      "tokens": 2048,
-     "v21": {
+     "v1": {
       "median_us": 296.3229179382324,
       "paired_change_pct": [
        0.0,
@@ -2734,7 +2736,7 @@
   },
   "kermit_single_role_5to1": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
     "sparse": {
@@ -2753,7 +2755,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 137.8082799911499,
       "paired_change_pct": [
        0.0,
@@ -2783,7 +2785,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 155.28647899627686,
       "paired_change_pct": [
        0.0,
@@ -2813,7 +2815,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 164.96391773223877,
       "paired_change_pct": [
        0.0,
@@ -2843,7 +2845,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 235.1207971572876,
       "paired_change_pct": [
        0.0,
@@ -2873,7 +2875,7 @@
     },
     {
      "tokens": 512,
-     "v21": {
+     "v1": {
       "median_us": 604.799108505249,
       "paired_change_pct": [
        0.0,
@@ -3071,18 +3073,19 @@
   },
   "done_witness_cost": {
    "arms": {
-    "v21": {
+    "v1": {
      "_label": "cf"
     },
-    "pushed": {
+    "channel0_only_2d22e5e9": {
      "_label": "xd",
      "_env": {
       "AFDEP_HYBRID_STAGGER": "1",
       "AFDEP_HYBRID_SPARSE_DISPATCH": "1",
       "AFDEP_HYBRID_SPARSE_COMBINE": "1"
-     }
+     },
+     "_note": "the earlier witness after channel 0's own warp only: it has the DONE gap of docs/v1.md section 17 and is not safe"
     },
-    "fixed": {
+    "done_witness_7b8ed8b5": {
      "_label": "xg",
      "_env": {
       "AFDEP_HYBRID_STAGGER": "1",
@@ -3094,26 +3097,26 @@
    "processes": [
     {
      "order": [
-      "v21",
-      "pushed",
-      "fixed"
+      "v1",
+      "channel0_only_2d22e5e9",
+      "done_witness_7b8ed8b5"
      ],
      "median_us": {
-      "v21": {
+      "v1": {
        "1": 137.81936168670654,
        "8": 155.59887886047363,
        "32": 164.58264350891113,
        "128": 235.0158405303955,
        "512": 604.206714630127
       },
-      "pushed": {
+      "channel0_only_2d22e5e9": {
        "1": 70.98775863647461,
        "8": 77.19504117965698,
        "32": 97.82240390777588,
        "128": 229.29896354675293,
        "512": 604.997673034668
       },
-      "fixed": {
+      "done_witness_7b8ed8b5": {
        "1": 70.47032117843628,
        "8": 82.65672206878662,
        "32": 97.4519157409668,
@@ -3124,26 +3127,26 @@
     },
     {
      "order": [
-      "pushed",
-      "fixed",
-      "v21"
+      "channel0_only_2d22e5e9",
+      "done_witness_7b8ed8b5",
+      "v1"
      ],
      "median_us": {
-      "pushed": {
+      "channel0_only_2d22e5e9": {
        "1": 70.54359912872314,
        "8": 77.31247901916504,
        "32": 97.43680000305176,
        "128": 229.78928565979004,
        "512": 604.94873046875
       },
-      "fixed": {
+      "done_witness_7b8ed8b5": {
        "1": 70.91032028198242,
        "8": 81.97304248809814,
        "32": 97.87360191345215,
        "128": 227.25296020507812,
        "512": 604.1015243530273
       },
-      "v21": {
+      "v1": {
        "1": 138.24039936065674,
        "8": 155.33055782318115,
        "32": 164.6174430847168,
@@ -3156,7 +3159,7 @@
    "table": [
     {
      "tokens": 1,
-     "v21": {
+     "v1": {
       "median_us": 138.02988052368164,
       "paired_change_pct": [
        0.0,
@@ -3165,7 +3168,7 @@
       "geomean_change_pct": 0.0,
       "repeats_faster": 0
      },
-     "pushed": {
+     "channel0_only_2d22e5e9": {
       "median_us": 70.76567888259888,
       "paired_change_pct": [
        -48.492172821228664,
@@ -3174,7 +3177,7 @@
       "geomean_change_pct": -48.731816293317046,
       "repeats_faster": 2
      },
-     "fixed": {
+     "done_witness_7b8ed8b5": {
       "median_us": 70.69032073020935,
       "paired_change_pct": [
        -48.86761894991889,
@@ -3186,7 +3189,7 @@
     },
     {
      "tokens": 8,
-     "v21": {
+     "v1": {
       "median_us": 155.4647183418274,
       "paired_change_pct": [
        0.0,
@@ -3195,7 +3198,7 @@
       "geomean_change_pct": 0.0,
       "repeats_faster": 0
      },
-     "pushed": {
+     "channel0_only_2d22e5e9": {
       "median_us": 77.25376009941101,
       "paired_change_pct": [
        -50.388433551068054,
@@ -3204,7 +3207,7 @@
       "geomean_change_pct": -50.30784645311562,
       "repeats_faster": 2
      },
-     "fixed": {
+     "done_witness_7b8ed8b5": {
       "median_us": 82.31488227844238,
       "paired_change_pct": [
        -46.87833056759659,
@@ -3216,7 +3219,7 @@
     },
     {
      "tokens": 32,
-     "v21": {
+     "v1": {
       "median_us": 164.60004329681396,
       "paired_change_pct": [
        0.0,
@@ -3225,7 +3228,7 @@
       "geomean_change_pct": 0.0,
       "repeats_faster": 0
      },
-     "pushed": {
+     "channel0_only_2d22e5e9": {
       "median_us": 97.62960195541382,
       "paired_change_pct": [
        -40.563353569855984,
@@ -3234,7 +3237,7 @@
       "geomean_change_pct": -40.686885513733316,
       "repeats_faster": 2
      },
-     "fixed": {
+     "done_witness_7b8ed8b5": {
       "median_us": 97.66275882720947,
       "paired_change_pct": [
        -40.78846124762215,
@@ -3246,7 +3249,7 @@
     },
     {
      "tokens": 128,
-     "v21": {
+     "v1": {
       "median_us": 235.22860050201416,
       "paired_change_pct": [
        0.0,
@@ -3255,7 +3258,7 @@
       "geomean_change_pct": 0.0,
       "repeats_faster": 0
      },
-     "pushed": {
+     "channel0_only_2d22e5e9": {
       "median_us": 229.54412460327148,
       "paired_change_pct": [
        -2.4325496403733604,
@@ -3264,7 +3267,7 @@
       "geomean_change_pct": -2.4165908878975073,
       "repeats_faster": 2
      },
-     "fixed": {
+     "done_witness_7b8ed8b5": {
       "median_us": 226.80155754089355,
       "paired_change_pct": [
        -3.6872772635790696,
@@ -3276,7 +3279,7 @@
     },
     {
      "tokens": 512,
-     "v21": {
+     "v1": {
       "median_us": 604.3265533447266,
       "paired_change_pct": [
        0.0,
@@ -3285,7 +3288,7 @@
       "geomean_change_pct": 0.0,
       "repeats_faster": 0
      },
-     "pushed": {
+     "channel0_only_2d22e5e9": {
       "median_us": 604.973201751709,
       "paired_change_pct": [
        0.13090857572233272,
@@ -3294,7 +3297,7 @@
       "geomean_change_pct": 0.10700502952711854,
       "repeats_faster": 0
      },
-     "fixed": {
+     "done_witness_7b8ed8b5": {
       "median_us": 603.8381195068359,
       "paired_change_pct": [
        -0.10459995795798482,
@@ -3309,7 +3312,7 @@
   }
  },
  "gpu_suite": {
-  "command": "torchrun on 12 nodes x 2 -m tests.gpu.deepep --payload fp8 --top-k 8 --hybrid on --ffn-ranks 2 (AFDEP_SCRATCH_MULTIDOMAIN=1); each run: 14 eager cases, 28 graph replays, 728 checked graph exchanges, bucket cycles; cases include mixed, changed routes, skew, inactive source, all skipped, all empty, partial prefix, delayed replies and dispatches",
+  "command": "torchrun on 12 nodes x 2 -m tests.gpu.deepep --payload fp8 --top-k 8 --hybrid on --ffn-ranks 2 (one torchrun per pod; capacity, SMs and hidden size per run in the entries below); each run: 14 eager cases, 28 graph replays, 728 checked graph exchanges, bucket cycles; cases include mixed, changed routes, skew, inactive source, all skipped, all empty, partial prefix, delayed replies and dispatches",
   "passed_0c22f278": [
    "all three, capacity 8 (every source staggered)",
    "all three, capacity 64 (bound 16: staggered and unstaggered sources mix)",
@@ -3330,10 +3333,17 @@
   "rejected_2d22e5e9": "kermit, all three switches with FFN-only AFDEP_SHARED_HYBRID_FORWARD=1: agreement ValueError on all 6 pods"
  },
  "unit": "tests/unit 41/41 on 200944ce and 2d22e5e9; Ruff check and format clean",
- "scope": "Directional hybrid only (one role per NVLink domain, afd_ffn_scaleout_ranks > 0). Not screened: union hybrid, BF16, other hidden sizes. Shared kernels and every default unchanged.",
+ "scope": "Directional hybrid only (one role per NVLink domain, afd_ffn_scaleout_ranks > 0). Not screened: union hybrid, BF16, other hidden sizes. Shared kernels and every default unchanged. FP8 payload only: BF16 with the switches has not been run.",
  "done_witness": {
   "finding": "The channel-0 witness of the sparse combine followed channel 0's forward warp only; a source that waits for its own channels and channel 0 could write its next dispatch into a forwarder's dispatch scale-out inbox while other forward warps still read the overlapping combine scale-up inbox (found by an independent design review). Fixed: every forward warp releases a rank-local DONE count and channel 0 waits for all C before the witness.",
   "fault_injection": "Three runs on kermit 4F:20A (FP8, hidden 2048, capacity 2048, 24 SMs, all three switches; GPU suite with a one-small-source case): forward warps of channels 5 mod 8, then of every channel but 0, delayed ~200 us before their reads; mixed then spread routing. The tree without DONE (2d22e5e9 + fault) passed all three, so the gap is argued from the layout and the code, not reproduced. The tree with DONE passed with and without the fault.",
   "gpu_suite_7b8ed8b5": "kermit 4F:20A, all three switches, capacity 2048, hidden 2048, FP8, 24 SMs, with the one-small-source case (spread routing): passes on 24 ranks"
+ },
+ "published_trees": {
+  "sparse_hybrid_commit": "adfbaf65471864f7bf6d071f76d175b83d6877c442daa6cc07de1341c10bdb37 (measured as 200944ce)",
+  "agreement_check_commit": "b3821109db47e6abbf8008c90d519ff047066e52ab00e10e6c985d541b50710f (measured as 2d22e5e9)",
+  "done_witness_commit": "ede73b32085db141c2193ffa57e629ea79fb398db9375abb0338f18ac83d015b (measured as 7b8ed8b5)",
+  "branch_head": "34fa5eac5093fd9a398edade5f44f88ad32c834ee17314e3770817e4ab4601c0 (adds section 18, measured as 81b71eb0, and comment fixes)",
+  "_note": "each published tree differs from the measured one only in comments and text (the rename to v1 and the release's comment fixes)"
  }
 }
