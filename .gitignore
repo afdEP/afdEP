@@ -12,3 +12,4 @@ results/
 *.nsys-rep
 *.sqlite
 .DS_Store
+uv.lock
