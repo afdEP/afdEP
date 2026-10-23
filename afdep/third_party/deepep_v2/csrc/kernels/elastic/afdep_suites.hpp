@@ -228,6 +228,7 @@ static bool afdep_hybrid_fp8_combine() {
 // bucket is at least b tokens; smaller buckets keep BF16 replies, where the round trip is bound by
 // latency and the Attention dequantize epilogue's fixed cost outweighs the bytes saved. Every rank
 // passes the same bucket per exchange, so both roles pick the same row format. Latched with the switch.
+// The default 0 (and any negative value, clamped to 0) means every bucket; it does not turn FP8 off.
 static int afdep_hybrid_fp8_combine_min_bucket() {
     return std::max(deep_ep::get_env<int>("AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET", 0), 0);
 }

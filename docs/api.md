@@ -97,7 +97,8 @@ in place; an infinity zeroes its group's finite elements unless they are near th
 limit) before the source sums the domains in FP32. `source_collect` still returns BF16.
 `AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET=b`, latched and checked with it and reported as
 `Buffer.fp8_combine_min_bucket`, keeps BF16 replies for exchanges whose bucket is below b
-tokens (every rank passes the same bucket, so both roles agree on the row format).
+tokens (every rank passes the same bucket, so both roles agree on the row format). The
+default 0 means every bucket, negative values clamp to 0, and it reports 0 when FP8 is off.
 
 Native compilation is lazy and process-locked. `AFDEP_CACHE_DIR` controls the
 extension cache; `EP_JIT_CACHE_DIR` controls DeepEP kernel JIT cache. Both must be

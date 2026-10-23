@@ -4,7 +4,7 @@
   "modified_files": {
     "csrc/elastic/buffer.hpp": {
       "upstream_sha256": "b2080118bb3e192018d42625eefba5c517690af5a0b8f6858c0842168f79da13",
-      "sha256": "ef170a77b0cb4604dea44285c1f492ef38aa98d28fe41017813134ba3e510b61"
+      "sha256": "de6338550e2961f13cfe718471089b2e347f887a53d3e43df7a637de14f5b18e"
     },
     "csrc/kernels/elastic/combine.hpp": {
       "upstream_sha256": "edb25ab70b64517786302a952c223f8389b3d7fce0f2d82a9706ddd83598b5e6",
@@ -44,7 +44,7 @@
       "sha256": "4231a5321913bc1c8af4dfb21e3a3c7cef41bce99c7fcac43359e63cd2b73267"
     },
     "csrc/kernels/elastic/afdep_suites.hpp": {
-      "sha256": "5a1986d13bb6339d60f813ae500546dd40384b6cad80b6c581c57f4cbb76df30"
+      "sha256": "832893649bbcd68a65cae578a53bda1184e02360e6a59c9d54a0a546d2a54bb4"
     },
     "deep_ep/include/deep_ep/impls/afdep_count_first.cuh": {
       "sha256": "a7779f4bf9c270f2b6af935ec012b104a1968d4e71c989dad1c054a60a317694"

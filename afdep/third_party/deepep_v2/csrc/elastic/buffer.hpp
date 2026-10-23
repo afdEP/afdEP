@@ -1495,12 +1495,13 @@ public:
             afd_scaleout_send_base = math::advance_ptr(buffer, num_buffer_bytes - num_send_bytes);
         }
         // afdEP FP8 combine (latched): still the directional hybrid (AFDEP_UNION_HYBRID was not flipped
-        // since construction), and the expanded, unweighted layout whose reply rows carry no metadata.
-        // Buckets below the latched minimum keep BF16 replies; every rank passes the same bucket.
-        const bool afd_fp8_replies = afd_fp8_combine and num_max_tokens_per_rank >= afd_fp8_min_bucket;
-        EP_HOST_ASSERT(not afd_fp8_replies or
+        // since construction), and the expanded, unweighted layout whose reply rows carry no metadata,
+        // asserted at every bucket. Buckets below the latched minimum keep BF16 replies; every rank
+        // passes the same bucket.
+        EP_HOST_ASSERT(not afd_fp8_combine or
                        (afd_ffn_scaleout_ranks > 0 and afd_mixed_ffn_ranks == 0 and use_expanded_layout and
                         allow_multiple_reduction and not topk_weights.has_value()));
+        const bool afd_fp8_replies = afd_fp8_combine and num_max_tokens_per_rank >= afd_fp8_min_bucket;
         // afdEP role suites (afdep_suites.hpp): in directional hybrid the Attention receive runs
         // the one-CTA collect kernel.
         auto afd_combine_shape = AfdLaunchShape::kShared;

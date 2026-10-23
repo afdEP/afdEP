@@ -283,8 +283,23 @@ def test_fp8_combine_switch_is_latched_and_agreement_checked():
     )
     assert "return {0, false, false, mixed, false, 0};" in buffer
     assert "return {0, false, false, 0, false, 0};" in buffer
-    # The minimum bucket is latched with the switch and reported next to it.
+    # The minimum bucket is latched with the switch (0 when it is off, so ranks that
+    # differ only in an unused minimum still agree), clamped at 0, reported next to it.
+    assert (
+        "afd_fp8_min_bucket = afd_fp8_combine ? "
+        "afdep_hybrid_fp8_combine_min_bucket() : 0;"
+    ) in buffer
     assert buffer.count("afdep_hybrid_fp8_combine_min_bucket()") == 1
+    assert buffer.index("afd_fp8_min_bucket = afd_fp8_combine") < buffer.index(
+        "// Timeout\n"
+    )
+    assert (
+        'std::max(deep_ep::get_env<int>("AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET", 0), 0)'
+    ) in suites
+    # The layout assert holds at every bucket, not only the FP8 ones.
+    assert buffer.index("EP_HOST_ASSERT(not afd_fp8_combine or") < buffer.index(
+        "const bool afd_fp8_replies"
+    )
     assert "afd_fp8_combine, afd_fp8_min_bucket};" in buffer
     # combine() passes the latched value, gated by this exchange's bucket, to both
     # launches; the kernels never re-read it.
