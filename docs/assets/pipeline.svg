@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1069" viewBox="0 0 1240 1069" role="img" aria-labelledby="title desc" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="title">One exchange in one NVLink domain: Masked DeepEP and afdEP v1</title>
+<desc id="desc">Two swimlane flowcharts, Attention GPUs and FFN GPUs, through initialization, dispatch, copy epilogue, expert GEMM, combine and reduce epilogue. Masked DeepEP registers a union window, runs an all-rank barrier at the entry and exit of dispatch and of combine, exchanges counts with every rank and runs every kernel on every rank. afdEP v1 lays the same window out by role, sends counts from Attention to FFN only, runs no all-rank barrier (each phase receiver waits for its senders per-CTA arrivals), starts the FFN copy epilogue at the counts, and runs each epilogue only on the role that needs it.</desc>
+<defs><marker id="arreb6834" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#eb6834"/></marker><marker id="arr2a78d6" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#2a78d6"/></marker></defs>
+<rect width="1240" height="1069" fill="#fcfcfb"/>
+<text x="20" y="40" font-size="24" font-weight="700" fill="#0b0b0b" text-anchor="start">One exchange in one NVLink domain, step by step</text>
+<text x="20" y="66" font-size="14" font-weight="400" fill="#52514e" text-anchor="start">2 Attention + 2 FFN GPUs on the same DeepEP V2 transport; the roles decide what each rank registers, who counts, who waits and which kernels run.</text>
+<rect x="20" y="86" width="590" height="933" rx="14" fill="#f6f2ee"/>
+<rect x="20" y="86" width="590" height="5" rx="2.5" fill="#eb6834"/>
+<text x="36" y="118" font-size="18" font-weight="700" fill="#0b0b0b" text-anchor="start">Masked DeepEP (DeepEP V2, role_aware=False)</text>
+<text x="164.0" y="142" font-size="13" font-weight="600" fill="#52514e" text-anchor="middle">Attention GPUs (A0, A1)</text>
+<text x="466.0" y="142" font-size="13" font-weight="600" fill="#52514e" text-anchor="middle">FFN GPUs (F0, F1)</text>
+<rect x="640" y="86" width="590" height="933" rx="14" fill="#eef4fc"/>
+<rect x="640" y="86" width="590" height="5" rx="2.5" fill="#2a78d6"/>
+<text x="656" y="118" font-size="18" font-weight="700" fill="#0b0b0b" text-anchor="start">afdEP v1 (role path)</text>
+<text x="784.0" y="142" font-size="13" font-weight="600" fill="#52514e" text-anchor="middle">Attention GPUs (A0, A1)</text>
+<text x="1086.0" y="142" font-size="13" font-weight="600" fill="#52514e" text-anchor="middle">FFN GPUs (F0, F1)</text>
+<text x="36" y="170" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Initialization, once: registered NVLink window</text>
+<text x="656" y="170" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Initialization, once: registered NVLink window</text>
+<rect x="36" y="180" width="256" height="84" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="48" y="209" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">dispatch inbox</text>
+<rect x="148.0" y="194" width="30.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="163.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A0</text>
+<rect x="182.0" y="194" width="30.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="197.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A1</text>
+<rect x="216.0" y="194" width="30.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="231.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F0</text>
+<rect x="250.0" y="194" width="30.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="265.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F1</text>
+<text x="48" y="239" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">combine inbox</text>
+<rect x="148.0" y="224" width="30.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="163.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A0</text>
+<rect x="182.0" y="224" width="30.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="197.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A1</text>
+<rect x="216.0" y="224" width="30.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="231.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F0</text>
+<rect x="250.0" y="224" width="30.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="265.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F1</text>
+<rect x="338" y="180" width="256" height="84" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="350" y="209" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">dispatch inbox</text>
+<rect x="450.0" y="194" width="30.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="465.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A0</text>
+<rect x="484.0" y="194" width="30.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="499.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A1</text>
+<rect x="518.0" y="194" width="30.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="533.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F0</text>
+<rect x="552.0" y="194" width="30.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="567.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F1</text>
+<text x="350" y="239" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">combine inbox</text>
+<rect x="450.0" y="224" width="30.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="465.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A0</text>
+<rect x="484.0" y="224" width="30.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="499.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A1</text>
+<rect x="518.0" y="224" width="30.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="533.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F0</text>
+<rect x="552.0" y="224" width="30.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="567.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F1</text>
+<text x="38" y="285" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Union window: a region per rank in every inbox; count slots for every</text>
+<text x="38" y="302" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">rank and logical expert, Attention&#x27;s dummy expert slots included</text>
+<rect x="656" y="180" width="256" height="84" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="668" y="209" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">dispatch inbox</text>
+<rect x="768" y="194" width="132" height="22" rx="5" fill="none" stroke="#e1e0d9" stroke-dasharray="4 3"/>
+<text x="834.0" y="209" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">not written</text>
+<text x="668" y="239" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">combine inbox</text>
+<rect x="768.0" y="224" width="64.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="800.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F0</text>
+<rect x="836.0" y="224" width="64.0" height="22" rx="5" fill="#e1e0d9" stroke="#c3c2b7"/>
+<text x="868.0" y="239" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">F1</text>
+<rect x="958" y="180" width="256" height="84" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="970" y="209" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">dispatch inbox</text>
+<rect x="1070.0" y="194" width="64.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="1102.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A0</text>
+<rect x="1138.0" y="194" width="64.0" height="22" rx="5" fill="#f0efec" stroke="#c3c2b7"/>
+<text x="1170.0" y="209" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">A1</text>
+<text x="970" y="239" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">combine inbox</text>
+<rect x="1070" y="224" width="132" height="22" rx="5" fill="none" stroke="#e1e0d9" stroke-dasharray="4 3"/>
+<text x="1136.0" y="239" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">not written</text>
+<text x="658" y="285" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Same size on every rank (the window is symmetric), laid out by role:</text>
+<text x="658" y="302" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">50% of the union window at 2A2F; regions shown are the ones written</text>
+<text x="36" y="332" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Dispatch</text>
+<text x="656" y="332" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Dispatch</text>
+<rect x="36" y="351" width="558" height="8" rx="4" fill="#3a3936"/>
+<rect x="209.7" y="344" width="210.6" height="22" rx="11" fill="#3a3936"/>
+<text x="315.0" y="359" font-size="12" font-weight="600" fill="#fcfcfb" text-anchor="middle">all-rank barrier + grid sync</text>
+<rect x="36" y="376" width="256" height="92" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="48" y="401" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">count every rank and expert</text>
+<text x="48" y="418" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">send counts to every rank</text>
+<text x="48" y="435" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">wait for every rank&#x27;s counts</text>
+<text x="48" y="452" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">write tokens into FFN inboxes</text>
+<rect x="338" y="376" width="256" height="92" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="350" y="401" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">count its zero tokens</text>
+<text x="350" y="418" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">send zero counts to every rank</text>
+<text x="350" y="435" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">wait for every rank&#x27;s counts</text>
+<text x="350" y="452" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">write no tokens</text>
+<rect x="36" y="485" width="558" height="8" rx="4" fill="#3a3936"/>
+<rect x="252.9" y="478" width="124.2" height="22" rx="11" fill="#3a3936"/>
+<text x="315.0" y="493" font-size="12" font-weight="600" fill="#fcfcfb" text-anchor="middle">all-rank barrier</text>
+<path d="M656 355 L1214 355" stroke="#e1e0d9" stroke-width="2" stroke-dasharray="6 5"/>
+<rect x="875.2" y="344" width="119.6" height="22" rx="11" fill="#fcfcfb" stroke="#e1e0d9"/>
+<text x="935.0" y="359" font-size="12" font-weight="500" fill="#898781" text-anchor="middle">no entry barrier</text>
+<rect x="656" y="376" width="256" height="92" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="668" y="401" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">count FFN experts only</text>
+<text x="668" y="418" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">send counts to FFN ranks only</text>
+<text x="668" y="435" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">write tokens into FFN inboxes</text>
+<text x="668" y="452" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">release one arrival per CTA</text>
+<rect x="958" y="376" width="256" height="92" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="970" y="401" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">skip its own count reduction</text>
+<text x="970" y="418" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">wait for the sources&#x27; counts</text>
+<text x="970" y="435" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">start the copy epilogue</text>
+<text x="970" y="452" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">wait for the sources&#x27; arrivals</text>
+<path d="M918 422.0 L950 422.0" stroke="#2a78d6" stroke-width="2.5" fill="none" marker-end="url(#arr2a78d6)"/>
+<path d="M656 489 L1214 489" stroke="#e1e0d9" stroke-width="2" stroke-dasharray="6 5"/>
+<rect x="796.0" y="478" width="278.0" height="22" rx="11" fill="#fcfcfb" stroke="#e1e0d9"/>
+<text x="935.0" y="493" font-size="12" font-weight="500" fill="#898781" text-anchor="middle">no exit barrier: only the FFN ranks wait</text>
+<text x="36" y="530" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Copy epilogue</text>
+<text x="656" y="530" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Copy epilogue</text>
+<rect x="36" y="540" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="48" y="565" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">expand received rows:</text>
+<text x="48" y="582" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">none arrive</text>
+<rect x="338" y="540" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="350" y="565" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">expand received rows,</text>
+<text x="350" y="582" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">launched near dispatch end</text>
+<rect x="656" y="540" width="256" height="58" rx="10" fill="none" stroke="#e1e0d9" stroke-dasharray="5 4"/>
+<text x="784.0" y="574.0" font-size="12.5" font-weight="400" fill="#898781" text-anchor="middle">no kernel</text>
+<rect x="958" y="540" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="970" y="565" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">expand rows, launched at the</text>
+<text x="970" y="582" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">counts and overlapping the payload</text>
+<text x="36" y="626" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Expert GEMM (e.g. DeepGEMM), run by the caller</text>
+<text x="656" y="626" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Expert GEMM (e.g. DeepGEMM), run by the caller</text>
+<rect x="36" y="636" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="48" y="661" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">dummy expert slots</text>
+<text x="48" y="678" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">receive no rows</text>
+<rect x="338" y="636" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="350" y="661" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">grouped GEMM on the</text>
+<text x="350" y="678" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">received rows</text>
+<rect x="656" y="636" width="256" height="58" rx="10" fill="none" stroke="#e1e0d9" stroke-dasharray="5 4"/>
+<text x="784.0" y="670.0" font-size="12.5" font-weight="400" fill="#898781" text-anchor="middle">no kernel</text>
+<rect x="958" y="636" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="970" y="661" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">grouped GEMM on the</text>
+<text x="970" y="678" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">received rows</text>
+<text x="36" y="722" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Combine</text>
+<text x="656" y="722" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Combine</text>
+<rect x="36" y="741" width="558" height="8" rx="4" fill="#3a3936"/>
+<rect x="209.7" y="734" width="210.6" height="22" rx="11" fill="#3a3936"/>
+<text x="315.0" y="749" font-size="12" font-weight="600" fill="#fcfcfb" text-anchor="middle">all-rank barrier + grid sync</text>
+<rect x="36" y="766" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="48" y="791" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">send zero rows</text>
+<rect x="338" y="766" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="350" y="791" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">reduce local top-k rows</text>
+<text x="350" y="808" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">write replies into source inboxes</text>
+<rect x="36" y="841" width="558" height="8" rx="4" fill="#3a3936"/>
+<rect x="252.9" y="834" width="124.2" height="22" rx="11" fill="#3a3936"/>
+<text x="315.0" y="849" font-size="12" font-weight="600" fill="#fcfcfb" text-anchor="middle">all-rank barrier</text>
+<path d="M656 745 L1214 745" stroke="#e1e0d9" stroke-width="2" stroke-dasharray="6 5"/>
+<rect x="875.2" y="734" width="119.6" height="22" rx="11" fill="#fcfcfb" stroke="#e1e0d9"/>
+<text x="935.0" y="749" font-size="12" font-weight="500" fill="#898781" text-anchor="middle">no entry barrier</text>
+<rect x="656" y="766" width="256" height="75" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="668" y="791" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">wait for the FFN ranks&#x27;</text>
+<text x="668" y="808" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">arrivals</text>
+<rect x="958" y="766" width="256" height="75" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="970" y="791" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">reduce local top-k rows</text>
+<text x="970" y="808" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">write replies into source inboxes</text>
+<text x="970" y="825" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">release one arrival per CTA</text>
+<path d="M952 803.5 L920 803.5" stroke="#2a78d6" stroke-width="2.5" fill="none" marker-end="url(#arr2a78d6)"/>
+<path d="M656 862 L1214 862" stroke="#e1e0d9" stroke-width="2" stroke-dasharray="6 5"/>
+<rect x="776.2" y="851" width="317.59999999999997" height="22" rx="11" fill="#fcfcfb" stroke="#e1e0d9"/>
+<text x="935.0" y="866" font-size="12" font-weight="500" fill="#898781" text-anchor="middle">no exit barrier: only the Attention ranks wait</text>
+<text x="36" y="903" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Reduce epilogue</text>
+<text x="656" y="903" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Reduce epilogue</text>
+<rect x="36" y="913" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="48" y="938" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">sum each token&#x27;s top-k</text>
+<text x="48" y="955" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">reply rows</text>
+<rect x="338" y="913" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="350" y="938" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">reduce zero tokens</text>
+<rect x="656" y="913" width="256" height="58" rx="10" fill="#ffffff" stroke="#c3c2b7"/>
+<text x="668" y="938" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">sum each token&#x27;s top-k rows;</text>
+<text x="668" y="955" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="start">one FFN rank: a zero-copy view</text>
+<rect x="958" y="913" width="256" height="58" rx="10" fill="none" stroke="#e1e0d9" stroke-dasharray="5 4"/>
+<text x="1086.0" y="947.0" font-size="12.5" font-weight="400" fill="#898781" text-anchor="middle">no kernel</text>
+<text x="36" y="1005" font-size="13.5" font-weight="600" fill="#0b0b0b" text-anchor="start">4 all-rank barriers per round trip; every rank runs every kernel</text>
+<text x="656" y="1005" font-size="13.5" font-weight="600" fill="#0b0b0b" text-anchor="start">no all-rank barriers: each phase&#x27;s receivers wait for their senders</text>
+<rect x="20" y="1038" width="34" height="8" rx="4" fill="#3a3936"/>
+<text x="62" y="1047" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">all-rank barrier</text>
+<path d="M180 1042 L214 1042" stroke="#2a78d6" stroke-width="2.5" marker-end="url(#arr2a78d6)"/>
+<text x="224" y="1047" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">data, counts and per-CTA arrivals; only the receiving role waits</text>
+<rect x="640" y="1034" width="34" height="16" rx="4" fill="none" stroke="#e1e0d9" stroke-dasharray="5 4"/>
+<text x="682" y="1047" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">no kernel launched on that role</text>
+</svg>

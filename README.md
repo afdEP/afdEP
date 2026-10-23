@@ -25,6 +25,14 @@ expert slots, and every rank sends, receives and waits in both phases. v1
 make unnecessary; a change that would speed up Masked DeepEP as well is out of scope.
 Every change keeps a control switch that restores the Masked behaviour.
 
+One exchange in one NVLink domain, with every barrier, the kernels each role runs and
+the inbox regions each rank registers and receives into:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/pipeline-dark.svg">
+  <img alt="Flowcharts of one exchange in one NVLink domain: Masked DeepEP and afdEP v1, stage by stage" src="docs/assets/pipeline.svg">
+</picture>
+
 In one NVLink domain:
 - no entry barriers [§1](docs/v1.md#1-entry-barriers); counts flow Attention → FFN only [§2](docs/v1.md#2-directional-count-exchange);
   only receivers wait at exit, per sending CTA [§3](docs/v1.md#3-directed-exit);
