@@ -3,7 +3,7 @@
  "change": "opt-in sparse directional hybrid across NVLink domains: AFDEP_HYBRID_STAGGER, AFDEP_HYBRID_SPARSE_DISPATCH, AFDEP_HYBRID_SPARSE_COMBINE (docs/design.md section 17); off by default",
  "decision": "opt-in until reviewed; recommended setting: all three switches. Communication-only evidence, no serving claim. Open: whether the same idea would speed up Masked (union hybrid) as well (unmeasured). The DONE witness (7b8ed8b5) costs +6.6% (paired) (5 us) at 8 tokens on kermit 4F:20A and is within 1.2% elsewhere.",
  "native_source_sha256": {
-  "control_v1": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",
+  "control_default": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",
   "stagger_only": "e551ab70f1ec7398fa1667f82150b72a2578e8c1ba5cb6acb79472ac1f64a2b7",
   "sparse_dispatch": "c301de5ba7b2f0d9a161cf53fea238a787d497edfd6465c6333b6f6e75ba6251",
   "sparse_combine": "841bc731a9638e7a41f64fe150411acbef203aae51597967a3da55f1a5e516ee",
@@ -12,13 +12,13 @@
   "fault_collect_waits_channel_0_only": "f92c479c",
   "agreement_gated": "2d22e5e93f92a26fab05812b2ef26a706f6e25186d8e0564f74b42899c01b72d",
   "done_witness": "7b8ed8b5",
-  "_note": "all_three_200944ce is the last tree screened at 12 domains; it predates the done witness (7b8ed8b5). Measured trees predate the rename to v1; the published branch's digests are in published_trees"
+  "_note": "all_three_200944ce is the last tree screened at 12 domains; it predates the done witness (7b8ed8b5). Measured trees predate the published commits' comment and text changes; the published branch's digests are in published_trees"
  },
  "setup": "12 pods x 2 H200 (piggy, InfiniBand, NCCL GIN): 2 FFN ranks in one NVLink domain, 22 Attention ranks in 11 domains (11:1, directional hybrid), FP8, hidden 2048, top-k 8 of 128 experts, capacity 2048, 24 transport SMs (C = 192 channels), CUDA graphs; benchmarks.comm with benchmarks.screen's pairing, one torchrun per pod (2 fresh processes per arm, rotated order, max over Attention ranks, each Attention rank's round trip checked, per-arm digest checked)",
  "screens": {
   "stagger": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "xn_off": {
@@ -34,7 +34,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 231.52160167694092,
       "paired_change_pct": [
        0.0,
@@ -64,7 +64,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 259.66912269592285,
       "paired_change_pct": [
        0.0,
@@ -94,7 +94,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "default": {
       "median_us": 266.0289192199707,
       "paired_change_pct": [
        0.0,
@@ -124,7 +124,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 284.72524642944336,
       "paired_change_pct": [
        0.0,
@@ -154,7 +154,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "default": {
       "median_us": 320.98283767700195,
       "paired_change_pct": [
        0.0,
@@ -184,7 +184,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 460.7655906677246,
       "paired_change_pct": [
        0.0,
@@ -214,7 +214,7 @@
     }
    ],
    "native_source_sha256": {
-    "v1": [
+    "default": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "xn_off": [
@@ -227,7 +227,7 @@
   },
   "sparse_dispatch": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "stagger": {
@@ -253,7 +253,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 231.32952213287354,
       "paired_change_pct": [
        0.0,
@@ -292,7 +292,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 259.85899448394775,
       "paired_change_pct": [
        0.0,
@@ -331,7 +331,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "default": {
       "median_us": 266.78460121154785,
       "paired_change_pct": [
        0.0,
@@ -370,7 +370,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 285.20999908447266,
       "paired_change_pct": [
        0.0,
@@ -409,7 +409,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "default": {
       "median_us": 321.4114761352539,
       "paired_change_pct": [
        0.0,
@@ -448,7 +448,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 460.7441520690918,
       "paired_change_pct": [
        0.0,
@@ -487,7 +487,7 @@
     }
    ],
    "native_source_sha256": {
-    "v1": [
+    "default": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "stagger": [
@@ -503,7 +503,7 @@
   },
   "sparse_combine": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "xc_off": {
@@ -534,7 +534,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 231.65307998657227,
       "paired_change_pct": [
        0.0,
@@ -582,7 +582,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 259.9840831756592,
       "paired_change_pct": [
        0.0,
@@ -630,7 +630,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "default": {
       "median_us": 266.1874771118164,
       "paired_change_pct": [
        0.0,
@@ -678,7 +678,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 285.10364055633545,
       "paired_change_pct": [
        0.0,
@@ -726,7 +726,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "default": {
       "median_us": 321.0510063171387,
       "paired_change_pct": [
        0.0,
@@ -774,7 +774,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 460.85920333862305,
       "paired_change_pct": [
        0.0,
@@ -822,7 +822,7 @@
     }
    ],
    "native_source_sha256": {
-    "v1": [
+    "default": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "xc_off": [
@@ -841,7 +841,7 @@
   },
   "stagger_bound": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "dc": {
@@ -873,7 +873,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 231.60955905914307,
       "paired_change_pct": [
        0.0,
@@ -912,7 +912,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 260.1851177215576,
       "paired_change_pct": [
        0.0,
@@ -951,7 +951,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "default": {
       "median_us": 266.34220123291016,
       "paired_change_pct": [
        0.0,
@@ -990,7 +990,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 285.0104808807373,
       "paired_change_pct": [
        0.0,
@@ -1029,7 +1029,7 @@
     },
     {
      "tokens": 48,
-     "v1": {
+     "default": {
       "median_us": 300.0867176055908,
       "paired_change_pct": [
        0.0,
@@ -1068,7 +1068,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "default": {
       "median_us": 321.4609146118164,
       "paired_change_pct": [
        0.0,
@@ -1107,7 +1107,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 460.68676948547363,
       "paired_change_pct": [
        0.0,
@@ -1146,7 +1146,7 @@
     }
    ],
    "native_source_sha256": {
-    "v1": [
+    "default": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "dc": [
@@ -1162,7 +1162,7 @@
   },
   "all_three_200944ce": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "sparse": {
@@ -1177,7 +1177,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 231.4649200439453,
       "paired_change_pct": [
        0.0,
@@ -1198,7 +1198,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 259.5296812057495,
       "paired_change_pct": [
        0.0,
@@ -1219,7 +1219,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "default": {
       "median_us": 266.326003074646,
       "paired_change_pct": [
        0.0,
@@ -1240,7 +1240,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 284.9646806716919,
       "paired_change_pct": [
        0.0,
@@ -1261,7 +1261,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "default": {
       "median_us": 320.8979320526123,
       "paired_change_pct": [
        0.0,
@@ -1282,7 +1282,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 460.9529209136963,
       "paired_change_pct": [
        0.0,
@@ -1303,7 +1303,7 @@
     },
     {
      "tokens": 256,
-     "v1": {
+     "default": {
       "median_us": 712.3639297485352,
       "paired_change_pct": [
        0.0,
@@ -1324,7 +1324,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "default": {
       "median_us": 1220.1216888427734,
       "paired_change_pct": [
        0.0,
@@ -1345,7 +1345,7 @@
     }
    ],
    "native_source_sha256": {
-    "v1": [
+    "default": [
      "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663"
     ],
     "sparse": [
@@ -1499,7 +1499,7 @@
   },
   "two_ffn_domains": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "sparse": {
@@ -1514,7 +1514,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 207.86468029022217,
       "paired_change_pct": [
        0.0,
@@ -1535,7 +1535,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 220.96491813659668,
       "paired_change_pct": [
        0.0,
@@ -1556,7 +1556,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "default": {
       "median_us": 224.3644380569458,
       "paired_change_pct": [
        0.0,
@@ -1577,7 +1577,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 239.97948169708252,
       "paired_change_pct": [
        0.0,
@@ -1598,7 +1598,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "default": {
       "median_us": 288.72931957244873,
       "paired_change_pct": [
        0.0,
@@ -1619,7 +1619,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 403.46635818481445,
       "paired_change_pct": [
        0.0,
@@ -1640,7 +1640,7 @@
     },
     {
      "tokens": 256,
-     "v1": {
+     "default": {
       "median_us": 615.0772094726562,
       "paired_change_pct": [
        0.0,
@@ -1691,7 +1691,7 @@
   },
   "three_attention_domains": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "sparse": {
@@ -1706,7 +1706,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 99.68000173568726,
       "paired_change_pct": [
        0.0,
@@ -1727,7 +1727,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 115.73772192001343,
       "paired_change_pct": [
        0.0,
@@ -1748,7 +1748,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "default": {
       "median_us": 118.83692264556885,
       "paired_change_pct": [
        0.0,
@@ -1769,7 +1769,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 121.21760129928589,
       "paired_change_pct": [
        0.0,
@@ -1790,7 +1790,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "default": {
       "median_us": 132.1267604827881,
       "paired_change_pct": [
        0.0,
@@ -1811,7 +1811,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 166.7775583267212,
       "paired_change_pct": [
        0.0,
@@ -1832,7 +1832,7 @@
     },
     {
      "tokens": 256,
-     "v1": {
+     "default": {
       "median_us": 244.3905210494995,
       "paired_change_pct": [
        0.0,
@@ -1884,7 +1884,7 @@
   },
   "innode_6a2f": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "off": {
@@ -1906,7 +1906,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 24.32472050189972,
       "paired_change_pct": [
        0.0,
@@ -1945,7 +1945,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 29.294719696044922,
       "paired_change_pct": [
        0.0,
@@ -1984,7 +1984,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 35.4693204164505,
       "paired_change_pct": [
        0.0,
@@ -2023,7 +2023,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 53.16823959350586,
       "paired_change_pct": [
        0.0,
@@ -2062,7 +2062,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "default": {
       "median_us": 151.96383953094482,
       "paired_change_pct": [
        0.0,
@@ -2101,7 +2101,7 @@
     },
     {
      "tokens": 2048,
-     "v1": {
+     "default": {
       "median_us": 502.0069980621338,
       "paired_change_pct": [
        0.0,
@@ -2168,7 +2168,7 @@
   },
   "innode_7a1f": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "off": {
@@ -2190,7 +2190,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 23.81052017211914,
       "paired_change_pct": [
        0.0,
@@ -2229,7 +2229,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 27.214239835739136,
       "paired_change_pct": [
        0.0,
@@ -2268,7 +2268,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 34.14640009403229,
       "paired_change_pct": [
        0.0,
@@ -2307,7 +2307,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 70.26659965515137,
       "paired_change_pct": [
        0.0,
@@ -2346,7 +2346,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "default": {
       "median_us": 202.04676151275635,
       "paired_change_pct": [
        0.0,
@@ -2385,7 +2385,7 @@
     },
     {
      "tokens": 2048,
-     "v1": {
+     "default": {
       "median_us": 736.8312072753906,
       "paired_change_pct": [
        0.0,
@@ -2452,7 +2452,7 @@
   },
   "innode_4a4f": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "off": {
@@ -2474,7 +2474,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 24.31764006614685,
       "paired_change_pct": [
        0.0,
@@ -2513,7 +2513,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 26.569600105285645,
       "paired_change_pct": [
        0.0,
@@ -2552,7 +2552,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 27.755680084228516,
       "paired_change_pct": [
        0.0,
@@ -2591,7 +2591,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 39.575480222702026,
       "paired_change_pct": [
        0.0,
@@ -2630,7 +2630,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "default": {
       "median_us": 95.96468210220337,
       "paired_change_pct": [
        0.0,
@@ -2669,7 +2669,7 @@
     },
     {
      "tokens": 2048,
-     "v1": {
+     "default": {
       "median_us": 296.3229179382324,
       "paired_change_pct": [
        0.0,
@@ -2736,7 +2736,7 @@
   },
   "kermit_single_role_5to1": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "sparse": {
@@ -2755,7 +2755,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 137.8082799911499,
       "paired_change_pct": [
        0.0,
@@ -2785,7 +2785,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 155.28647899627686,
       "paired_change_pct": [
        0.0,
@@ -2815,7 +2815,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 164.96391773223877,
       "paired_change_pct": [
        0.0,
@@ -2845,7 +2845,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 235.1207971572876,
       "paired_change_pct": [
        0.0,
@@ -2875,7 +2875,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "default": {
       "median_us": 604.799108505249,
       "paired_change_pct": [
        0.0,
@@ -3073,7 +3073,7 @@
   },
   "done_witness_cost": {
    "arms": {
-    "v1": {
+    "default": {
      "_label": "cf"
     },
     "channel0_only_2d22e5e9": {
@@ -3097,12 +3097,12 @@
    "processes": [
     {
      "order": [
-      "v1",
+      "default",
       "channel0_only_2d22e5e9",
       "done_witness_7b8ed8b5"
      ],
      "median_us": {
-      "v1": {
+      "default": {
        "1": 137.81936168670654,
        "8": 155.59887886047363,
        "32": 164.58264350891113,
@@ -3129,7 +3129,7 @@
      "order": [
       "channel0_only_2d22e5e9",
       "done_witness_7b8ed8b5",
-      "v1"
+      "default"
      ],
      "median_us": {
       "channel0_only_2d22e5e9": {
@@ -3146,7 +3146,7 @@
        "128": 227.25296020507812,
        "512": 604.1015243530273
       },
-      "v1": {
+      "default": {
        "1": 138.24039936065674,
        "8": 155.33055782318115,
        "32": 164.6174430847168,
@@ -3159,7 +3159,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "default": {
       "median_us": 138.02988052368164,
       "paired_change_pct": [
        0.0,
@@ -3189,7 +3189,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "default": {
       "median_us": 155.4647183418274,
       "paired_change_pct": [
        0.0,
@@ -3219,7 +3219,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "default": {
       "median_us": 164.60004329681396,
       "paired_change_pct": [
        0.0,
@@ -3249,7 +3249,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "default": {
       "median_us": 235.22860050201416,
       "paired_change_pct": [
        0.0,
@@ -3279,7 +3279,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "default": {
       "median_us": 604.3265533447266,
       "paired_change_pct": [
        0.0,
@@ -3344,6 +3344,6 @@
   "agreement_check_commit": "b3821109db47e6abbf8008c90d519ff047066e52ab00e10e6c985d541b50710f (measured as 2d22e5e9)",
   "done_witness_commit": "ede73b32085db141c2193ffa57e629ea79fb398db9375abb0338f18ac83d015b (measured as 7b8ed8b5)",
   "branch_head": "34fa5eac5093fd9a398edade5f44f88ad32c834ee17314e3770817e4ab4601c0 (adds section 18, measured as 81b71eb0, and comment fixes)",
-  "_note": "each published tree differs from the measured one only in comments and text (the rename to v1 and the release's comment fixes)"
+  "_note": "each published tree differs from the measured one only in comments and text (renamed comments and the release's comment fixes)"
  }
 }

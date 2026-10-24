@@ -3,7 +3,7 @@
  "change": "opt-in mixed-role directional hybrid (AFDEP_MIXED_HYBRID=1): FFN ranks [0, F), 0 < F < U, share NVLink domain 0 with Attention ranks; per-rank roles through generated copies of hybrid_dispatch.cuh and hybrid_combine.cuh; every rank's reply inbox in a slice before the staging slice (docs/design.md section 18)",
  "decision": "opt-in prototype (stage 1, dense); the section-17 sparse switches do not apply yet. Not yet run: fault injection for the reply-slice and staging orderings, two-buffer interleave, 8-GPU nodes, serving.",
  "native_source_sha256": {
-  "control_v1": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",
+  "control_default": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",
   "mixed": [
    "81b71eb093c583acd6cd0972df9232769c02fb202f8662eab7b9553c1ee336b7"
   ],
@@ -504,7 +504,7 @@
    ]
   },
   "union_profile_kernel_durations": "nsys kernel traces (not in the repository): hybrid_dispatch ~87-113 us on every GPU kind at 1 and 32 tokens; hybrid_combine 97-112 us (T=1) and 145-169 us (T=32)",
-  "union_channel_sweep": "docs/validation-v1-sparse-hybrid.json screens.kermit_mixed_role_11to1: 8 SMs instead of 24 give -17.1% at 1 token and +55.8% at 512"
+  "union_channel_sweep": "docs/validation-sparse-hybrid.json screens.kermit_mixed_role_11to1: 8 SMs instead of 24 give -17.1% at 1 token and +55.8% at 512"
  },
  "gpu_suite_81b71eb0": [
   "F=2 FP8 capacity 8",
@@ -523,6 +523,6 @@
  "published_trees": {
   "mixed_hybrid_commit": "c065385b1a3927a9c0398f07b99bb415f9d7a67731f90a6d1531ade4457720aa (measured as 81b71eb0)",
   "branch_head": "34fa5eac5093fd9a398edade5f44f88ad32c834ee17314e3770817e4ab4601c0 (comment fixes)",
-  "_note": "each published tree differs from the measured one only in comments and text (the rename to v1 and the release's comment fixes)"
+  "_note": "each published tree differs from the measured one only in comments and text (renamed comments and the release's comment fixes)"
  }
 }

@@ -801,11 +801,12 @@ staggers.
 12 pods × 2 H200 (piggy, InfiniBand, GIN): 2 FFN ranks in one domain, 22 Attention ranks
 in 11 domains, FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs (C = 192),
 CUDA graphs, 2 fresh processes per arm in rotated order, every Attention rank's round
-trip checked. Paired against the v1 tree (`958652a3`); each arm on the digest shown:
+trip checked. Paired against the default role path on `958652a3`, the tree before the
+switches; each arm on the digest shown:
 
 | Arm (µs at T=1; change at each T) | T=1 | 8 | 16 | 32 | 64 | 128 |
 |---|---:|---:|---:|---:|---:|---:|
-| v1 role path | 231.3 µs | 259.9 | 266.8 | 285.2 | 321.4 | 460.7 |
+| Default role path | 231.3 µs | 259.9 | 266.8 | 285.2 | 321.4 | 460.7 |
 | Masked DeepEP (earlier run, same layout) | +43.8% | +33.8% | +29.2% | +26.0% | +21.2% | +4.5% |
 | Switches off (`e551ab70`, `841bc731`) | −0.03 to −0.63% | −0.37 to +0.08% | ≤ ±0.17% | ≤ ±0.11% | ≤ ±0.14% | ≤ ±0.08% |
 | Stagger (`c301de5b`) | −12.4% | −17.3% | −15.3% | −8.5% | +0.7% | +2.2% |
@@ -820,7 +821,7 @@ witness below), all three switches, paired again with 256 and 512 tokens added:
 
 | `200944ce`, all three | T=1 | 8 | 16 | 32 | 64 | 128 | 256 | 512 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| v1 (µs) | 231.5 | 259.5 | 266.3 | 285.0 | 320.9 | 461.0 | 712.4 | 1,220.1 |
+| Default (µs) | 231.5 | 259.5 | 266.3 | 285.0 | 320.9 | 461.0 | 712.4 | 1,220.1 |
 | All three (µs) | 73.8 | 86.2 | 100.4 | 140.5 | 235.1 | 428.1 | 691.2 | 1,221.1 |
 | Paired change (both repeats) | −68.2% to −68.0% | −66.8% | −62.3% | −50.7% | −26.8% to −26.7% | −7.2% to −7.0% | −3.0% to −2.9% | +0.0% to +0.2% |
 | Against Masked (earlier run, unpaired) | −78.3% | −75.7% | −71.5% | −61.2% | −41.2% | −13.4% | – | – |
@@ -828,17 +829,17 @@ witness below), all three switches, paired again with 256 and 512 tokens added:
 The gain scales with S, the number of Attention domains, and holds with two FFN
 domains (both on `200944ce`, 2 repeats, every repeat faster):
 
-| `200944ce`, all three (v1 µs, paired change) | T=1 | 8 | 16 | 32 | 64 | 128 | 256 |
+| `200944ce`, all three (default µs, paired change) | T=1 | 8 | 16 | 32 | 64 | 128 | 256 |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Two FFN domains: 4 FFN + 20 Attention ranks, 12 × 2 pods | 207.9 µs, −67.1% | 221.0 µs, −64.3% | 224.4 µs, −59.5% | 240.0 µs, −47.0% | 288.7 µs, −27.6% | 403.5 µs, −8.6% | 615.1 µs, −1.7% |
 | Three Attention domains: 2 FFN + 6 Attention ranks, 4 × 2 pods (3:1) | 99.7 µs, −33.9% | 115.7 µs, −35.7% | 118.8 µs, −35.2% | 121.2 µs, −29.5% | 132.1 µs, −21.9% | 166.8 µs, −6.0% | 244.4 µs, −3.6% |
 
 On a second cluster with 4-GPU NVLink domains, the switches give similar gains, and the
-mixed-role layout shows what remains (2 repeats each; v1 `958652a3`):
+mixed-role layout shows what remains (2 repeats each; default `958652a3`):
 
 | 6 kermit pods × 4 H200 | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| Single-role domains 5:1 (4F:20A), v1 µs | 137.8 | 155.3 | 165.0 | 235.1 | 604.8 |
+| Single-role domains 5:1 (4F:20A), default µs | 137.8 | 155.3 | 165.0 | 235.1 | 604.8 |
 | same, all three switches (`2d22e5e9`) | −48.8% | −50.5% | −40.8% | −2.4% | 0.0% |
 | same, Masked | +34.5% | +24.7% | +27.7% | +18.2% | +5.2% |
 | Mixed-role 11:1 (FFN domain 2F + 2A: union hybrid), role path µs | 211.5 | 234.9 | 264.2 | 332.4 | 763.8 |
@@ -861,7 +862,7 @@ domains (only the construction-time agreement gather runs in every topology), an
 paired screen agrees (`200944ce` against `958652a3`, 2 repeats; the later done witness and
 section 18 are also gated on two or more domains):
 
-| In-node, one NVLink domain of 8 H200, BF16 (1–2,048 tokens) | v1 µs at T=1 / 2,048 | Switches off | Switches on | Masked at T=1 / 2,048 |
+| In-node, one NVLink domain of 8 H200, BF16 (1–2,048 tokens) | Default µs at T=1 / 2,048 | Switches off | Switches on | Masked at T=1 / 2,048 |
 |---|---|---|---|---|
 | 6A:2F | 24.3 / 502.0 | −0.6% to +0.2% | −1.2% to +1.0% | +32.3% / +1.2% |
 | 7A:1F | 23.8 / 736.8 | −0.8% to +0.3% | −1.2% to +0.5% | +65.2% / +15.0% |
@@ -899,7 +900,7 @@ three, with and without the delay. DONE costs latency where a source waits on fe
 the forwarder's channels: paired on kermit 4F:20A with all three switches (2 repeats,
 `2d22e5e9` without against `7b8ed8b5` with), 70.8 / 77.3 / 97.6 / 229.5 / 605.0 µs
 become 70.7 / 82.3 / 97.7 / 226.8 / 603.8 µs at 1 / 8 / 32 / 128 / 512 tokens: +6.6%
-(5 µs) at 8 tokens, in both repeats, and within ±1.2% elsewhere (v1: 138.0 / 155.5 /
+(5 µs) at 8 tokens, in both repeats, and within ±1.2% elsewhere (default: 138.0 / 155.5 /
 164.6 / 235.2 / 604.3 µs). A zero-cost alternative is to place the dispatch scale-out
 inbox past the combine scale-up inbox, so the two cannot overlap; not yet done. The comm screen's
 own check alone could not show this: every exchange returns the same values. Unit tests
@@ -918,7 +919,7 @@ Decision: opt-in until reviewed; the recommended setting is all three switches. 
 serving claim yet: this is communication-only evidence. Not covered: the union hybrid
 and the mixed-role path of section 18. FP8 payload only: BF16 with the switches has not
 been run (suite or screen).
-([record](validation-v1-sparse-hybrid.json))
+([record](validation-sparse-hybrid.json))
 
 ### 18. Mixed-role directional hybrid (opt-in, FFN ranks sharing an NVLink domain)
 
@@ -964,13 +965,13 @@ arm in rotated order, every Attention rank's round trip checked, every repeat fa
 
 | 2 FFN + 22 Attention (11:1), 128 experts | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| Union role path, v1 (`958652a3`), µs | 212.1 | 235.4 | 265.0 | 333.5 | 763.8 |
+| Union role path, default (`958652a3`), µs | 212.1 | 235.4 | 265.0 | 333.5 | 763.8 |
 | Mixed-role directional (`81b71eb0`) | **−23.2%** | **−19.7%** | **−21.7%** | **−14.8%** | **−8.1%** |
 | Masked | −0.4% | +0.1% | −0.2% | −0.3% | −0.4% |
 
 | 1 FFN + 23 Attention (23:1), 64 experts | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| Union role path, v1 (`958652a3`), µs | 280.3 | 319.4 | 353.4 | 437.5 | 1,082.7 |
+| Union role path, default (`958652a3`), µs | 280.3 | 319.4 | 353.4 | 437.5 | 1,082.7 |
 | Mixed-role directional (`81b71eb0`) | **−20.7%** | **−16.2%** | **−16.8%** | **−12.4%** | **−6.2%** |
 | Masked | −0.4% | +0.1% | −0.2% | −0.3% | −0.2% |
 
@@ -992,7 +993,7 @@ hidden 2048 and 24 SMs, at F = 1 (8 experts) and at F = 3 (12 experts); an earli
 (`d1c3c18a`) also passed F = 2 FP8 at capacity 64 with hidden 2048. Unit tests 41/41,
 Ruff clean. Not yet run: fault injection for the reply-slice and staging orderings,
 and a two-buffer interleave.
-([record](validation-v1-mixed-hybrid.json))
+([record](validation-mixed-hybrid.json))
 
 Not yet: the section-17 sparse switches on the mixed path (they would need per-lane
 count retirement for the self lane, and a DONE witness), more than one

@@ -206,9 +206,9 @@ CUDA graphs, maximum over Attention ranks; no serving results.
 
 Across NVLink domains the remaining cost is synchronization that grows with the channel
 count, not with the tokens, plus the union fallback on nodes that hold both roles. Two
-opt-in additions address them. With every switch off, v1's kernels and launches are
-unchanged, and in one NVLink domain nothing changes. Design, correctness argument and
-evidence: [docs/design.md §17](docs/design.md#17-sparse-directional-hybrid-opt-in-across-nvlink-domains) and
+opt-in additions address them. With every switch off, afdEP's default kernels and
+launches are unchanged, and in one NVLink domain nothing changes. Design, correctness
+argument and evidence: [docs/design.md §17](docs/design.md#17-sparse-directional-hybrid-opt-in-across-nvlink-domains) and
 [§18](docs/design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain).
 
 **Sparse directional hybrid** (`AFDEP_HYBRID_STAGGER=1`, `AFDEP_HYBRID_SPARSE_DISPATCH=1`,
@@ -222,11 +222,11 @@ constructing the `Buffer`; construction rejects a mismatch.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-xn-sparse-dark.svg">
-  <img alt="Sparse directional hybrid against afdEP v1 and Masked at 11:1 over 12 domains" src="docs/assets/results-xn-sparse.svg">
+  <img alt="Sparse directional hybrid against afdEP and Masked at 11:1 over 12 domains" src="docs/assets/results-xn-sparse.svg">
 </picture>
 
-At 11:1 over 12 single-role domains, all three switches cut the round trip by
-68% against v1 at one token, 51% at 32 and 7% at 128 tokens, and are
+At 11:1 over 12 single-role domains, all three switches cut the round trip by 68%
+against the default (switches off) at one token, 51% at 32 and 7% at 128 tokens, and are
 neutral at 512. These and the scaling screens below ran on trees before the done witness
 (`200944ce`, and `2d22e5e9` at 5:1). The switches compound: sparse combine alone gains
 about 2%, and our untraced reading is that it removes the outbound signals that become
@@ -253,126 +253,126 @@ Attention-only nodes just send and collect.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-xn-mixed-dark.svg">
-  <img alt="Mixed-role directional hybrid against afdEP v1 and Masked" src="docs/assets/results-xn-mixed.svg">
+  <img alt="Mixed-role directional hybrid against afdEP and Masked" src="docs/assets/results-xn-mixed.svg">
 </picture>
 
-It cuts the round trip against v1 by 23% at one token and 8% at 512 tokens at
-11:1, and by 21% and 6% at 23:1. It was measured and validated on 4-GPU NVLink
-domains only (6 × 4 H200, F = 1 to 3, one FFN-holding domain); 8-GPU nodes, fault
+It cuts the round trip against the default union hybrid by 23% at one token and 8% at
+512 tokens at 11:1, and by 21% and 6% at 23:1. It was measured and validated on 4-GPU
+NVLink domains only (6 × 4 H200, F = 1 to 3, one FFN-holding domain); 8-GPU nodes, fault
 injection for its reply and staging orderings and a two-buffer interleave are not yet
 run. The sparse switches do not apply to this path yet.
 
 <details><summary>Cross-node proposal numbers</summary>
 
-H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; v1 on 958652a3, the proposal on the tree each dataset's digests name (64 experts at 23:1).
+H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; afdEP (switches off) on 958652a3, the proposal on the tree each dataset's digests name (64 experts at 23:1).
 
 | All three switches (200944ce, before the done witness), 11:1 over 12 domains | T=1 | 8 | 16 | 32 | 64 | 128 | 256 | 512 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 231.5 | 259.5 | 266.3 | 285.0 | 320.9 | 461.0 | 712.4 | 1,220.1 |
+| afdEP, µs | 231.5 | 259.5 | 266.3 | 285.0 | 320.9 | 461.0 | 712.4 | 1,220.1 |
 | Cross-node: all three sparse switches, µs | 73.8 | 86.2 | 100.4 | 140.5 | 235.1 | 428.1 | 691.2 | 1,221.1 |
-| Cross-node: all three sparse switches vs afdEP v1 | −68.1% | −66.8% | −62.3% | −50.7% | −26.7% | −7.1% | −3.0% | +0.1% |
+| Cross-node: all three sparse switches vs afdEP | −68.1% | −66.8% | −62.3% | −50.7% | −26.7% | −7.1% | −3.0% | +0.1% |
 
 | Stagger and sparse dispatch, 11:1 | T=1 | 8 | 16 | 32 | 64 | 128 |
 |---|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 231.3 | 259.9 | 266.8 | 285.2 | 321.4 | 460.7 |
+| afdEP, µs | 231.3 | 259.9 | 266.8 | 285.2 | 321.4 | 460.7 |
 | Stagger only, µs | 202.7 | 215.0 | 225.9 | 260.8 | 323.5 | 470.8 |
 | Sparse dispatch only, µs | 153.1 | 183.8 | 194.7 | 221.5 | 277.6 | 441.0 |
 | Stagger + sparse dispatch, µs | 131.0 | 144.3 | 154.2 | 197.9 | 280.8 | 452.3 |
-| Stagger only vs afdEP v1 | −12.4% | −17.3% | −15.3% | −8.5% | +0.7% | +2.2% |
-| Sparse dispatch only vs afdEP v1 | −33.8% | −29.3% | −27.0% | −22.3% | −13.6% | −4.3% |
-| Stagger + sparse dispatch vs afdEP v1 | −43.4% | −44.5% | −42.2% | −30.6% | −12.6% | −1.8% |
+| Stagger only vs afdEP | −12.4% | −17.3% | −15.3% | −8.5% | +0.7% | +2.2% |
+| Sparse dispatch only vs afdEP | −33.8% | −29.3% | −27.0% | −22.3% | −13.6% | −4.3% |
+| Stagger + sparse dispatch vs afdEP | −43.4% | −44.5% | −42.2% | −30.6% | −12.6% | −1.8% |
 
 | Sparse combine, 11:1 | T=1 | 8 | 16 | 32 | 64 | 128 |
 |---|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 231.7 | 260.0 | 266.2 | 285.1 | 321.1 | 460.9 |
+| afdEP, µs | 231.7 | 260.0 | 266.2 | 285.1 | 321.1 | 460.9 |
 | Sparse combine only, µs | 226.0 | 255.7 | 264.8 | 284.5 | 320.4 | 460.3 |
 | Sparse dispatch + combine, µs | 151.5 | 180.8 | 194.0 | 221.1 | 276.5 | 440.9 |
 | Cross-node: all three sparse switches, µs | 74.3 | 86.3 | 100.4 | 140.8 | 235.5 | 428.0 |
-| Sparse combine only vs afdEP v1 | −2.4% | −1.6% | −0.5% | −0.2% | −0.2% | −0.1% |
-| Sparse dispatch + combine vs afdEP v1 | −34.6% | −30.5% | −27.1% | −22.4% | −13.9% | −4.3% |
-| Cross-node: all three sparse switches vs afdEP v1 | −67.9% | −66.8% | −62.3% | −50.6% | −26.6% | −7.1% |
+| Sparse combine only vs afdEP | −2.4% | −1.6% | −0.5% | −0.2% | −0.2% | −0.1% |
+| Sparse dispatch + combine vs afdEP | −34.6% | −30.5% | −27.1% | −22.4% | −13.9% | −4.3% |
+| Cross-node: all three sparse switches vs afdEP | −67.9% | −66.8% | −62.3% | −50.6% | −26.6% | −7.1% |
 
 | Stagger bound, 11:1 | T=1 | 8 | 16 | 32 | 48 | 64 | 128 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 231.6 | 260.2 | 266.3 | 285.0 | 300.1 | 321.5 | 460.7 |
+| afdEP, µs | 231.6 | 260.2 | 266.3 | 285.0 | 300.1 | 321.5 | 460.7 |
 | Sparse dispatch + combine, µs | 148.3 | 179.8 | 193.4 | 221.2 | 247.7 | 277.3 | 441.0 |
 | + stagger up to 48 tokens, µs | 74.2 | 86.2 | 100.2 | 140.6 | 188.8 | 277.5 | 440.8 |
 | + stagger at every size, µs | 74.0 | 86.3 | 100.4 | 140.6 | 188.5 | 236.1 | 428.6 |
-| Sparse dispatch + combine vs afdEP v1 | −36.0% | −30.9% | −27.4% | −22.4% | −17.5% | −13.7% | −4.3% |
-| + stagger up to 48 tokens vs afdEP v1 | −68.0% | −66.9% | −62.4% | −50.7% | −37.1% | −13.7% | −4.3% |
-| + stagger at every size vs afdEP v1 | −68.0% | −66.8% | −62.3% | −50.7% | −37.2% | −26.6% | −7.0% |
+| Sparse dispatch + combine vs afdEP | −36.0% | −30.9% | −27.4% | −22.4% | −17.5% | −13.7% | −4.3% |
+| + stagger up to 48 tokens vs afdEP | −68.0% | −66.9% | −62.4% | −50.7% | −37.1% | −13.7% | −4.3% |
+| + stagger at every size vs afdEP | −68.0% | −66.8% | −62.3% | −50.7% | −37.2% | −26.6% | −7.0% |
 
 | Two FFN domains, 4F:20A (12 × 2 H200) | T=1 | 8 | 16 | 32 | 64 | 128 | 256 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 207.9 | 221.0 | 224.4 | 240.0 | 288.7 | 403.5 | 615.1 |
+| afdEP, µs | 207.9 | 221.0 | 224.4 | 240.0 | 288.7 | 403.5 | 615.1 |
 | Cross-node: all three sparse switches, µs | 68.5 | 79.0 | 90.9 | 127.2 | 209.0 | 368.8 | 604.6 |
-| Cross-node: all three sparse switches vs afdEP v1 | −67.1% | −64.3% | −59.5% | −47.0% | −27.6% | −8.6% | −1.7% |
+| Cross-node: all three sparse switches vs afdEP | −67.1% | −64.3% | −59.5% | −47.0% | −27.6% | −8.6% | −1.7% |
 
 | Three Attention domains, 2F:6A (4 × 2 H200) | T=1 | 8 | 16 | 32 | 64 | 128 | 256 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 99.7 | 115.7 | 118.8 | 121.2 | 132.1 | 166.8 | 244.4 |
+| afdEP, µs | 99.7 | 115.7 | 118.8 | 121.2 | 132.1 | 166.8 | 244.4 |
 | Cross-node: all three sparse switches, µs | 65.9 | 74.4 | 77.0 | 85.5 | 103.2 | 156.8 | 235.6 |
-| Cross-node: all three sparse switches vs afdEP v1 | −33.9% | −35.7% | −35.2% | −29.5% | −21.9% | −6.0% | −3.6% |
+| Cross-node: all three sparse switches vs afdEP | −33.9% | −35.7% | −35.2% | −29.5% | −21.9% | −6.0% | −3.6% |
 
 | 5:1, 6 single-role domains (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 137.8 | 155.3 | 165.0 | 235.1 | 604.8 |
+| afdEP, µs | 137.8 | 155.3 | 165.0 | 235.1 | 604.8 |
 | Cross-node: all three sparse switches, µs | 70.5 | 76.8 | 97.7 | 229.4 | 604.8 |
 | Masked DeepEP, µs | 185.4 | 193.6 | 210.7 | 277.9 | 636.0 |
-| Cross-node: all three sparse switches vs afdEP v1 | −48.8% | −50.5% | −40.8% | −2.4% | −0.0% |
-| Masked DeepEP vs afdEP v1 | +34.5% | +24.7% | +27.7% | +18.2% | +5.2% |
+| Cross-node: all three sparse switches vs afdEP | −48.8% | −50.5% | −40.8% | −2.4% | −0.0% |
+| Masked DeepEP vs afdEP | +34.5% | +24.7% | +27.7% | +18.2% | +5.2% |
 
 | Done witness cost, 5:1 (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 138.0 | 155.5 | 164.6 | 235.2 | 604.3 |
+| afdEP, µs | 138.0 | 155.5 | 164.6 | 235.2 | 604.3 |
 | Sparse, earlier witness on channel 0 only (unsafe), µs | 70.8 | 77.3 | 97.6 | 229.5 | 605.0 |
 | Sparse, done witness after every forward warp, µs | 70.7 | 82.3 | 97.7 | 226.8 | 603.8 |
-| Sparse, earlier witness on channel 0 only (unsafe) vs afdEP v1 | −48.7% | −50.3% | −40.7% | −2.4% | +0.1% |
-| Sparse, done witness after every forward warp vs afdEP v1 | −48.8% | −47.1% | −40.7% | −3.6% | −0.1% |
+| Sparse, earlier witness on channel 0 only (unsafe) vs afdEP | −48.7% | −50.3% | −40.7% | −2.4% | +0.1% |
+| Sparse, done witness after every forward warp vs afdEP | −48.8% | −47.1% | −40.7% | −3.6% | −0.1% |
 
 | 11:1, 2F:22A, 128 experts (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 212.1 | 235.4 | 265.0 | 333.5 | 763.8 |
+| afdEP, µs | 212.1 | 235.4 | 265.0 | 333.5 | 763.8 |
 | Cross-node: mixed-role directional, µs | 163.0 | 189.0 | 207.5 | 284.1 | 701.6 |
 | Masked DeepEP, µs | 211.3 | 235.7 | 264.6 | 332.4 | 760.4 |
-| Cross-node: mixed-role directional vs afdEP v1 | −23.2% | −19.7% | −21.7% | −14.8% | −8.1% |
-| Masked DeepEP vs afdEP v1 | −0.4% | +0.1% | −0.2% | −0.3% | −0.4% |
+| Cross-node: mixed-role directional vs afdEP | −23.2% | −19.7% | −21.7% | −14.8% | −8.1% |
+| Masked DeepEP vs afdEP | −0.4% | +0.1% | −0.2% | −0.3% | −0.4% |
 
 | 23:1, 1F:23A, 64 experts (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 280.3 | 319.4 | 353.4 | 437.5 | 1,082.7 |
+| afdEP, µs | 280.3 | 319.4 | 353.4 | 437.5 | 1,082.7 |
 | Cross-node: mixed-role directional, µs | 222.2 | 267.6 | 294.0 | 383.4 | 1,015.5 |
 | Masked DeepEP, µs | 279.2 | 319.6 | 352.9 | 436.1 | 1,080.3 |
-| Cross-node: mixed-role directional vs afdEP v1 | −20.7% | −16.2% | −16.8% | −12.4% | −6.2% |
-| Masked DeepEP vs afdEP v1 | −0.4% | +0.1% | −0.2% | −0.3% | −0.2% |
+| Cross-node: mixed-role directional vs afdEP | −20.7% | −16.2% | −16.8% | −12.4% | −6.2% |
+| Masked DeepEP vs afdEP | −0.4% | +0.1% | −0.2% | −0.3% | −0.2% |
 
-In one NVLink domain, tree `200944ce` matches v1 with the switches off and on; the later
+In one NVLink domain, tree `200944ce` matches afdEP (`958652a3`) with the switches off and on; the later
 done witness and the mixed-role path run only with two or more NVLink domains.
 one NVLink domain of 8 × H200 (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks.
 
 | 6A:2F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 24.3 | 29.3 | 35.5 | 53.2 | 152.0 | 502.0 |
+| afdEP, µs | 24.3 | 29.3 | 35.5 | 53.2 | 152.0 | 502.0 |
 | Tree 200944ce, switches off, µs | 24.2 | 29.3 | 35.3 | 53.2 | 151.9 | 501.6 |
 | Tree 200944ce, switches on, µs | 24.6 | 28.9 | 35.5 | 53.2 | 152.2 | 501.8 |
-| Tree 200944ce, switches off vs afdEP v1 | −0.6% | +0.2% | −0.6% | +0.0% | −0.0% | −0.1% |
-| Tree 200944ce, switches on vs afdEP v1 | +1.0% | −1.2% | +0.2% | +0.1% | +0.2% | −0.0% |
+| Tree 200944ce, switches off vs afdEP | −0.6% | +0.2% | −0.6% | +0.0% | −0.0% | −0.1% |
+| Tree 200944ce, switches on vs afdEP | +1.0% | −1.2% | +0.2% | +0.1% | +0.2% | −0.0% |
 
 | 7A:1F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 23.8 | 27.2 | 34.1 | 70.3 | 202.0 | 736.8 |
+| afdEP, µs | 23.8 | 27.2 | 34.1 | 70.3 | 202.0 | 736.8 |
 | Tree 200944ce, switches off, µs | 23.9 | 27.0 | 34.1 | 69.9 | 201.6 | 736.5 |
 | Tree 200944ce, switches on, µs | 23.9 | 27.1 | 33.8 | 69.5 | 201.9 | 736.7 |
-| Tree 200944ce, switches off vs afdEP v1 | +0.3% | −0.8% | −0.0% | −0.6% | −0.2% | −0.0% |
-| Tree 200944ce, switches on vs afdEP v1 | +0.5% | −0.4% | −1.2% | −1.0% | −0.0% | −0.0% |
+| Tree 200944ce, switches off vs afdEP | +0.3% | −0.8% | −0.0% | −0.6% | −0.2% | −0.0% |
+| Tree 200944ce, switches on vs afdEP | +0.5% | −0.4% | −1.2% | −1.0% | −0.0% | −0.0% |
 
 | 4A:4F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| afdEP v1, µs | 24.3 | 26.6 | 27.8 | 39.6 | 96.0 | 296.3 |
+| afdEP, µs | 24.3 | 26.6 | 27.8 | 39.6 | 96.0 | 296.3 |
 | Tree 200944ce, switches off, µs | 24.3 | 26.5 | 27.8 | 39.9 | 96.0 | 296.5 |
 | Tree 200944ce, switches on, µs | 24.2 | 26.5 | 27.8 | 39.9 | 96.1 | 296.9 |
-| Tree 200944ce, switches off vs afdEP v1 | +0.0% | −0.2% | +0.3% | +0.8% | +0.0% | +0.1% |
-| Tree 200944ce, switches on vs afdEP v1 | −0.6% | −0.1% | +0.3% | +0.9% | +0.2% | +0.2% |
+| Tree 200944ce, switches off vs afdEP | +0.0% | −0.2% | +0.3% | +0.8% | +0.0% | +0.1% |
+| Tree 200944ce, switches on vs afdEP | −0.6% | −0.1% | +0.3% | +0.9% | +0.2% | +0.2% |
 
 </details>
 
@@ -445,8 +445,8 @@ meaning; it does not enable an unvalidated topology.
 The cross-node proposal is opt-in and validated more narrowly. The sparse switches
 passed the GPU suite on 24 ranks (12 × 2 and 6 × 4 H200) with FP8 only; with the done
 witness, only on 6 × 4 H200 at capacity 2,048
-([record](docs/validation-v1-sparse-hybrid.json)). The mixed-role path passed it on
-6 × 4 H200 with F = 1 to 3 ([record](docs/validation-v1-mixed-hybrid.json)).
+([record](docs/validation-sparse-hybrid.json)). The mixed-role path passed it on
+6 × 4 H200 with F = 1 to 3 ([record](docs/validation-mixed-hybrid.json)).
 
 [Design and evidence](docs/design.md) · [v0 validation](docs/validation.md) ·
 [Contributing](CONTRIBUTING.md) · [Licenses and provenance](THIRD_PARTY_NOTICES.md)

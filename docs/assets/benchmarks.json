@@ -691,7 +691,7 @@
   }
  },
  "cross_node_proposal": {
-  "setup": "H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; v1 on 958652a3, the proposal on the tree each dataset's digests name (64 experts at 23:1)",
+  "setup": "H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; afdEP (switches off) on 958652a3, the proposal on the tree each dataset's digests name (64 experts at 23:1)",
   "in_node_setup": "one NVLink domain of 8 × H200 (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks",
   "sparse_11to1": {
    "all_three": {
