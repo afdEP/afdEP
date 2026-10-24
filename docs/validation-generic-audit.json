@@ -1,6 +1,6 @@
 {
  "date": "2026-10-21",
- "purpose": "Test whether v1 combine changes are AFD-specific by applying them to Masked DeepEP's generic instantiation (scratch audit build: AFDEP_AUDIT_GENERIC passes upstream expected top-k ceil(k/R), AFDEP_COMBINE_MAX_UNROLL and AFDEP_AUDIT_SPLIT to the generic combine; not shipped)",
+ "purpose": "Test whether the role path's combine changes are AFD-specific by applying them to Masked DeepEP's generic instantiation (scratch audit build: AFDEP_AUDIT_GENERIC passes upstream expected top-k ceil(k/R), AFDEP_COMBINE_MAX_UNROLL and AFDEP_AUDIT_SPLIT to the generic combine; not shipped)",
  "scope": "4 x H100, 2 Attention + 2 FFN, E128 top-k 8, capacity 2048, BF16, graphs, 24 SMs, random routing; three fresh-process repeats",
  "arms": {
   "masked": "upstream Masked",

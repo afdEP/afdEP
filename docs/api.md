@@ -79,7 +79,7 @@ through to the pinned transport. `num_sms=0` selects approximately 24/132 of the
 smallest device's SM count; choose/tune explicitly for a workload. Both hybrid
 settings are validated in one NVLink domain and across NVLink domains joined by GIN.
 Across domains, role specialization runs the directional hybrid when every domain
-holds one role, and the union hybrid otherwise ([v1](v1.md), sections 6 and 7).
+holds one role, and the union hybrid otherwise ([design](design.md), sections 6 and 7).
 
 Native compilation is lazy and process-locked. `AFDEP_CACHE_DIR` controls the
 extension cache; `EP_JIT_CACHE_DIR` controls DeepEP kernel JIT cache. Both must be

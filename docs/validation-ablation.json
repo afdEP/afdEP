@@ -1,6 +1,6 @@
 {
  "date": "2026-10-21",
- "purpose": "Contribution of each shipped change on the clean v1 build: each arm switches one change off with its control environment variable (first arm = full role path)",
+ "purpose": "Contribution of each shipped change on the clean build: each arm switches one change off with its control environment variable (first arm = full role path)",
  "scope": "4 x H100, 2A2F, E128 top-k 8, capacity 2048, random, BF16, graphs, 24 SMs; three fresh-process repeats",
  "arms": {
   "afd": "clean role path",

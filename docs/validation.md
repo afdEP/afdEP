@@ -22,5 +22,5 @@ Large configurations use hidden size 2,048 and top-k 8, exceeding local expert c
 [Exact runtime fingerprints, matrix and log hashes](validation-v0.json).
 These are correctness checks with synthetic expert outputs, **not performance or
 serving measurements**. Other architectures, layouts and multi-domain role
-specialization remained unvalidated in v0; the v1 records are listed in
-[docs/v1.md](v1.md).
+specialization remained unvalidated in v0; the later records are listed in
+[docs/design.md](design.md).
