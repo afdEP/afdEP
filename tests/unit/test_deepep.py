@@ -358,7 +358,7 @@ def test_role_worker_dispatches_empty_and_preserves_receipt(runtime):
     assert runtime.native.combine.call_args.args[0] is rows
 
 
-def test_v1_public_api_enables_specialization_without_loading_torch():
+def test_public_api_enables_specialization_without_loading_torch():
     from afdep import Buffer, Config
 
     value = Config(2048, 4096, 128, 8, 2, 2)

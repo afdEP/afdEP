@@ -333,7 +333,7 @@ z
    <text style="font-weight: 600; font-size: 13px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="7.4304" y="18.39" transform="rotate(-0 7.4304 18.39)">Sparse directional hybrid, 11:1 across 12 single-role domains (12 × 2 H200)</text>
   </g>
   <g id="text_17">
-   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="7.4304" y="37.365" transform="rotate(-0 7.4304 37.365)">Before the done witness (200944ce); each switch paired against afdEP v1 in its own screen, Masked from an earlier unpaired one</text>
+   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="7.4304" y="37.365" transform="rotate(-0 7.4304 37.365)">Before the done witness (200944ce); each switch paired against afdEP in its own screen, Masked from an earlier unpaired one</text>
   </g>
   <g id="legend_1">
    <g id="line2d_28">
@@ -359,7 +359,7 @@ z
     </g>
    </g>
    <g id="text_18">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="34.6536" y="59.49" transform="rotate(-0 34.6536 59.49)">afdEP v1</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="34.6536" y="59.49" transform="rotate(-0 34.6536 59.49)">afdEP</text>
    </g>
    <g id="line2d_29">
     <path d="M 13.0536 69.119297 

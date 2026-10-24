@@ -1,22 +1,23 @@
-# afdEP v1: Masked DeepEP adapted to AFD
+# afdEP: Masked DeepEP adapted to AFD
 
 Baseline: **Masked DeepEP** = the vendored DeepEP V2 kernels with `role_aware=False`
-(union world, dummy Attention expert slots, upstream combine). v1 changes are
+(union world, dummy Attention expert slots, upstream combine). afdEP's changes are
 opt-in on the role path (`role_aware=True`), in one NVLink domain and across
 NVLink domains joined by GIN; generic
 instantiations keep the upstream template arguments and kernels.
 
-Naming: this generation was developed as v2.1 and released as v1; v0 is the
-earlier DeepEP-reuse generation ([validation](validation.md)). Native source digests
-in the records are those of the trees as measured: `958652a3` is the v1 tree before
-the rename. The rename and the release's comment and notice fixes changed only comments
-and text, giving `131efc37` for the released tree. Older digests name the trees each
-section measured; the 4 × H100 result below, for example, is `bd4db4da`, which predates
-sections 10 and 13–16. The trees of sections 17 and 18 map the same way: `200944ce`,
-`2d22e5e9`, `7b8ed8b5` and `81b71eb0` are published as `adfbaf65`, `b3821109`, `ede73b32`
-and `c065385b`, and the branch head with its comment fixes is `34fa5eac`.
+Digests: native source digests in the records are those of the trees as measured.
+`958652a3` is the tree of commit `32c871d`, which merged the directional role path; the
+commits after it changed only comments, notices and other text in the native tree
+(the 1.0.0 release tree is `131efc37`). Older digests name the trees each section
+measured; the 4 × H100 result below, for example, is `bd4db4da`, which predates
+sections 10 and 13–16. The earlier DeepEP-reuse role specialization, v0, has its own
+record ([validation](validation.md)). Sections 17 and 18 were measured on development
+trees; their published commits differ only in comments and text: `200944ce`,
+`2d22e5e9`, `7b8ed8b5` and `81b71eb0` are published as `adfbaf65`, `b3821109`,
+`ede73b32` and `c065385b`, and the comment fixes after review give `34fa5eac`.
 
-v1 ships a change only if it depends on the AFD roles. A change that would
+afdEP ships a change only if it depends on the AFD roles. A change that would
 speed up Masked DeepEP as well is a DeepEP improvement, not an AFD one, and is
 rejected here even when it is faster (R1–R3). Every shipped change keeps a
 measurement control switch.
@@ -41,15 +42,15 @@ On the build before the per-CTA release, FP8 at H4096 measured −21.4% to −2.
 against Masked. Eager exchanges up to 128 tokens are bound by host launches (55–62 µs per round trip in both arms) and too noisy to rank; a
 profiled trace shows the role path issuing fewer host API calls than Masked. From
 512 tokens eager runs are faster in every repeat (−3.6% and −2.0% at 2,048)
-([record](validation-v1-fp8-eager.json)).
+([record](validation-fp8-eager.json)).
 
 The gain is the protocol overhead AFD removes (barriers, union counts, all-rank
 exits), so it is largest at decode-sized token counts and shrinks as payload
 movement dominates. Registered transport memory is 50% of union in 2A2F and
 about 75% at 3:1 and 1:3 (section 4). The GPU matrix and both ratios pass on the
-same native digest ([matrix](validation-v1-cta-exit.json),
-[screens](validation-v1-result.json); the build before the per-CTA release:
-[validation-v1-clean.json](validation-v1-clean.json)). These
+same native digest ([matrix](validation-cta-exit.json),
+[screens](validation-result.json); the build before the per-CTA release:
+[validation-clean.json](validation-clean.json)). These
 are communication-only measurements, not serving claims.
 
 **The Masked baseline is the deployed Masked DeepEP.** afdEP's Masked arm runs this tree
@@ -58,7 +59,7 @@ buffer (the FastAFD `3c71619` DeepEP V2 snapshot the plugin serves with, role
 specialization off) through the same exchange, routes and timing on 4 × H200, it
 matches within −0.4% to +1.2% at 2A2F and −0.2% to +0.3% at 3A:1F from 1 to 2,048
 tokens; against that reference the role path is 29.8% (2A2F) and 37.3% (3A:1F) faster
-at one token and 3.6% / 4.6% at 2,048 ([record](validation-v1-masked-equivalence.json)).
+at one token and 3.6% / 4.6% at 2,048 ([record](validation-masked-equivalence.json)).
 
 The role suites (sections 14 and 15) also give compute back the SMs that the
 shared launches held. Under a synthetic GEMM load on a side stream, an FFN GEMM in
@@ -73,7 +74,7 @@ Contribution of each change on the clean build (before the per-CTA release of
 section 3, which `AFDEP_GRID_SYNC_EXIT=1` measures separately): each arm switches one change
 off with its control variable; cells are the paired change against the full
 role path (positive = slower), and every control at up to 128 tokens was slower
-in all three repeats ([record](validation-v1-ablation.json)).
+in all three repeats ([record](validation-ablation.json)).
 
 | Arm (H2048 / H4096 random) | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -103,7 +104,7 @@ payloads, FFN ranks never receive combine payloads); a symmetric world, where
 every rank writes every peer's inbox in both phases, keeps the barrier. On the clean
 build the skip saves 7.3 µs per one-token round trip at H2048 (30.1 → 22.8 µs)
 and 6.8 µs at H4096 (development screens:
-[validation-v1-barriers.json](validation-v1-barriers.json)).
+[validation-barriers.json](validation-barriers.json)).
 
 The GPU matrix passes with barriers skipped, including delayed FFN replies, a
 delayed Attention source before dispatch, changing graph replays, host-count
@@ -123,7 +124,7 @@ the union exchange as a measurement control.
 AFD basis: dispatch counts flow one way because sources receive no tokens and
 FFN ranks send none; a symmetric rank both sends and receives.
 
-Development screens: [validation-v1-notify.json](validation-v1-notify.json).
+Development screens: [validation-notify.json](validation-notify.json).
 
 ### 3. Directed exit
 
@@ -143,7 +144,7 @@ measurement control.
 AFD basis: each phase has one sending role and one receiving role, so a sender
 has nothing to wait for; in a symmetric world every rank is both.
 
-Development screens and GPU matrix: [validation-v1-exit.json](validation-v1-exit.json).
+Development screens and GPU matrix: [validation-exit.json](validation-exit.json).
 
 Per-CTA release: the sending role receives nothing in its phase, so it does not
 need the grid sync before releasing its arrival. Each sending CTA flushes its own
@@ -154,7 +155,7 @@ as a control; against it the control is slower in every cell and repeat (H2048
 random: +9.7% at one token, 22.68 vs 20.74 µs, to +0.9% at 2,048; H4096 +7.1%
 to +0.4%). With it the one-token round trip is 20.7 µs at H2048 (Masked 31.6)
 and 28.4 µs at H4096 (Masked 38.6)
-([record](validation-v1-cta-exit.json)).
+([record](validation-cta-exit.json)).
 
 ### 4. Role-sized registered buffers
 
@@ -176,7 +177,7 @@ same maximum, as the symmetric window requires. Without the rank layout
 
 Latency is unchanged against the `AFDEP_UNION_BUFFERS=1` control (H2048 random:
 19.6 vs 19.6 µs at one token, 185.9 vs 185.9 µs at 2,048). The full 2A2F matrix
-and both ratios pass ([record](validation-v1-buffers.json)).
+and both ratios pass ([record](validation-buffers.json)).
 
 ### 5. Attention:FFN ratios
 
@@ -191,7 +192,7 @@ The role API previously rejected more than one physical NVLink domain. Across
 two waldorf nodes (2 × H200 each, InfiniBand GIN) the role path passes all 14
 cross-node cases (BF16/FP8, hybrid on/off, small/large, generic controls, and
 3:1 / 1:3 layouts that mix roles in a domain), so the check only requires GIN
-([record](validation-v1-cross-node.json)). Sections 1–4 are single-domain.
+([record](validation-cross-node.json)). Sections 1–4 are single-domain.
 
 Across three nodes (6 ranks) the role path passes all 14 cases with one FFN
 domain and two Attention domains, with two FFN domains and one Attention domain,
@@ -199,7 +200,7 @@ and with mixed-role domains. With more than one FFN domain, DeepEP's hybrid
 combine rounds each FFN domain's partial to BF16 before the cross-domain sum, so
 the GPU suite's reference now rounds once per reduction stage (FFN rank, FFN
 domain, total); Masked showed the same one-ulp difference against the old
-single-rounding reference ([record](validation-v1-three-domain.json)).
+single-rounding reference ([record](validation-three-domain.json)).
 
 Three-node latency, one FFN node and two Attention nodes (6 ranks, H2048 random,
 three repeats, every cell faster than both controls in all repeats):
@@ -220,19 +221,19 @@ domain over InfiniBand GIN; three share a node, so absolute latency is not a
 deployment number) also pass BF16/FP8 small and large and the generic control,
 and the directional protocol measures 76.5 µs at one token against Masked's
 118.4 (−35%), −35% up to 32 tokens and −3.1% at 2,048, every cell faster than
-both controls in all repeats ([record](validation-v1-four-domain.json)).
+both controls in all repeats ([record](validation-four-domain.json)).
 
 Five single-GPU domains (two FFN, three Attention, on three nodes) pass BF16
 small/large, FP8 large and the generic control, and measure 95.1 µs at one token
 against Masked's 156.5 (−39%) to −2.5% at 2,048, every cell faster in all
-repeats ([record](validation-v1-five-domain.json)).
+repeats ([record](validation-five-domain.json)).
 
 Eight ranks in four two-GPU domains (4 × 2 H200, physical domain [4, 2]) pass
 BF16 small/large, FP8 large and the generic control with two FFN and two
 Attention domains and with one FFN and three Attention domains. One-token round
 trips: 85.5 µs against Masked's 129.4 (−34%) and 100.2 µs against 129.1 (−22%);
 −3.0% and −1.4% at 2,048, every cell faster than both controls in all repeats
-([record](validation-v1-eight-rank.json)).
+([record](validation-eight-rank.json)).
 
 The gain over Masked grows with the number of domains (two: −17% at one token;
 three: −21%; four: −35%; five: −39%), as the union protocol's reverse-direction
@@ -261,7 +262,7 @@ traffic FFN → Attention only:
   counters or slot allocators), so Attention domains also skip their scale-up
   barriers: −2.6% at one token (74.80 → 72.87 µs) to −0.4% at 2,048 against
   the protocol without the skip, every size faster in all repeats
-  ([record](validation-v1-attention-scaleup.json)).
+  ([record](validation-attention-scaleup.json)).
 
 **Correction (section 11):** as first shipped, this protocol let RDMA staging
 overlap inboxes another domain writes. That was a race in layouts with two or
@@ -275,7 +276,7 @@ of the union protocol at one token showed the cross-domain entry barriers alone
 on the critical path for about 17 µs of the 88 µs round trip.
 
 Cross-node, H2048 random, three repeats, on the final build (each control slower
-in every repeat; [record](validation-v1-cross-node-final.json)):
+in every repeat; [record](validation-cross-node-final.json)):
 
 | Arm | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -288,8 +289,8 @@ FP8 dispatch across nodes matches: 73.3 µs at one token (Masked 88.0, −17%),
 repeats (same record).
 
 The 14 cross-node cases pass on the final native digest
-([record](validation-v1-attention-scaleup.json)); the single-domain matrix ran
-on the protocol's first digest ([record](validation-v1-directional-hybrid.json))
+([record](validation-attention-scaleup.json)); the single-domain matrix ran
+on the protocol's first digest ([record](validation-directional-hybrid.json))
 and the Attention-domain skip changes only hybrid kernels. The two waldorf nodes
 were shared with other workloads.
 
@@ -307,7 +308,7 @@ first route-derived index, store or put. Mixed-role layouts keep the guard;
 `AFDEP_HYBRID_ROUTE_GUARD=1` keeps it as a control.
 
 Cross-node, H2048 random, three repeats. The control was slower in every cell
-and repeat; [record](validation-v1-route-guard.json):
+and repeat; [record](validation-route-guard.json):
 
 | Arm | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -334,7 +335,7 @@ Attention domains now skip it. `AFDEP_ATTENTION_GRID_SYNC=1` keeps it as a
 control.
 
 Cross-node, H2048 random, three repeats. The control was slower in every repeat
-up to 512 tokens; [record](validation-v1-attention-entry-sync.json):
+up to 512 tokens; [record](validation-attention-entry-sync.json):
 
 | Arm | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -360,7 +361,7 @@ tuning: in a symmetric 4-rank world it is also faster (up to −7.5%). At 2A2F
 H4096 the role-sized prefix was 2–10% slower.
 
 Control slowdown against the new path, three repeats; every cell was faster in
-all repeats ([record](validation-v1-single-ffn-reduce.json)):
+all repeats ([record](validation-single-ffn-reduce.json)):
 
 | Layout (GPU, hidden) | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -402,7 +403,7 @@ so those layouts are safe and unchanged. The fix:
 - with two or more Attention domains, FFN domains stage in a slice that
   `calculate_buffer_size` reserves at the window end.
 
-Results ([record](validation-v1-staging-fix.json)):
+Results ([record](validation-staging-fix.json)):
 - Both injected cases pass after the fix.
 - The 14 two-node cases, ten three-pod cases (two FFN or two Attention domains,
   BF16/FP8, small/large, generic) and the single-domain matrix pass on native
@@ -421,7 +422,7 @@ union.
 Against the guard-kernel control the change is −1.0% to −1.6% at every size up to
 512 tokens across two nodes, and it brings the path level with Masked. Direct
 BF16/FP8 small and large cases and all eight invalid-route cases pass
-([record](validation-v1-direct-gin-routes.json)).
+([record](validation-direct-gin-routes.json)).
 
 Why this path matters at decode sizes: Masked with hybrid off is within 4% of
 hybrid on at 1–32 tokens across two nodes. With two Attention domains it ties or
@@ -447,7 +448,7 @@ which no FFN writes. Layouts with more than one FFN rank, and calls with weights
 or bias, return the ordinary result.
 
 Copy slowdown against the view, three repeats; every cell was faster in all
-repeats ([record](validation-v1-collect-view.json)):
+repeats ([record](validation-collect-view.json)):
 
 | Layout (H100, H2048) | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -561,7 +562,7 @@ Masked µs):
 The role suites are faster than the shared shapes in 59 of 60 repeat cells (the other is
 −0.5%) and than an isolated tree before the role suites (`8205d02b`) in 58 of 60. An earlier two-node
 screen on the development digest had 12 of 15; differences at 512 tokens are within
-run-to-run noise. Masked is 4–38% slower ([record](validation-v1-role-suites.json)).
+run-to-run noise. Masked is 4–38% slower ([record](validation-role-suites.json)).
 
 **Correctness.** Every rank of every run records its native digest. Passing:
 - two nodes 1F:1A (all controls), three pods with two FFN or two Attention domains,
@@ -646,7 +647,7 @@ Correctness on `9675783b`: the GPU matrix, both ratios, the collect view, hidden
 7168, 7 transport SMs, every control, runs with the FFN on the shared kernel and the
 Attention on the role path, and fault injection (late sender CTA, late prefix sum,
 late receiver pass; a receiver counting one arrival per sender returns stale rows and
-one expecting an extra arrival times out) ([record](validation-v1-role-suites.json)).
+one expecting an extra arrival times out) ([record](validation-role-suites.json)).
 
 ### 16. Count-first dispatch with a streaming FFN expansion (opt-in, one NVLink domain)
 
@@ -733,7 +734,7 @@ prefix sums all pass; an epilogue that skips the row wait gives mismatches, and 
 skips the prefix wait while the prefix sums are late trips assertions. A first version
 of that last control delayed only the release word, after the sums existed, and passed:
 it did not create the race.
-([record](validation-v1-count-first.json))
+([record](validation-count-first.json))
 
 ## Proposed (opt-in, under review)
 
@@ -1004,7 +1005,7 @@ order, as union already requires.
 Three Attention ranks per FFN rank make one FFN serve three sources. One NVLink
 domain, 4 × H200, BF16, hidden 2,048, top-k 8 of 128 experts, 24 transport SMs,
 native digest `9675783b` (role suites). Per-kernel times from Nsight traces of graph
-replays, max over the ranks of a role ([record](validation-v1-ratio-3to1.json)):
+replays, max over the ranks of a role ([record](validation-ratio-3to1.json)):
 
 | Layout, tokens per Attention rank | Round trip | Attention dispatch send | FFN expand copy | FFN combine (reduce + reply) |
 |---|---:|---:|---:|---:|
@@ -1041,7 +1042,7 @@ role-specific difference is small: under the GEMM load of section 14 the Attenti
 GEMM rises 0.5 µs at 2,048 tokens on the role path (its extra combine CTAs exit at
 once) and 1.3 µs under Masked. The FFN GEMM rises 0.5 µs on the role path. Sizing the
 combine grid by the FFN's load is therefore a deployment setting for any EP backend at
-high Attention:FFN ratios, not a v1 change, and is not shipped (as R1–R3).
+high Attention:FFN ratios, not an afdEP change, and is not shipped (as R1–R3).
 
 **AFD-specific candidate: expansion during ingress (section 16).** The
 FFN sends nothing in dispatch, so its idle SMs could expand rows while the sources are
@@ -1128,7 +1129,7 @@ Removing the signals needs the FFN to know which channels carry data before it w
 which is count-first dispatch with per-channel occupancy: a wire-protocol change,
 AFD-specific (counts flow one way; the FFN never sends in dispatch), modelled at about
 −32 µs at 4F:12A and one token, and the same change the one-domain expansion overlap
-needs. It is not part of the role suites, which keep the v1 protocol; section 17
+needs. It is not part of the role suites, which keep the shipped protocol; section 17
 implements it opt-in across NVLink domains (the sparse switches). Fewer channels
 are a protocol-neutral setting (16 instead of 24 SMs saved 9 µs at 4F:12A and one token,
 flat at 512) but help Masked as well.
@@ -1157,7 +1158,7 @@ Spreading a few tokens' hidden chunks across idle combine warps cut FFN combine
 latency, but the same split applied to Masked gained up to 32% (H4096, 32
 tokens): upstream's one-warp-per-token loop is slow for both. Removed.
 
-Audit, H4096 random, µs ([record](validation-v1-generic-audit.json)):
+Audit, H4096 random, µs ([record](validation-generic-audit.json)):
 
 | Arm | T=1 | 32 | 128 | 2,048 |
 |---|---:|---:|---:|---:|
@@ -1172,8 +1173,8 @@ Audit, H4096 random, µs ([record](validation-v1-generic-audit.json)):
 
 A full-device transport grid for buckets of at least 512 tokens was 10–16 points
 faster than the 24/132 default, but the same knob speeds up Masked equally: it is
-a generic DeepEP launch setting, not an AFD property, so v1 does not ship it.
-The screens remain in [the record](validation-v1-grid.json). Sections 4–7 below
+a generic DeepEP launch setting, not an AFD property, so afdEP does not ship it.
+The screens remain in [the record](validation-grid.json). Sections 4–7 below
 were measured while that policy was active: their paired changes compare arms
 that shared it, but their absolute 512- and 2,048-token values include it.
 
@@ -1195,7 +1196,7 @@ each slot. It was slower than its own control at every size (H2048, 2A2F):
 
 Removing the per-token fence recovers part of the loss but no overlap gain
 appears, so the change is not shipped
-([record](validation-v1-stream-rejected.json)).
+([record](validation-stream-rejected.json)).
 
 ### R5. Attention receive merge (no meaningful gain)
 
@@ -1205,13 +1206,13 @@ skipped it and let every reduce-epilogue CTA wait on the arrival counters. Paire
 against the two-kernel path (H2048, three repeats) it changed one-token latency
 by −1.3% (22.67 → 22.45 µs) and other sizes by −1.8% to +0.4%, while occupying
 every Attention SM for the whole wait instead of one. Not shipped
-([record](validation-v1-merge-rejected.json)).
+([record](validation-merge-rejected.json)).
 
 ### R6. Voided screen of the per-CTA exit
 
 The first screen of section 3's per-CTA release selected the tree with
 `PYTHONPATH` while `python -m` put the HEAD tree first on `sys.path`, so both
-arms ran HEAD ([void record](validation-v1-cta-exit-rejected.json)). Screens
+arms ran HEAD ([void record](validation-cta-exit-rejected.json)). Screens
 now isolate trees with `PYTHONSAFEPATH=1` and record each arm's native digest;
 the re-run shipped the change.
 
@@ -1225,7 +1226,7 @@ scale-out). Across two nodes this halved registered transport memory (78.8 →
 case, but the union-buffer control was faster in every repeat up to 512 tokens
 (one token: 73.07 vs 74.10 µs, −1.4%). Latency is the primary objective and the
 saving is about 39 MB per rank at this capacity, so it is not shipped
-([record](validation-v1-hybrid-buffers-rejected.json)).
+([record](validation-hybrid-buffers-rejected.json)).
 
 ### R8. Per-CTA counts (slower)
 
@@ -1238,7 +1239,7 @@ after every arrival. The SM0 control was faster in every H2048 repeat (one token
 20.65 vs 21.01 µs, −1.3% to −3.1% up to 512 tokens): moving the prefix sums
 behind the arrival and completing the remote count atomics before each release
 cost more than SM0's late release. Not shipped
-([record](validation-v1-per-cta-counts-rejected.json)).
+([record](validation-per-cta-counts-rejected.json)).
 
 ### R9. Shared arrival word (about 1%, inconsistent)
 
@@ -1253,7 +1254,7 @@ Against its control, the shared word was:
 - mixed at 1A:3F, where one token was slower in 3 of 5 repeats.
 
 In two of the three layouts the repeats disagreed on the winner. It is not
-shipped ([record](validation-v1-shared-arrival-rejected.json)).
+shipped ([record](validation-shared-arrival-rejected.json)).
 
 ### R10. One-CTA receive in one NVLink domain (nothing to free, latency moved)
 
@@ -1286,7 +1287,7 @@ No mechanism was found. An in-process A/B is not possible with this DeepEP build
 graphs captured on one Buffer corrupt each other), and single-process traces vary
 more between processes than the effect. So the one-NVLink-domain suites keep the shared
 launch shapes. What the FFN receive did hold, the copy epilogue, is section 15
-([record](validation-v1-role-suites.json)).
+([record](validation-role-suites.json)).
 
 ### R11. Batched count-first flag release and slot-at-issue (slower)
 

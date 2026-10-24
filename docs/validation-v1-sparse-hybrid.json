@@ -1,6 +1,6 @@
 {
  "date": "2026-10-22",
- "change": "opt-in sparse directional hybrid across NVLink domains: AFDEP_HYBRID_STAGGER, AFDEP_HYBRID_SPARSE_DISPATCH, AFDEP_HYBRID_SPARSE_COMBINE (docs/v1.md section 17); off by default",
+ "change": "opt-in sparse directional hybrid across NVLink domains: AFDEP_HYBRID_STAGGER, AFDEP_HYBRID_SPARSE_DISPATCH, AFDEP_HYBRID_SPARSE_COMBINE (docs/design.md section 17); off by default",
  "decision": "opt-in until reviewed; recommended setting: all three switches. Communication-only evidence, no serving claim. Open: whether the same idea would speed up Masked (union hybrid) as well (unmeasured). The DONE witness (7b8ed8b5) costs +6.6% (paired) (5 us) at 8 tokens on kermit 4F:20A and is within 1.2% elsewhere.",
  "native_source_sha256": {
   "control_v1": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",
@@ -3083,7 +3083,7 @@
       "AFDEP_HYBRID_SPARSE_DISPATCH": "1",
       "AFDEP_HYBRID_SPARSE_COMBINE": "1"
      },
-     "_note": "the earlier witness after channel 0's own warp only: it has the DONE gap of docs/v1.md section 17 and is not safe"
+     "_note": "the earlier witness after channel 0's own warp only: it has the DONE gap of docs/design.md section 17 and is not safe"
     },
     "done_witness_7b8ed8b5": {
      "_label": "xg",

@@ -44,7 +44,7 @@ static bool afdep_role_suites() {
 // (FFN dispatch, Attention combine) launch the senders' grid, but CTAs 1.. exit about
 // 0.6 us after launch (measured on H100), so only CTA 0 stays resident, and it owns
 // its SM either way. A one-CTA receive therefore frees almost nothing, and it moved
-// latency by about 0.3 us (1-2%) at 1-8 tokens, in both directions (docs/v1.md, R10).
+// latency by about 0.3 us (1-2%) at 1-8 tokens, in both directions (docs/design.md, R10).
 //
 // What the FFN receive does hold is the copy epilogue: a PDL dependent of 132
 // max-shared-memory CTAs that launches once every receive CTA has triggered. The FFN
@@ -56,7 +56,7 @@ static bool afdep_role_suites() {
 // have arrived, early enough to hide the epilogue's launch behind the payload, and the
 // epilogue no longer holds the SMs from receive entry. Template, launch shape and every
 // other statement are the shared kernel's (one-token 3A:1F pays ~0.4 us, where counts
-// and payload arrive together; docs/v1.md section 15). AFDEP_SHARED_FFN_RECEIVE=1
+// and payload arrive together; docs/design.md section 15). AFDEP_SHARED_FFN_RECEIVE=1
 // keeps the shared kernel; AFDEP_KEEP_ENTRY_BARRIERS, AFDEP_UNION_NOTIFY and
 // AFDEP_ALL_RANK_EXIT imply it.
 static bool afdep_ffn_receive_kernels() {

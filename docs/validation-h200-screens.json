@@ -1,16 +1,16 @@
 {
  "date": "2026-10-22 to 2026-10-23",
- "question": "afdEP v1 against Masked DeepEP on 8 x H200 in one NVLink domain and on 24 H200 ranks across NVLink domains (the README's 8 x H200 and cross-node results)",
- "native_source_sha256": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663 for both arms of every screen (v1 before the rename; see the naming note in docs/v1.md)",
- "method": "benchmarks.screen pairing: each repeat runs one fresh process per arm in rotating order; each process times dispatch + combine round trips under CUDA graphs (benchmarks.comm), per exchange the max over Attention ranks of CUDA-event us; median_us is the median over repeats of the process medians; paired_change_pct is Masked against v1 per repeat, geomean_change_pct their geometric mean; repeats_faster counts repeats where Masked was faster. Multi-pod screens ran every rank of an arm under one torchrun per pod; the flags below are passed to benchmarks.comm.",
- "scope": "communication only; no serving claim. These layouts are measured, not GPU-suite validated for v1.",
+ "question": "afdEP against Masked DeepEP on 8 x H200 in one NVLink domain and on 24 H200 ranks across NVLink domains (the README's 8 x H200 and cross-node results)",
+ "native_source_sha256": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663 for both arms of every screen (the tree of commit 32c871d; see the digest note in docs/design.md)",
+ "method": "benchmarks.screen pairing: each repeat runs one fresh process per arm in rotating order; each process times dispatch + combine round trips under CUDA graphs (benchmarks.comm), per exchange the max over Attention ranks of CUDA-event us; median_us is the median over repeats of the process medians; paired_change_pct is Masked against afd per repeat, geomean_change_pct their geometric mean; repeats_faster counts repeats where Masked was faster. Multi-pod screens ran every rank of an arm under one torchrun per pod; the flags below are passed to benchmarks.comm.",
+ "scope": "communication only; no serving claim. These layouts are measured, not GPU-suite validated.",
  "screens": {
   "in_node_6a2f": {
    "layout": "6A:2F in one NVLink domain",
    "topology": "one pod of 8 H200, one NVLink domain",
    "flags": "--payload bf16 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 2048 --capacity 2048 --ffn-ranks 2 --attention-ranks 6",
    "arms": {
-    "v1": {},
+    "afd": {},
     "masked": {
      "role_aware": false
     }
@@ -19,7 +19,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "afd": {
       "median_us": 24.32
      },
      "masked": {
@@ -34,7 +34,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "afd": {
       "median_us": 29.29
      },
      "masked": {
@@ -49,7 +49,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "afd": {
       "median_us": 35.47
      },
      "masked": {
@@ -64,7 +64,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "afd": {
       "median_us": 53.17
      },
      "masked": {
@@ -79,7 +79,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "afd": {
       "median_us": 151.96
      },
      "masked": {
@@ -94,7 +94,7 @@
     },
     {
      "tokens": 2048,
-     "v1": {
+     "afd": {
       "median_us": 502.01
      },
      "masked": {
@@ -114,7 +114,7 @@
    "topology": "one pod of 8 H200, one NVLink domain",
    "flags": "--payload bf16 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 2048 --capacity 2048 --ffn-ranks 1 --attention-ranks 7",
    "arms": {
-    "v1": {},
+    "afd": {},
     "masked": {
      "role_aware": false
     }
@@ -123,7 +123,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "afd": {
       "median_us": 23.81
      },
      "masked": {
@@ -138,7 +138,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "afd": {
       "median_us": 27.21
      },
      "masked": {
@@ -153,7 +153,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "afd": {
       "median_us": 34.15
      },
      "masked": {
@@ -168,7 +168,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "afd": {
       "median_us": 70.27
      },
      "masked": {
@@ -183,7 +183,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "afd": {
       "median_us": 202.05
      },
      "masked": {
@@ -198,7 +198,7 @@
     },
     {
      "tokens": 2048,
-     "v1": {
+     "afd": {
       "median_us": 736.83
      },
      "masked": {
@@ -218,7 +218,7 @@
    "topology": "one pod of 8 H200, one NVLink domain",
    "flags": "--payload bf16 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 2048 --capacity 2048 --ffn-ranks 4 --attention-ranks 4",
    "arms": {
-    "v1": {},
+    "afd": {},
     "masked": {
      "role_aware": false
     }
@@ -227,7 +227,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "afd": {
       "median_us": 24.32
      },
      "masked": {
@@ -242,7 +242,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "afd": {
       "median_us": 26.57
      },
      "masked": {
@@ -257,7 +257,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "afd": {
       "median_us": 27.76
      },
      "masked": {
@@ -272,7 +272,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "afd": {
       "median_us": 39.58
      },
      "masked": {
@@ -287,7 +287,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "afd": {
       "median_us": 95.96
      },
      "masked": {
@@ -302,7 +302,7 @@
     },
     {
      "tokens": 2048,
-     "v1": {
+     "afd": {
       "median_us": 296.32
      },
      "masked": {
@@ -322,7 +322,7 @@
    "topology": "12 pods x 2 H200, each its own NVLink domain, InfiniBand GIN",
    "flags": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 16 32 64 128 --capacity 2048 --hybrid on --ffn-ranks 2 --attention-ranks 22",
    "arms": {
-    "v1": {},
+    "afd": {},
     "masked": {
      "role_aware": false
     }
@@ -331,7 +331,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "afd": {
       "median_us": 236.05
      },
      "masked": {
@@ -346,7 +346,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "afd": {
       "median_us": 264.85
      },
      "masked": {
@@ -361,7 +361,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "afd": {
       "median_us": 272.71
      },
      "masked": {
@@ -376,7 +376,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "afd": {
       "median_us": 287.28
      },
      "masked": {
@@ -391,7 +391,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "afd": {
       "median_us": 329.87
      },
      "masked": {
@@ -406,7 +406,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "afd": {
       "median_us": 473.06
      },
      "masked": {
@@ -426,7 +426,7 @@
    "topology": "6 pods x 4 H200, each its own NVLink domain, InfiniBand GIN",
    "flags": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 20",
    "arms": {
-    "v1": {},
+    "afd": {},
     "masked": {
      "role_aware": false
     }
@@ -435,7 +435,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "afd": {
       "median_us": 137.81
      },
      "masked": {
@@ -450,7 +450,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "afd": {
       "median_us": 155.29
      },
      "masked": {
@@ -465,7 +465,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "afd": {
       "median_us": 164.96
      },
      "masked": {
@@ -480,7 +480,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "afd": {
       "median_us": 235.12
      },
      "masked": {
@@ -495,7 +495,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "afd": {
       "median_us": 604.8
      },
      "masked": {
@@ -511,11 +511,11 @@
    ]
   },
   "cross_node_11to1_mixed_3x8": {
-   "layout": "11:1 (2F:22A), FFN node = 2 FFN + 6 Attention GPUs (v1 runs the union hybrid)",
+   "layout": "11:1 (2F:22A), FFN node = 2 FFN + 6 Attention GPUs (afdEP runs the union hybrid)",
    "topology": "3 pods x 8 H200, each its own NVLink domain, InfiniBand GIN",
    "flags": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 16 32 64 128 --capacity 2048 --hybrid on --ffn-ranks 2 --attention-ranks 22",
    "arms": {
-    "v1": {},
+    "afd": {},
     "masked": {
      "role_aware": false
     }
@@ -524,7 +524,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "afd": {
       "median_us": 166.76
      },
      "masked": {
@@ -539,7 +539,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "afd": {
       "median_us": 189.68
      },
      "masked": {
@@ -554,7 +554,7 @@
     },
     {
      "tokens": 16,
-     "v1": {
+     "afd": {
       "median_us": 200.36
      },
      "masked": {
@@ -569,7 +569,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "afd": {
       "median_us": 214.47
      },
      "masked": {
@@ -584,7 +584,7 @@
     },
     {
      "tokens": 64,
-     "v1": {
+     "afd": {
       "median_us": 230.7
      },
      "masked": {
@@ -599,7 +599,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "afd": {
       "median_us": 257.7
      },
      "masked": {
@@ -615,11 +615,11 @@
    ]
   },
   "cross_node_11to1_mixed_6x4": {
-   "layout": "11:1 (2F:22A), FFN domain = 2 FFN + 2 Attention GPUs (v1 runs the union hybrid)",
+   "layout": "11:1 (2F:22A), FFN domain = 2 FFN + 2 Attention GPUs (afdEP runs the union hybrid)",
    "topology": "6 pods x 4 H200, each its own NVLink domain, InfiniBand GIN",
    "flags": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --tokens 1 8 32 128 512 --capacity 2048 --hybrid on --ffn-ranks 2 --attention-ranks 22",
    "arms": {
-    "v1": {},
+    "afd": {},
     "masked": {
      "role_aware": false
     }
@@ -628,7 +628,7 @@
    "table": [
     {
      "tokens": 1,
-     "v1": {
+     "afd": {
       "median_us": 212.11
      },
      "masked": {
@@ -643,7 +643,7 @@
     },
     {
      "tokens": 8,
-     "v1": {
+     "afd": {
       "median_us": 235.4
      },
      "masked": {
@@ -658,7 +658,7 @@
     },
     {
      "tokens": 32,
-     "v1": {
+     "afd": {
       "median_us": 264.97
      },
      "masked": {
@@ -673,7 +673,7 @@
     },
     {
      "tokens": 128,
-     "v1": {
+     "afd": {
       "median_us": 333.45
      },
      "masked": {
@@ -688,7 +688,7 @@
     },
     {
      "tokens": 512,
-     "v1": {
+     "afd": {
       "median_us": 763.8
      },
      "masked": {

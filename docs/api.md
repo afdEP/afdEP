@@ -79,7 +79,7 @@ through to the pinned transport. `num_sms=0` selects approximately 24/132 of the
 smallest device's SM count; choose/tune explicitly for a workload. Both hybrid
 settings are validated in one NVLink domain and across NVLink domains joined by GIN.
 Across domains, role specialization runs the directional hybrid when every domain
-holds one role, and the union hybrid otherwise ([v1](v1.md), sections 6 and 7).
+holds one role, and the union hybrid otherwise ([design](design.md), sections 6 and 7).
 Two opt-in protocols change this across domains: the sparse switches
 (`AFDEP_HYBRID_STAGGER`, `AFDEP_HYBRID_SPARSE_DISPATCH`, `AFDEP_HYBRID_SPARSE_COMBINE`,
 section 17) and the mixed-role path (`AFDEP_MIXED_HYBRID`, section 18). Set them alike on

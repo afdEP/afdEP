@@ -1,6 +1,6 @@
 {
  "date": "2026-10-22",
- "change": "opt-in mixed-role directional hybrid (AFDEP_MIXED_HYBRID=1): FFN ranks [0, F), 0 < F < U, share NVLink domain 0 with Attention ranks; per-rank roles through generated copies of hybrid_dispatch.cuh and hybrid_combine.cuh; every rank's reply inbox in a slice before the staging slice (docs/v1.md section 18)",
+ "change": "opt-in mixed-role directional hybrid (AFDEP_MIXED_HYBRID=1): FFN ranks [0, F), 0 < F < U, share NVLink domain 0 with Attention ranks; per-rank roles through generated copies of hybrid_dispatch.cuh and hybrid_combine.cuh; every rank's reply inbox in a slice before the staging slice (docs/design.md section 18)",
  "decision": "opt-in prototype (stage 1, dense); the section-17 sparse switches do not apply yet. Not yet run: fault injection for the reply-slice and staging orderings, two-buffer interleave, 8-GPU nodes, serving.",
  "native_source_sha256": {
   "control_v1": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",

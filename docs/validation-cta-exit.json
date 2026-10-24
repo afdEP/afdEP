@@ -587,5 +587,5 @@
   "grid_sync_exit": "AFDEP_GRID_SYNC_EXIT=1",
   "masked": "role_aware=False"
  },
- "history": "An earlier screen of this change (validation-v1-cta-exit-rejected.json) ran HEAD in both arms and is void; a tree-isolated re-run (PYTHONSAFEPATH=1, distinct digests 3d68dba2 vs 7f2dece7) first measured -9.4% at one token."
+ "history": "An earlier screen of this change (validation-cta-exit-rejected.json) ran HEAD in both arms and is void; a tree-isolated re-run (PYTHONSAFEPATH=1, distinct digests 3d68dba2 vs 7f2dece7) first measured -9.4% at one token."
 }
