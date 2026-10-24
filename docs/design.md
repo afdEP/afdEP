@@ -1077,7 +1077,8 @@ scale to 2^120, so it decodes to infinity and the group's other elements below a
 become zero. The same top scale means a finite group amax of 248·2^120 (about 3.3e38) or
 more also decodes to infinity: the top binade of BF16 is not representable. DeepSeek-V3 keeps its combine in BF16; this switch needs a model-level accuracy
 check (per-layer MoE-output error, next-token KL and greedy match, a small task suite) before
-any serving use, and communication-only evidence supports no quality claim.
+any serving use, and communication-only evidence supports no quality claim. The GSM8K check
+under Status is the task-level part; the per-layer error and next-token KL are still open.
 
 Expected gain, not measured: half the scale-out reply bytes at the same message and signal
 counts, so the byte-bound part of the round trip at 64 tokens and above should shrink by up
@@ -1114,8 +1115,14 @@ Status ([record](validation-fp8-combine.json), kermit H200 over InfiniBand, 2026
 - Serving (Qwen3-235B, 4,096 in / 2,048 out, 16A:8F, sparse switches): TPOT −1.4% to +0.9%
   with the minimum bucket 64; decode buckets there are mostly below 64 tokens, where the
   round trip is not byte-bound.
-- Not yet: a model-level accuracy check (per-layer MoE error, next-token KL, greedy match,
-  a task suite), required before any serving use.
+- Accuracy, task level (tree `b5078d62`, whose native changes since `2cee2f51` are comments):
+  GSM8K test (1,319 problems, zero-shot, greedy, thinking off) on Qwen3-235B served by vLLM
+  with 16A:8F and the sparse switches. FP8 replies at every bucket (minimum 0) score 95.07%
+  against 95.30% and 95.07% for two BF16 runs. 39 answers differ from the first BF16 run,
+  against 35 between the two BF16 runs (McNemar p = 0.75), so the 95% interval for the FP8
+  loss is about −0.7 to +1.2 points. FP8 makes greedy outputs diverge earlier (median 66–68
+  characters, against 144 between BF16 runs), as rounding should.
+- Not yet: per-layer MoE-output error and next-token KL.
 
 Against this document's rule (ship only role-dependent changes): the byte cut itself would
 also shrink Masked's combine, so like section 17 this needs a maintainer decision; the

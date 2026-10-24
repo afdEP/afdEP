@@ -11,10 +11,11 @@
   "ungated_gpu_suite_and_screens": "024e98b05de66aecbc2e72da3046d8d083b0ec4776dae3ec927f6330f252b846",
   "gated_final": "2cee2f51ee29cdbeb62ad4c38f77ba6bd5fd006b73e02181f5a9c8590cb4edae",
   "fault_tree": "60cf91b3c74ef7814e8da71ae73ebffb82ffd86cf12a7e1c0f841398e38dd1e9",
-  "negative_control_tree": "679c96af7f1ae589ce65483c2a606493e3b31f6452c55a585ff978e0bb6c9124"
+  "negative_control_tree": "679c96af7f1ae589ce65483c2a606493e3b31f6452c55a585ff978e0bb6c9124",
+  "accuracy_check": "b5078d629964b48d706eba81f1251e294c138c5e08f8d86240f711e1676e7405"
  },
  "setup": "kermit (CoreWeave) H200, NCCL 2.30.7 GIN over InfiniBand; 6 pods x 4 GPUs (one NVLink domain each) and 4 pods x 8 GPUs; vLLM 0.30.0 with the afd-plugin lanes tree (5215c41) for serving; Qwen3-235B-A22B-FP8 shapes (hidden 4096, top-8 of 128 experts, FP8 dispatch) unless stated",
- "decision": "opt-in; recommended with AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET=64. Round trip -4% to -21% from 64 tokens per Attention GPU, neutral below with the minimum bucket (+3% to +8% without it). Serving at 4,096/2,048 tokens: -1.4% to +0.9% TPOT. Lossy: needs a model-level accuracy check before serving use.",
+ "decision": "opt-in; recommended with AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET=64. Round trip -4% to -21% from 64 tokens per Attention GPU, neutral below with the minimum bucket (+3% to +8% without it). Serving at 4,096/2,048 tokens: -1.4% to +0.9% TPOT. Lossy; GSM8K on Qwen3-235B is unchanged within run-to-run noise with FP8 replies at every bucket (95.07% against 95.30% and 95.07% for two BF16 runs); per-layer MoE error and next-token KL are not measured yet.",
  "gpu_suite_ungated": [
   {
    "case": "g14-h4096",
@@ -963,5 +964,67 @@
   ],
   "note": "a first A/B on 024e98b0 showed +36% TPOT at 4 and 16 requests per Attention GPU and +15% at 96, 0% at 32. It ran while wide EP32 prefilled 16K prompts on the same InfiniBand fabric and did not reproduce in the repeat above; its control's 64-request point also moved from 51.4 to 58.5 ms between runs"
  },
- "scope": "communication-only correctness with synthetic expert outputs, transport timing, and serving TPOT; no model-accuracy evidence (per-layer error, next-token KL, task scores) yet"
+ "accuracy_gsm8k_16A_8F": {
+  "setup": "vLLM 0.30.0 with the afd-plugin lanes tree (5215c41), Qwen3-235B-A22B-FP8, AFD 16A:8F on six 4-GPU pods (FFN DP8 over two pods, Attention DP16 over four, so replies cross NVLink domains), sparse switches, real prefill; tree b5078d62, whose native changes since 2cee2f51 are comments only; arms one after another on fresh servers",
+  "method": "GSM8K test, 1,319 problems (openai/grade-school-math test.jsonl, sha256 3730d312f6e34405...); zero-shot chat with thinking off, question plus 'Please reason step by step, and put your final answer within \\boxed{}.'; greedy (temperature 0), at most 1,024 tokens, 256 requests in flight; the answer is the last \\boxed{} number, else the last number",
+  "arms": [
+   {
+    "arm": "bf16_run1",
+    "env": "AFDEP_HYBRID_FP8_COMBINE=0",
+    "correct": 1257,
+    "accuracy": 0.953,
+    "truncated": 0
+   },
+   {
+    "arm": "fp8_every_bucket",
+    "env": "AFDEP_HYBRID_FP8_COMBINE=1 (minimum bucket 0)",
+    "correct": 1254,
+    "accuracy": 0.9507,
+    "truncated": 1
+   },
+   {
+    "arm": "bf16_run2",
+    "env": "AFDEP_HYBRID_FP8_COMBINE=0",
+    "correct": 1254,
+    "accuracy": 0.9507,
+    "truncated": 0
+   }
+  ],
+  "paired_answers": {
+   "bf16_run1_vs_run2": {
+    "run1_only_correct": 19,
+    "run2_only_correct": 16
+   },
+   "fp8_vs_bf16_run1": {
+    "bf16_only_correct": 21,
+    "fp8_only_correct": 18,
+    "mcnemar_exact_p": 0.75
+   },
+   "fp8_vs_bf16_run2": {
+    "bf16_only_correct": 20,
+    "fp8_only_correct": 20,
+    "mcnemar_exact_p": 1.0
+   },
+   "fp8_loss_95pct_interval_points": [
+    -0.7,
+    1.2
+   ]
+  },
+  "greedy_text": {
+   "identical_outputs": {
+    "bf16_run1_vs_run2": 69,
+    "fp8_vs_bf16_run1": 21,
+    "fp8_vs_bf16_run2": 13
+   },
+   "median_first_divergence_chars": {
+    "bf16_run1_vs_run2": 144,
+    "fp8_vs_bf16_run1": 68,
+    "fp8_vs_bf16_run2": 66
+   },
+   "note": "batching makes greedy decoding differ between runs, so text match is read against the BF16 run-to-run floor; the FP8 arm diverging earlier than that floor shows the switch changed the numerics"
+  },
+  "truncated_case": "problem 186 under FP8 ran out of 1,024 tokens in a trial-and-error search over candidate values (no repetition loop); both BF16 runs solved it",
+  "result": "task accuracy unchanged within run-to-run noise; FP8 makes outputs diverge earlier than batching alone"
+ },
+ "scope": "communication-only correctness with synthetic expert outputs, transport timing, serving TPOT, and one task-level accuracy check (GSM8K on Qwen3-235B); no per-layer MoE error or next-token KL yet"
 }
