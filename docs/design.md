@@ -736,10 +736,10 @@ of that last control delayed only the release word, after the sums existed, and 
 it did not create the race.
 ([record](validation-count-first.json))
 
-## Proposed (opt-in, under review)
+## Opt-in additions after 1.0.0
 
-Sections 17 to 19 are opt-in additions on the cross-node branch; v1.0.0 does not ship
-them, and every default is unchanged.
+Sections 17 to 19 are opt-in additions merged after the 1.0.0 release (#3 and #12);
+v1.0.0 does not ship them, and every default is unchanged.
 
 ### 17. Sparse directional hybrid (opt-in, across NVLink domains)
 
@@ -916,10 +916,10 @@ DeepEP V2's union hybrid at small batches, where Masked spends extra signals on 
 Attention domains; that was neither implemented nor measured, and should be decided
 before this ships by default.
 
-Decision: opt-in until reviewed; the recommended setting is all three switches. No
-serving claim yet: this is communication-only evidence. Not covered: the union hybrid
-and the mixed-role path of section 18. FP8 payload only: BF16 with the switches has not
-been run (suite or screen).
+Decision: merged as opt-in (#3), off by default; the recommended setting is all three
+switches. No serving claim yet: this is communication-only evidence. Not covered: the
+union hybrid and the mixed-role path of section 18. FP8 payload only: BF16 with the
+switches has not been run (suite or screen).
 ([record](validation-sparse-hybrid.json))
 
 ### 18. Mixed-role directional hybrid (opt-in, FFN ranks sharing an NVLink domain)
@@ -1125,10 +1125,11 @@ Status ([record](validation-fp8-combine.json), kermit H200 over InfiniBand, 2026
 - Not yet: per-layer MoE-output error and next-token KL.
 
 Against this document's rule (ship only role-dependent changes): the byte cut itself would
-also shrink Masked's combine, so like section 17 this needs a maintainer decision; the
-implementation exists only in the directional protocol, where the S:1 ratio concentrates
-reply bytes on the FFN NICs. It is also the one place the library quantizes (AGENTS.md
-keeps quantization policy with the caller): opt-in, lossy and flagged for review.
+also shrink Masked's combine, so like section 17 it was merged as opt-in (#12) and stays
+off by default; the implementation exists only in the directional protocol, where the S:1
+ratio concentrates reply bytes on the FFN NICs. It is also the one place the library
+quantizes (AGENTS.md keeps quantization policy with the caller): opt-in, lossy and off by
+default.
 
 ## 3:1 Attention:FFN: where the time goes (analysis)
 
