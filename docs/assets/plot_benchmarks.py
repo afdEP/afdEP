@@ -85,7 +85,7 @@ def panel(ax, name, dataset, order, theme, headline):
     ax.yaxis.set_major_locator(FixedLocator(ticks))
     ax.yaxis.set_minor_locator(NullLocator())
     ax.set_yticklabels([f"{y:,}" for y in ticks])
-    ax.set_ylim(lo / 1.35, hi * 1.25)
+    ax.set_ylim(lo / (1.7 if headline and len(headline) > 2 else 1.35), hi * 1.25)
     ax.set_xlim(tokens[0] / 1.4, tokens[-1] * 1.4)
     ax.grid(True, which="major", color=t["grid"], linewidth=1, linestyle="-")
     ax.set_axisbelow(True)
@@ -97,11 +97,12 @@ def panel(ax, name, dataset, order, theme, headline):
         name, loc="left", fontsize=10.5, color=t["ink"], fontweight="semibold", pad=8
     )
     ax.set_facecolor(t["surface"])
-    if headline and all(label in dataset["series"] for label in headline):
+    if headline and all(label in dataset["series"] for label in headline[:2]):
         # One direct label per panel: the first series' change against the reference at
         # one token, above the upper of the two points (the series are lowest there).
         # The change is the paired geometric mean where the dataset has one.
-        new, ref = headline
+        new, ref = headline[:2]
+        below = len(headline) > 2 and headline[2] == "below"
         a, b = dataset["series"][new][0], dataset["series"][ref][0]
         paired = dataset.get("paired_ratio", {})
         if new in paired and ref in paired:
@@ -111,8 +112,8 @@ def panel(ax, name, dataset, order, theme, headline):
         sign = "−" if change < 0 else "+"
         ax.annotate(
             f"{sign}{abs(change):.0f}% at 1 token",
-            xy=(tokens[0], max(a, b)),
-            xytext=(-6, 11),
+            xy=(tokens[0], min(a, b) if below else max(a, b)),
+            xytext=(-6, -17 if below else 11),
             textcoords="offset points",
             fontsize=9,
             color=t["ink2"],
@@ -127,7 +128,10 @@ def figure(stem, title, subtitle, panels, order, cols, headline=None):
             {"font.family": FONT, "svg.fonttype": "none", "svg.hashsalt": "afdep"}
         )
         fig, axes = plt.subplots(
-            rows, cols, figsize=(3.7 * cols + 0.4, height), squeeze=False
+            rows,
+            cols,
+            figsize=(8.6 if cols == 1 else 3.7 * cols + 0.4, height),
+            squeeze=False,
         )
         fig.patch.set_facecolor(t["surface"])
         for ax, (name, dataset) in zip(axes.flat, panels, strict=False):
@@ -189,7 +193,8 @@ def figure(stem, title, subtitle, panels, order, cols, headline=None):
             fontsize=9,
             labelcolor=t["ink"],
             handlelength=1.6,
-            columnspacing=1.4,
+            # Browsers draw the labels in a wider UI font than matplotlib measures.
+            columnspacing=3.0 if max(len(label) for label in order) > 30 else 1.4,
         )
         fig.tight_layout(
             rect=(0, 0, 1, 1 - (0.95 + 0.22 * ((len(order) - 1) // 3)) / height)
@@ -234,43 +239,47 @@ figure(
 
 if "cross_node_proposal" in DATA:
     P = DATA["cross_node_proposal"]
-    final = P["sparse_11to1"]["final"]
+    final = P["sparse_11to1"]["all_three"]
     switches = P["sparse_11to1"]["switches"]["stagger"]
+    n = len(switches["tokens"])
     combined = {
         "tokens": switches["tokens"],
         "series": {
-            AFDEP: final["series"][AFDEP][: len(switches["tokens"])],
+            AFDEP: final["series"][AFDEP][:n],
             MASKED: P["sparse_11to1"]["masked_unpaired"]["series"][MASKED],
             "Stagger only": switches["series"]["Stagger only"],
             "Sparse dispatch only": switches["series"]["Sparse dispatch only"],
-            SPARSE: final["series"][SPARSE][: len(switches["tokens"])],
+            SPARSE: final["series"][SPARSE][:n],
+        },
+        "paired_ratio": {
+            label: final["paired_ratio"][label][:n] for label in (AFDEP, SPARSE)
         },
     }
     figure(
         "results-xn-sparse",
         "Sparse directional hybrid, 11:1 across 12 single-role domains (12 × 2 H200)",
-        "Each switch paired against afdEP in its own screen; Masked from an earlier"
-        " unpaired screen",
+        "Before the done witness (200944ce); each switch paired against afdEP in its"
+        " own screen, Masked from an earlier unpaired one",
         [("2 FFN + 22 Attention ranks, FP8, hidden 2048", combined)],
         [AFDEP, MASKED, SPARSE, "Sparse dispatch only", "Stagger only"],
         1,
-        (SPARSE, AFDEP),
+        (SPARSE, AFDEP, "below"),
     )
     figure(
         "results-xn-scaling",
         "Sparse directional hybrid at other layouts",
-        "All three switches against afdEP, paired; FP8, hidden 2048, top-8 of 128"
-        " experts",
+        "All three switches against afdEP, paired, before the done witness; FP8,"
+        " hidden 2048, top-8 of 128 experts",
         list(P["sparse_scaling"].items()),
         [AFDEP, MASKED, SPARSE],
         3,
-        (SPARSE, AFDEP),
+        (SPARSE, AFDEP, "below"),
     )
     figure(
         "results-xn-mixed",
         "Mixed-role directional hybrid: the FFN domain also holds Attention GPUs",
-        "Against afdEP, which runs the union hybrid here and equals Masked;"
-        " 6 × 4 H200, FP8, hidden 2048",
+        "Against afdEP, which runs the union hybrid here and matches Masked within"
+        " 0.5%; 6 × 4 H200, FP8, hidden 2048",
         list(P["mixed_role"].items()),
         [AFDEP, MASKED, MIXED],
         2,
