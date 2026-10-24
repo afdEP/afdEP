@@ -56,6 +56,12 @@ class ElasticBuffer {
     std::string afd_cf_arm = "full";
     bool afd_cf_source_only = false;
 
+    // afdEP FP8 combine replies (afdep_suites.hpp), latched at construction: on only in the directional
+    // hybrid, where every rank must latch the same value (afdep/deepep.py checks it), for buckets of at
+    // least afd_fp8_min_bucket tokens.
+    bool afd_fp8_combine = false;
+    int afd_fp8_min_bucket = 0;
+
     // Timeout settings
     int num_cpu_timeout_secs;
     int64_t num_gpu_timeout_cycles;
@@ -129,6 +135,17 @@ public:
             afdep_directed_exit() and afdep_per_cta_exit() and afdep_role_buffers())
             afd_cf_min_bucket = afdep_count_first_min_bucket();
 
+        // afdEP FP8 combine: the directional hybrid only (F % U == 0 with F > 0, so never the mixed-role
+        // path, which needs F < U), off in one NVLink domain, under the union hybrid, for generic buffers,
+        // in deterministic mode and without SM90 features. Latched unchecked, like count-first: the row
+        // format is on the wire, and the agreement check certifies exactly the value combine uses.
+        afd_fp8_combine = afd_ffn_ranks > 0 and not deterministic and allow_multiple_reduction and
+            kEnableSM90Features and
+            afdep_directional_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
+                                     nccl_context->num_scaleup_ranks) > 0 and
+            afdep_hybrid_fp8_combine();
+        afd_fp8_min_bucket = afd_fp8_combine ? afdep_hybrid_fp8_combine_min_bucket() : 0;
+
         // Timeout
         this->num_cpu_timeout_secs = num_cpu_timeout_secs;
         this->num_gpu_timeout_cycles = static_cast<int64_t>(num_gpu_timeout_secs);
@@ -199,17 +216,20 @@ public:
     // hybrid reads them, so any other topology (one NVLink domain, mixed-role domains) reports
     // them off and never rejects ranks that set them differently.
     // The mixed-role hybrid (afdep_roles.hpp) is reported the same way: its F, wire-visible.
-    std::tuple<int, bool, bool, int> get_afd_sparse_hybrid_config() const {
+    // The fifth and sixth elements are the latched FP8 combine replies setting and its minimum bucket
+    // (directional hybrid only).
+    std::tuple<int, bool, bool, int, bool, int> get_afd_sparse_hybrid_config() const {
         if (afd_ffn_ranks > 0) {
             const int mixed = afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
                                                  nccl_context->num_scaleup_ranks);
             if (mixed > 0)
-                return {0, false, false, mixed};
+                return {0, false, false, mixed, false, 0};
         }
         if (afd_ffn_ranks <= 0 or afdep_directional_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
                                                            nccl_context->num_scaleup_ranks) == 0)
-            return {0, false, false, 0};
-        return {afdep_hybrid_stagger_max_tokens(), afdep_hybrid_sparse_dispatch(), afdep_hybrid_sparse_combine(), 0};
+            return {0, false, false, 0, false, 0};
+        return {afdep_hybrid_stagger_max_tokens(), afdep_hybrid_sparse_dispatch(), afdep_hybrid_sparse_combine(), 0,
+                afd_fp8_combine, afd_fp8_min_bucket};
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
@@ -1474,6 +1494,14 @@ public:
             EP_HOST_ASSERT(num_send_bytes <= num_buffer_bytes);
             afd_scaleout_send_base = math::advance_ptr(buffer, num_buffer_bytes - num_send_bytes);
         }
+        // afdEP FP8 combine (latched): still the directional hybrid (AFDEP_UNION_HYBRID was not flipped
+        // since construction), and the expanded, unweighted layout whose reply rows carry no metadata,
+        // asserted at every bucket. Buckets below the latched minimum keep BF16 replies; every rank
+        // passes the same bucket.
+        EP_HOST_ASSERT(not afd_fp8_combine or
+                       (afd_ffn_scaleout_ranks > 0 and afd_mixed_ffn_ranks == 0 and use_expanded_layout and
+                        allow_multiple_reduction and not topk_weights.has_value()));
+        const bool afd_fp8_replies = afd_fp8_combine and num_max_tokens_per_rank >= afd_fp8_min_bucket;
         // afdEP role suites (afdep_suites.hpp): in directional hybrid the Attention receive runs
         // the one-CTA collect kernel.
         auto afd_combine_shape = AfdLaunchShape::kShared;
@@ -1506,7 +1534,8 @@ public:
             afd_direct and afd_ffn_ranks == 1 and afdep_single_ffn_reduce(),
             afd_scaleout_send_base,
             afd_combine_shape,
-            afd_mixed_ffn_ranks);
+            afd_mixed_ffn_ranks,
+            afd_fp8_replies);
 
         // Allocate output tensors
         // afdEP single-FFN collect view: with one FFN rank in one NVLink domain (rank layout), each
@@ -1549,7 +1578,7 @@ public:
                                        jit::device_runtime->get_num_sms(),
                                        jit::device_runtime->get_num_smem_bytes(),
                                        use_expanded_layout, allow_multiple_reduction,
-                                       comm_stream);
+                                       comm_stream, afd_fp8_replies);
         }
 
         // Stream control

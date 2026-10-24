@@ -31,6 +31,13 @@ COLLECT_VIEW = False  # --collect-view: Attention reads the single-FFN collect v
 # role's launch shape; protocol and buffer-geometry controls must match on all ranks.
 ROLE_LOCAL_ENV_PREFIX, ROLE_LOCAL_ENV = "AFDEP_SHARED_", ("AFDEP_ATTENTION_GRID_SYNC",)
 RECORDED_ENV_PREFIXES = ("AFDEP_", "EP_", "NCCL_")
+# FP8 combine replies (AFDEP_HYBRID_FP8_COMBINE=1, afdep_fp8_combine.cuh): E4M3 per FFN
+# domain, one power-of-two scale 2^e per 128 elements, e the smallest integer with
+# amax <= 448 * 2^e (from amax's FP32 bits), clamped at -117.
+FP8_GROUP = 128
+FP8_EXPONENT_BIAS, FP8_MANTISSA_THRESHOLD, FP8_MIN_EXPONENT = 135, 0x600000, -117
+# Worst-case E4M3 relative rounding error (2^-4 of the group amax) and BF16 slack.
+FP8_GROUP_ERROR, BF16_SLACK = 2.0**-4 * 1.01, 2.0**-7
 # FFN rank 0 delays replies; the last Attention rank delays its next dispatch.
 
 
@@ -40,6 +47,9 @@ class Case:
     counts: tuple[int, ...]
     epoch: int
     routing: str = "mixed"
+    # "wide": every 128-column group spans 2^0..2^-23 (E4M3 rounding, subnormals and
+    # flush to zero under FP8 combine replies); exact in BF16, so BF16 payload only.
+    magnitudes: str = "narrow"
 
 
 def inputs(case: Case, source: int, rows: int, config: Config):
@@ -47,7 +57,10 @@ def inputs(case: Case, source: int, rows: int, config: Config):
     columns = torch.arange(config.hidden_size, device="cuda", dtype=torch.int64)
     signature = (tokens + 1) | ((source + 1) << 8) | (case.epoch << 16)
     signs = 2 * ((signature[:, None] >> (columns[None, :] % 24)) & 1) - 1
-    magnitudes = (2.0 ** (columns % 4).float()) / 16
+    if case.magnitudes == "wide":
+        magnitudes = 2.0 ** -(columns % 24).float()
+    else:
+        magnitudes = (2.0 ** (columns % 4).float()) / 16
     x = (signs.float() * magnitudes).bfloat16()
     slots = torch.arange(config.top_k, device="cuda", dtype=torch.int64)
     if case.routing == "skew":
@@ -190,14 +203,12 @@ class Exchange:
         return snapshot, received.recv_counts_host if host_counts else None
 
 
-def combined_reference(x, ids, weights, config: Config, scaleup_ranks: int | None):
-    """BF16 combine result along DeepEP's reduction tree.
+def reply_partials(x, ids, weights, config: Config, scaleup_ranks: int | None):
+    """The BF16 partials a source receives, along DeepEP's reduction tree.
 
     Each FFN rank sums its experts' BF16 rows into one BF16 partial; with hybrid
     (multi-domain) transport each FFN domain's forwarder sums its ranks' partials
-    into one BF16 partial; the source sums what it receives. Every stage is an
-    exact FP32 sum rounded once to BF16, so this equals a single rounding whenever
-    the intermediates are exact (one FFN domain, small expert factors).
+    into one BF16 partial. Every stage is an exact FP32 sum rounded once to BF16.
     """
     contribution = (weights * (ids + 1).float()).masked_fill(ids < 0, 0)
     rows_bf16 = (x.float()[:, None, :] * contribution[:, :, None]).bfloat16().float()
@@ -211,19 +222,93 @@ def combined_reference(x, ids, weights, config: Config, scaleup_ranks: int | Non
             sum(partials[start : start + scaleup_ranks]).bfloat16().float()
             for start in range(0, config.ffn_ranks, scaleup_ranks)
         ]
-    return sum(partials).bfloat16()
+    return partials
 
 
-def verify(snapshot, case: Case, buffer: Buffer, rows: int, *, sign=1) -> None:
+def group_amax(partial):
+    """Each element's 128-column group amax."""
+    rows, hidden = partial.shape
+    groups = partial.view(rows, hidden // FP8_GROUP, FP8_GROUP)
+    return groups.abs().amax(dim=2, keepdim=True), groups
+
+
+def fp8_reply(partial):
+    """An FFN domain's BF16 partial as the source decodes its FP8 reply row.
+
+    Scaling by powers of two built from their bits and dequantizing are exact in
+    FP32 (e >= -117 keeps every product normal), so the only rounding is the E4M3
+    cast, to nearest even as the kernel's satfinite conversion within range.
+    """
+    amax, groups = group_amax(partial)
+    bits = amax.view(torch.int32)
+    exponent = ((bits >> 23) & 0xFF) - FP8_EXPONENT_BIAS
+    exponent = exponent + ((bits & 0x7FFFFF) > FP8_MANTISSA_THRESHOLD).int()
+    exponent = exponent.clamp(min=FP8_MIN_EXPONENT)
+    inverse = ((127 - exponent) << 23).view(torch.float32)
+    scale = ((127 + exponent) << 23).view(torch.float32)
+    values = (groups * inverse).to(torch.float8_e4m3fn).float()
+    return (values * scale).view_as(partial)
+
+
+def combined_reference(
+    x, ids, weights, config: Config, scaleup_ranks: int | None, fp8_combine=False
+):
+    """Combine result: the source sums the partials it receives in FP32 and rounds
+    once to BF16, which equals a single rounding whenever the intermediates are
+    exact (one FFN domain, small expert factors).
+
+    With FP8 combine replies (across NVLink domains) each FFN domain's partial
+    arrives as FP8; the epilogue sums the decoded rows in ascending order of each
+    domain's last top-k slot (DeepEP's deduplication keeps the highest lane).
+    """
+    partials = reply_partials(x, ids, weights, config, scaleup_ranks)
+    if not fp8_combine:
+        return sum(partials).bfloat16()
+    assert scaleup_ranks is not None, "FP8 combine replies need two NVLink domains"
+    domain = torch.where(ids >= 0, ids // (config.experts_per_rank * scaleup_ranks), -1)
+    slots = torch.arange(config.top_k, device=ids.device)
+    last = torch.stack(
+        [torch.where(domain == d, slots, -1).amax(dim=1) for d in range(len(partials))],
+        dim=1,
+    )
+    order = last.argsort(dim=1, stable=True)
+    decoded = torch.stack([fp8_reply(partial) for partial in partials], dim=1)
+    decoded = decoded.gather(1, order[:, :, None].expand_as(decoded))
+    total = torch.zeros_like(partials[0])
+    for position in range(len(partials)):
+        total = total + decoded[:, position]
+    return total.bfloat16()
+
+
+def fp8_error_bound(x, ids, weights, config: Config, scaleup_ranks: int):
+    """|FP8-reply result - BF16 result| bound: E4M3 rounding is at most 2^-4 of each
+    domain's group amax, plus the two BF16 roundings."""
+    partials = reply_partials(x, ids, weights, config, scaleup_ranks)
+    amax_sum = sum(group_amax(p)[0].expand(-1, -1, FP8_GROUP) for p in partials)
+    exact = sum(partials).bfloat16().float()
+    return FP8_GROUP_ERROR * amax_sum.reshape_as(exact) + BF16_SLACK * exact.abs()
+
+
+def verify(
+    snapshot, case: Case, buffer: Buffer, rows: int, *, sign=1, bucket=None
+) -> None:
     value, host_counts = snapshot
     config = buffer.config
+    # FP8 replies apply to buckets of at least the latched minimum (default: capacity).
+    bucket = bucket or config.capacity_tokens_per_rank
+    fp8 = buffer.fp8_combine and bucket >= buffer.fp8_combine_min_bucket
     if buffer.role == "attention":
         x, ids, weights = inputs(case, buffer.role_rank, rows, config)
         scaleout, scaleup = buffer.logical_domain
-        expected = combined_reference(
-            sign * x.float(), ids, weights, config, scaleup if scaleout > 1 else None
-        )
+        scaleup_ranks = scaleup if scaleout > 1 else None
+        x = sign * x.float()
+        expected = combined_reference(x, ids, weights, config, scaleup_ranks, fp8)
         torch.testing.assert_close(value, expected, rtol=0, atol=0)
+        if fp8:
+            # The FP8-aware reference itself stays within E4M3's bound of BF16.
+            bf16 = combined_reference(x, ids, weights, config, scaleup_ranks)
+            bound = fp8_error_bound(x, ids, weights, config, scaleup_ranks)
+            assert ((value.float() - bf16.float()).abs() <= bound).all()
         return
     first = buffer.role_rank * config.experts_per_rank
     counts = torch.zeros(config.experts_per_rank, dtype=torch.int64, device="cuda")
@@ -363,9 +448,13 @@ def bucket_checks(buffer, graph):
                 exchange.update(Case(case.name, case.counts, case.epoch + 10))
             cuda_graph.replay()
         torch.cuda.synchronize()
-        for (_, case, exchange), (value, counts) in zip(plans, captured, strict=True):
+        for (bucket, case, exchange), (value, counts) in zip(
+            plans, captured, strict=True
+        ):
             replayed = Case(case.name, case.counts, case.epoch + 10)
-            verify((value.clone(), counts), replayed, buffer, exchange.rows)
+            verify(
+                (value.clone(), counts), replayed, buffer, exchange.rows, bucket=bucket
+            )
         cuda_graph.reset()
     else:
         snapshots = []
@@ -375,8 +464,8 @@ def bucket_checks(buffer, graph):
             role_host_counts = ffn if buffer.role == "ffn" else attention
             snapshots.append(exchange.run(host_counts=role_host_counts, bucket=bucket))
         torch.cuda.synchronize()
-        for (_, case, exchange), snapshot in zip(plans, snapshots, strict=True):
-            verify(snapshot, case, buffer, exchange.rows)
+        for (bucket, case, exchange), snapshot in zip(plans, snapshots, strict=True):
+            verify(snapshot, case, buffer, exchange.rows, bucket=bucket)
     dist.barrier()
 
 
@@ -407,7 +496,7 @@ def main() -> None:
     parser.add_argument(
         "--hidden-size",
         type=int,
-        choices=(256, 2048, 7168, 8192),
+        choices=(256, 2048, 4096, 7168, 8192),
         default=DEFAULT_HIDDEN,
     )
     parser.add_argument("--top-k", type=int, choices=(2, 8), default=DEFAULT_TOP_K)
@@ -504,6 +593,8 @@ def main() -> None:
         Case("partial_prefix", prefix, 7),
         Case("one_small_source", one_small, 8, "spread"),
     ]
+    if args.payload == "bf16":
+        cases.append(Case("fp8_range", full, 9, "mixed", "wide"))
     for host_counts in (False, True):
         for case in cases:
             rows = case.counts[buffer.role_rank] if buffer.role == "attention" else n
@@ -523,6 +614,8 @@ def main() -> None:
         "role": buffer.role,
         "config": asdict(config),
         "physical_domain": buffer.physical_domain,
+        "fp8_combine": buffer.fp8_combine,
+        "fp8_combine_min_bucket": buffer.fp8_combine_min_bucket,
         "gpu": torch.cuda.get_device_name(),
         "native_source_sha256": source_digest(),
         "env": {

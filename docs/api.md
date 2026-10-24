@@ -23,7 +23,8 @@ on graph replay. All payload tensors are on the selected CUDA device.
 
 BF16 dispatch uses BF16 activations. FP8 uses `float8_e4m3fn` activations and
 FP32 block-128 scales `[T,H/128]`; strided scale views are supported. The library
-does not quantize or run GEMMs. `H` is a multiple of 256, `K ≤ min(32,E)`, and
+does not quantize or run GEMMs, except the opt-in lossy reply transport
+`AFDEP_HYBRID_FP8_COMBINE` below. `H` is a multiple of 256, `K ≤ min(32,E)`, and
 real experts divide evenly over FFN ranks.
 
 Receive prefix sum `ends[e]` is a device tensor: expert e occupies
@@ -85,6 +86,19 @@ Two opt-in protocols change this across domains: the sparse switches
 section 17) and the mixed-role path (`AFDEP_MIXED_HYBRID`, section 18). Set them alike on
 every rank before constructing the `Buffer` and keep them; construction gathers every
 rank's resolved values once and rejects a mismatch.
+
+`AFDEP_HYBRID_FP8_COMBINE=1` (section 19; validated on H200; GSM8K accuracy unchanged, no per-layer or next-token KL check yet) sends the
+directional hybrid's combine replies across NVLink domains as FP8: set it alike before
+construction, which latches it (later changes have no effect), checks it on every rank and
+reports it as `Buffer.fp8_combine`; it is off outside the directional hybrid. It is lossy:
+each FFN domain's BF16 partial is rounded to E4M3 with a power-of-two scale per 128 elements
+(error at most 2^-4 of the group's largest magnitude; tiny elements flush to zero; NaN stays
+in place; an infinity zeroes its group's finite elements unless they are near the BF16 range
+limit) before the source sums the domains in FP32. `source_collect` still returns BF16.
+`AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET=b`, latched and checked with it and reported as
+`Buffer.fp8_combine_min_bucket`, keeps BF16 replies for exchanges whose bucket is below b
+tokens (every rank passes the same bucket, so both roles agree on the row format). The
+default 0 means every bucket, negative values clamp to 0, and it reports 0 when FP8 is off.
 
 Native compilation is lazy and process-locked. `AFDEP_CACHE_DIR` controls the
 extension cache; `EP_JIT_CACHE_DIR` controls DeepEP kernel JIT cache. Both must be

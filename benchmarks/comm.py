@@ -262,6 +262,11 @@ def main():
         "transport_sms": {
             arm.name: arm.buffer.transport._resolved_num_sms for arm in arms
         },
+        # Resolved AFDEP_HYBRID_FP8_COMBINE (lossy replies; docs/design.md section 19).
+        "fp8_combine": {arm.name: arm.buffer.fp8_combine for arm in arms},
+        "fp8_combine_min_bucket": {
+            arm.name: arm.buffer.fp8_combine_min_bucket for arm in arms
+        },
         "device": torch.cuda.get_device_name(),
         "torch": torch.__version__,
         "native_source_sha256": source_digest(),
