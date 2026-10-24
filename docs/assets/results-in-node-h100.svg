@@ -1174,7 +1174,7 @@ L 804.074961 307.692842
    <text style="font-weight: 600; font-size: 13px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="9.936" y="18.39" transform="rotate(-0 9.936 18.39)">One NVLink domain, 4 × H100</text>
   </g>
   <g id="text_87">
-   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="9.936" y="37.365" transform="rotate(-0 9.936 37.365)">afdEP v1 against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128 experts (96 for 1A:3F); BF16 unless noted</text>
+   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="9.936" y="37.365" transform="rotate(-0 9.936 37.365)">afdEP against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128 experts (96 for 1A:3F); BF16 unless noted</text>
   </g>
   <g id="legend_1">
    <g id="line2d_149">
@@ -1200,12 +1200,12 @@ z
     </g>
    </g>
    <g id="text_88">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="36.324" y="59.49" transform="rotate(-0 36.324 59.49)">afdEP v1</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="36.324" y="59.49" transform="rotate(-0 36.324 59.49)">afdEP</text>
    </g>
    <g id="line2d_150">
-    <path d="M 85.288219 56.34 
-L 92.488219 56.34 
-L 99.688219 56.34 
+    <path d="M 73.440562 56.34 
+L 80.640563 56.34 
+L 87.840563 56.34 
 " style="fill: none; stroke: #eb6834; stroke-width: 2; stroke-linecap: square"/>
     <defs>
      <path id="m902f7a575b" d="M 0 3.5 
@@ -1221,11 +1221,11 @@ z
 " style="stroke: #fcfcfb; stroke-width: 2"/>
     </defs>
     <g>
-     <use xlink:href="#m902f7a575b" x="92.488219" y="56.34" style="fill: #eb6834; stroke: #fcfcfb; stroke-width: 2"/>
+     <use xlink:href="#m902f7a575b" x="80.640563" y="56.34" style="fill: #eb6834; stroke: #fcfcfb; stroke-width: 2"/>
     </g>
    </g>
    <g id="text_89">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="106.888219" y="59.49" transform="rotate(-0 106.888219 59.49)">Masked DeepEP</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="95.040562" y="59.49" transform="rotate(-0 95.040562 59.49)">Masked DeepEP</text>
    </g>
   </g>
  </g>
