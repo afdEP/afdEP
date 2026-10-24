@@ -1,6 +1,6 @@
 {
  "date": "2026-10-21",
- "build": "clean v1 role path (native digest below)",
+ "build": "clean role path (native digest below)",
  "scope": "4 x H100, 2A2F, E128 top-k 8, capacity 2048, random, 24 SMs; three fresh-process repeats; Masked vs role path",
  "native_source_sha256": "3d68dba2908a071fa732163a66a697d010c62d6227e0868db2672dfb8683e199",
  "fp8_graphs": {

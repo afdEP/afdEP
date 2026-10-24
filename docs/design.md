@@ -1,20 +1,20 @@
-# afdEP v1: Masked DeepEP adapted to AFD
+# afdEP: Masked DeepEP adapted to AFD
 
 Baseline: **Masked DeepEP** = the vendored DeepEP V2 kernels with `role_aware=False`
-(union world, dummy Attention expert slots, upstream combine). v1 changes are
+(union world, dummy Attention expert slots, upstream combine). afdEP's changes are
 opt-in on the role path (`role_aware=True`), in one NVLink domain and across
 NVLink domains joined by GIN; generic
 instantiations keep the upstream template arguments and kernels.
 
-Naming: this generation was developed as v2.1 and released as v1; v0 is the
-earlier DeepEP-reuse generation ([validation](validation.md)). Native source digests
-in the records are those of the trees as measured: `958652a3` is the v1 tree before
-the rename. The rename and the release's comment and notice fixes changed only comments
-and text, giving `131efc37` for the released tree. Older digests name the trees each
-section measured; the 4 × H100 result below, for example, is `bd4db4da`, which predates
-sections 10 and 13–16.
+Digests: native source digests in the records are those of the trees as measured.
+`958652a3` is the tree of commit `32c871d`, which merged the directional role path; the
+commits after it changed only comments, notices and other text in the native tree
+(the 1.0.0 release tree is `131efc37`). Older digests name the trees each section
+measured; the 4 × H100 result below, for example, is `bd4db4da`, which predates
+sections 10 and 13–16. The earlier DeepEP-reuse role specialization, v0, has its own
+record ([validation](validation.md)).
 
-v1 ships a change only if it depends on the AFD roles. A change that would
+afdEP ships a change only if it depends on the AFD roles. A change that would
 speed up Masked DeepEP as well is a DeepEP improvement, not an AFD one, and is
 rejected here even when it is faster (R1–R3). Every shipped change keeps a
 measurement control switch.
@@ -775,7 +775,7 @@ role-specific difference is small: under the GEMM load of section 14 the Attenti
 GEMM rises 0.5 µs at 2,048 tokens on the role path (its extra combine CTAs exit at
 once) and 1.3 µs under Masked. The FFN GEMM rises 0.5 µs on the role path. Sizing the
 combine grid by the FFN's load is therefore a deployment setting for any EP backend at
-high Attention:FFN ratios, not a v1 change, and is not shipped (as R1–R3).
+high Attention:FFN ratios, not an afdEP change, and is not shipped (as R1–R3).
 
 **AFD-specific candidate: expansion during ingress (section 16).** The
 FFN sends nothing in dispatch, so its idle SMs could expand rows while the sources are
@@ -862,7 +862,7 @@ Removing the signals needs the FFN to know which channels carry data before it w
 which is count-first dispatch with per-channel occupancy: a wire-protocol change,
 AFD-specific (counts flow one way; the FFN never sends in dispatch), modelled at about
 −32 µs at 4F:12A and one token, and the same change the one-domain expansion overlap
-needs. It is not part of the role suites, which keep the v1 protocol. Fewer channels
+needs. It is not part of the role suites, which keep the shipped protocol. Fewer channels
 are a protocol-neutral setting (16 instead of 24 SMs saved 9 µs at 4F:12A and one token,
 flat at 512) but help Masked as well.
 
@@ -905,7 +905,7 @@ Audit, H4096 random, µs ([record](validation-generic-audit.json)):
 
 A full-device transport grid for buckets of at least 512 tokens was 10–16 points
 faster than the 24/132 default, but the same knob speeds up Masked equally: it is
-a generic DeepEP launch setting, not an AFD property, so v1 does not ship it.
+a generic DeepEP launch setting, not an AFD property, so afdEP does not ship it.
 The screens remain in [the record](validation-grid.json). Sections 4–7 below
 were measured while that policy was active: their paired changes compare arms
 that shared it, but their absolute 512- and 2,048-token values include it.
