@@ -1,7 +1,7 @@
 {
  "date": "2026-10-22 to 2026-10-23",
  "question": "afdEP v1 against Masked DeepEP on 8 x H200 in one NVLink domain and on 24 H200 ranks across NVLink domains (the README's 8 x H200 and cross-node results)",
- "native_source_sha256": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663 for both arms of every screen (v1 before the rename; see the naming note in docs/v1.md)",
+ "native_source_sha256": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663 for both arms of every screen (v1 before the rename; see the naming note in docs/design.md)",
  "method": "benchmarks.screen pairing: each repeat runs one fresh process per arm in rotating order; each process times dispatch + combine round trips under CUDA graphs (benchmarks.comm), per exchange the max over Attention ranks of CUDA-event us; median_us is the median over repeats of the process medians; paired_change_pct is Masked against v1 per repeat, geomean_change_pct their geometric mean; repeats_faster counts repeats where Masked was faster. Multi-pod screens ran every rank of an arm under one torchrun per pod; the flags below are passed to benchmarks.comm.",
  "scope": "communication only; no serving claim. These layouts are measured, not GPU-suite validated for v1.",
  "screens": {

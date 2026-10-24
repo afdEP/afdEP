@@ -1,6 +1,6 @@
 {
  "date": "2026-10-22",
- "change": "opt-in count-first dispatch with a streaming FFN expansion, one NVLink domain (docs/v1.md section 16); off by default",
+ "change": "opt-in count-first dispatch with a streaming FFN expansion, one NVLink domain (docs/design.md section 16); off by default",
  "decision": "not the default: below 2,048 tokens it does not win, and under compute load at 3A:1F it raises FFN GEMM time by up to 1.5 us even with the epilogue capped at 64 SMs (gate: <= 1 us). Recommended opt-in setting: MIN_BUCKET=2048, EPILOGUE_SMS=64, UNGATE=1 (no payload gate measures better).",
  "native_source_sha256": {
   "shipped": "958652a3538af7478544b8259a6f108b1838e1e14d77ea95e0940f8805218663",

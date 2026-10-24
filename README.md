@@ -34,39 +34,39 @@ the inbox regions each rank registers and receives into:
 </picture>
 
 In one NVLink domain:
-- no entry barriers [§1](docs/v1.md#1-entry-barriers); counts flow Attention → FFN only [§2](docs/v1.md#2-directional-count-exchange);
-  only receivers wait at exit, per sending CTA [§3](docs/v1.md#3-directed-exit);
+- no entry barriers [§1](docs/design.md#1-entry-barriers); counts flow Attention → FFN only [§2](docs/design.md#2-directional-count-exchange);
+  only receivers wait at exit, per sending CTA [§3](docs/design.md#3-directed-exit);
 - receive buffers sized per role, 50% of the union registration at 2A2F and about 75%
-  at 3:1 and 1:3 [§4](docs/v1.md#4-role-sized-registered-buffers);
+  at 3:1 and 1:3 [§4](docs/design.md#4-role-sized-registered-buffers);
 - each role launches only the warps it uses, and the FFN starts its copy epilogue at the
-  counts [§14](docs/v1.md#14-role-suites-launch-only-what-each-role-uses), [§15](docs/v1.md#15-ffn-receive-copy-epilogue-trigger-at-the-counts-one-nvlink-domain);
+  counts [§14](docs/design.md#14-role-suites-launch-only-what-each-role-uses), [§15](docs/design.md#15-ffn-receive-copy-epilogue-trigger-at-the-counts-one-nvlink-domain);
 - with one FFN rank, a single-FFN reduction and a zero-copy collect view
-  [§10](docs/v1.md#10-single-ffn-reduction), [§13](docs/v1.md#13-single-ffn-collect-view).
+  [§10](docs/design.md#10-single-ffn-reduction), [§13](docs/design.md#13-single-ffn-collect-view).
 
 Across NVLink domains joined by NCCL GPU-Initiated Networking (GIN):
 - a directional protocol when every domain holds one role: no cross-domain barriers,
   and counts, payloads, finish tails and combine signals each flow one way
-  [§7](docs/v1.md#7-directional-hybrid-protocol), with route checks in the kernel
-  [§8](docs/v1.md#8-route-checks-inside-the-directional-hybrid-dispatch) and staging kept out of remotely written inboxes
-  [§11](docs/v1.md#11-staging-outside-remotely-written-inboxes-fix);
+  [§7](docs/design.md#7-directional-hybrid-protocol), with route checks in the kernel
+  [§8](docs/design.md#8-route-checks-inside-the-directional-hybrid-dispatch) and staging kept out of remotely written inboxes
+  [§11](docs/design.md#11-staging-outside-remotely-written-inboxes-fix);
 - domains that hold both roles (FFN GPUs sharing a node with Attention GPUs) run
   DeepEP's union hybrid and match Masked within 1.4%.
 
-Opt-in and off by default: count-first dispatch [§16](docs/v1.md#16-count-first-dispatch-with-a-streaming-ffn-expansion-opt-in-one-nvlink-domain). Every
-change, its control and its evidence: [docs/v1.md](docs/v1.md).
+Opt-in and off by default: count-first dispatch [§16](docs/design.md#16-count-first-dispatch-with-a-streaming-ffn-expansion-opt-in-one-nvlink-domain). Every
+change, its control and its evidence: [docs/design.md](docs/design.md).
 
 ## Results
 
 Communication only: one dispatch plus combine round trip under CUDA graphs, in µs,
 lower is better, maximum over Attention ranks. Each repeat runs one fresh process per
 arm; latencies are medians over the repeats and every percentage is the geometric mean
-of the per-repeat paired changes, as in [docs/v1.md](docs/v1.md). These are not
+of the per-repeat paired changes, as in [docs/design.md](docs/design.md). These are not
 serving results. Data: [benchmarks.json](docs/assets/benchmarks.json); figures:
 [plot_benchmarks.py](docs/assets/plot_benchmarks.py).
 
 The Masked baseline is the deployed one: on 4 × H200 afdEP's Masked arm matches the
 Masked DeepEP that afd-plugin serves within −0.4% to +1.2% at 2A2F and −0.2% to +0.3% at
-3A:1F, from 1 to 2,048 tokens ([record](docs/validation-v1-masked-equivalence.json)).
+3A:1F, from 1 to 2,048 tokens ([record](docs/validation-masked-equivalence.json)).
 
 ### One NVLink domain
 
@@ -82,7 +82,7 @@ and 13–15 came later and report their own gains on top.
 
 <details><summary>4 × H100 numbers</summary>
 
-4 × H100 in one NVLink domain, E128 / top-8 (E96 for 1A:3F), capacity 2,048, BF16 unless noted, 24 transport SMs; median of three fresh-process repeats, max over Attention ranks; native tree bd4db4da (sections 1–4, before sections 10 and 13–16). Record: [validation-v1-result.json](docs/validation-v1-result.json).
+4 × H100 in one NVLink domain, E128 / top-8 (E96 for 1A:3F), capacity 2,048, BF16 unless noted, 24 transport SMs; median of three fresh-process repeats, max over Attention ranks; native tree bd4db4da (sections 1–4, before sections 10 and 13–16). Record: [validation-result.json](docs/validation-result.json).
 
 | 2A2F, hidden 2,048, random routing | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -133,7 +133,7 @@ v1 is still 13% faster at 2,048 tokens.
 
 <details><summary>8 × H200 numbers</summary>
 
-8 × H200 in one NVLink domain (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3. Record: [validation-v1-h200-screens.json](docs/validation-v1-h200-screens.json).
+8 × H200 in one NVLink domain (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3. Record: [validation-h200-screens.json](docs/validation-h200-screens.json).
 
 | 6A:2F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -170,7 +170,7 @@ Masked within 1.4%. On real 8-GPU nodes that is the common case at high ratios: 
 
 <details><summary>Cross-node numbers</summary>
 
-H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3. Record: [validation-v1-h200-screens.json](docs/validation-v1-h200-screens.json).
+H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3. Record: [validation-h200-screens.json](docs/validation-h200-screens.json).
 
 | 11:1, 12 single-role domains (12 × 2 H200) | T=1 | 8 | 16 | 32 | 64 | 128 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -253,16 +253,16 @@ prequantized FP8 dispatch return BF16 combined outputs. See the
 
 The GPU suite (BF16 and FP8, small and large capacities, eager and CUDA graphs, invalid
 routes) passes on the release tree with 2A2F, 3A:1F and 1A:3F in one four-GPU NVLink
-domain ([record](docs/validation-v1-count-first.json), `default_off_shipped`). Across
+domain ([record](docs/validation-count-first.json), `default_off_shipped`). Across
 NVLink domains the directional protocol passed it on earlier v1 trees over two to four
 domains of two H200 GPUs and four and five single-GPU domains joined by InfiniBand GIN
-([three](docs/validation-v1-three-domain.json), [four](docs/validation-v1-four-domain.json)
-and [five domains](docs/validation-v1-five-domain.json),
-[eight ranks](docs/validation-v1-eight-rank.json),
-[staging fix](docs/validation-v1-staging-fix.json)). The 8-GPU NVLink domain and the
+([three](docs/validation-three-domain.json), [four](docs/validation-four-domain.json)
+and [five domains](docs/validation-five-domain.json),
+[eight ranks](docs/validation-eight-rank.json),
+[staging fix](docs/validation-staging-fix.json)). The 8-GPU NVLink domain and the
 24-rank layouts under Results are measured, not suite-validated, for v1. Other layouts
 and larger multi-domain worlds require validation. `allow_hybrid_mode` keeps DeepEP's
 meaning; it does not enable an unvalidated topology.
 
-[v1 changes and evidence](docs/v1.md) · [v0 validation](docs/validation.md) ·
+[v1 changes and evidence](docs/design.md) · [v0 validation](docs/validation.md) ·
 [Contributing](CONTRIBUTING.md) · [Licenses and provenance](THIRD_PARTY_NOTICES.md)

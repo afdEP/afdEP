@@ -3,7 +3,7 @@
  "paired_ratio": "per series and token count, the geometric mean over repeats of the per-repeat ratio of that series' process median to the control series' (paired fresh processes); series values are medians",
  "in_node_h100": {
   "setup": "4 × H100 in one NVLink domain, E128 / top-8 (E96 for 1A:3F), capacity 2,048, BF16 unless noted, 24 transport SMs; median of three fresh-process repeats, max over Attention ranks; native tree bd4db4da (sections 1–4, before sections 10 and 13–16)",
-  "source": "docs/v1.md (Result), record validation-v1-result.json",
+  "source": "docs/design.md (Result), record validation-result.json",
   "layouts": {
    "2A2F, hidden 2,048, random routing": {
     "tokens": [
@@ -291,7 +291,7 @@
  },
  "in_node_h200": {
   "setup": "8 × H200 in one NVLink domain (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3",
-  "source": "docs/validation-v1-h200-screens.json",
+  "source": "docs/validation-h200-screens.json",
   "layouts": {
    "6A:2F": {
     "tokens": [
@@ -468,7 +468,7 @@
  },
  "cross_node": {
   "setup": "H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3",
-  "source": "docs/validation-v1-h200-screens.json",
+  "source": "docs/validation-h200-screens.json",
   "layouts": {
    "11:1, 12 single-role domains (12 × 2 H200)": {
     "tokens": [
