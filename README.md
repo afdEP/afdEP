@@ -270,7 +270,7 @@ it cuts the round trip by 3–5% at 64 tokens per Attention GPU and 13–21% at 
 `AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET=64` keeps smaller buckets on BF16, where it would cost
 3–8%. In serving at 4,096 in / 2,048 out it changed TPOT by −1.4% to +0.9%. It is lossy and needs a model-level accuracy check before
 serving use ([docs/design.md §19](docs/design.md#19-fp8-combine-replies-opt-in-across-nvlink-domains),
-[record](docs/validation-v1-fp8-combine.json)).
+[record](docs/validation-fp8-combine.json)).
 
 <details><summary>Cross-node proposal numbers</summary>
 

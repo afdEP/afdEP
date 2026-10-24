@@ -1008,7 +1008,7 @@ AFD basis: in the directional hybrid every reply byte of S Attention domains lea
 the few NICs of the FFN domain (each FFN NIC sends S_A·T reply rows while each Attention NIC
 receives F_D·T). Motivating measurements on kermit (6 × 4 H200, InfiniBand, 4 FFN + 20
 Attention ranks, Qwen3-235B shapes, hidden 4096, cross-node tree `34fa5eac`; the same
-layout's screens with this switch are in the [record](validation-v1-fp8-combine.json)):
+layout's screens with this switch are in the [record](validation-fp8-combine.json)):
 above about 64 tokens per Attention GPU the round trip is bound by bytes through the FFN
 node's NICs at 0.33–0.45 µs per arriving token; a token moves about 4.2 KB of FP8 dispatch
 (with scales) and 8.2 KB of BF16 combine replies, so replies are two thirds of the bytes,
@@ -1085,7 +1085,7 @@ to a third (the dispatch bytes stay); at 16 tokens or fewer, where latency and s
 dominate, about neutral. One NVLink domain, mixed-role and union paths are unchanged by
 construction.
 
-Status ([record](validation-v1-fp8-combine.json), kermit H200 over InfiniBand, 2026-10-23).
+Status ([record](validation-fp8-combine.json), kermit H200 over InfiniBand, 2026-10-23).
 - Correctness: on `024e98b0` the GPU suite passes bit-exact against the FP8-aware reference
   on 6 × 4 GPUs at hidden 2048, 4096, 7168 and 8192, FP8 and BF16 dispatch (with
   `fp8_range`), top-k 2, every sparse switch combination, two FFN domains, one Attention
