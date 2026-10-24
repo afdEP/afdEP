@@ -1,6 +1,6 @@
 {
  "date": "2026-10-23",
- "change": "opt-in FP8 combine replies across NVLink domains on the directional hybrid (AFDEP_HYBRID_FP8_COMBINE=1) and their minimum bucket (AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET); docs/v1.md section 19; off by default",
+ "change": "opt-in FP8 combine replies across NVLink domains on the directional hybrid (AFDEP_HYBRID_FP8_COMBINE=1) and their minimum bucket (AFDEP_HYBRID_FP8_COMBINE_MIN_BUCKET); docs/design.md section 19; off by default",
  "commits": [
   "4c8521d",
   "1e0a1b5",

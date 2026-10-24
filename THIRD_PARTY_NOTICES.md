@@ -13,7 +13,7 @@ and its afdEP role specializations are MIT-licensed.
 
 The snapshot includes AFD plugin patches for optional GIN and module-local
 bindings. afdEP v0 changes role-specific receive bounds, empty-side epilogues,
-route validation, and NCCL version diagnostics. afdEP v1 also changes the
+route validation, and NCCL version diagnostics. afdEP also changes the
 role path's synchronization and protocol: it skips the entry barriers, sends
 counts from Attention to FFN only, replaces the exit barriers with directed
 per-CTA arrival, sizes receive buffers per role, adds a directional hybrid

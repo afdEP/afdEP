@@ -72,7 +72,7 @@ def test_role_template_parameters_default_to_upstream_kernels():
 # size launches of these kernels and add separate role kernels; they never edit a
 # shared kernel, so Masked and every shared instantiation keep their code, include
 # hash and cubin.
-V1_KERNEL_SHA256 = {
+SHARED_KERNEL_SHA256 = {
     "dispatch.cuh": (
         "81e189fab1985fba3f8c772ecfe0b2efbfe4618744c0ae0195566ae20326ce6a"
     ),
@@ -99,7 +99,7 @@ def test_role_suites_leave_shared_kernels_untouched():
     def digest(path):
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
-    for name, sha in V1_KERNEL_SHA256.items():
+    for name, sha in SHARED_KERNEL_SHA256.items():
         assert digest(include / "impls" / name) == sha, name
     upstream = [
         include / "impls/combine_reduce_epilogue.cuh",
@@ -349,7 +349,7 @@ def test_fp8_combine_exponent_rule():
         # The UE8M0 byte and both powers of two are FP32 normals.
         assert 1 <= 127 + e <= 254 and 1 <= 127 - e <= 254, bf16_bits
         # The largest decoded magnitude is finite below the top scale; at 2^120 it
-        # is not, as the header and docs/v1.md section 19 state.
+        # is not, as the header and docs/design.md section 19 state.
         assert e == 120 or e4m3_max * Fraction(2) ** e < Fraction(2) ** 128, bf16_bits
     assert exponent(0x7F7F) == 120  # the largest finite BF16
     assert exponent(0x7F80) == 120  # an infinity keeps the same, finite scale

@@ -819,7 +819,7 @@ MIXED_HYBRID_COMBINE_EDITS = (
 # and puts H + align32(H / 128) bytes instead of 2H into the same (slot, token) row of
 # the Attention inbox. Both FP8 regions keep their BF16 base addresses, so every FP8
 # byte lies inside the BF16 region it replaces, and the staging and ordering arguments
-# (docs/v1.md sections 7, 11 and 17) hold unchanged. The Attention reduce epilogue
+# (docs/design.md sections 7, 11 and 17) hold unchanged. The Attention reduce epilogue
 # dequantizes and sums each FFN domain's row in FP32.
 FP8_COMBINE_REDUCE_STORE = (
     "dst_buffer_ptr[i * (kUnrollFactor * 32) + j * 32 + lane_idx] = {0};\n",

@@ -17,13 +17,13 @@ from matplotlib.ticker import FixedLocator, NullLocator  # noqa: E402
 HERE = Path(__file__).resolve().parent
 DATA = json.loads((HERE / "benchmarks.json").read_text())
 
-V1, MASKED = "afdEP v1", "Masked DeepEP"
+AFDEP, MASKED = "afdEP", "Masked DeepEP"
 SPARSE = "Cross-node: all three sparse switches"
 MIXED = "Cross-node: mixed-role directional"
 # Validated categorical slots (light, dark); a colour follows its entity in every
 # figure.
 SERIES = {
-    V1: ("#2a78d6", "#3987e5"),
+    AFDEP: ("#2a78d6", "#3987e5"),
     MASKED: ("#eb6834", "#d95926"),
     SPARSE: ("#1baf7a", "#199e70"),
     "Sparse dispatch only": ("#eda100", "#c98500"),
@@ -211,30 +211,30 @@ def figure(stem, title, subtitle, panels, order, cols, headline=None):
 figure(
     "results-in-node-h100",
     "One NVLink domain, 4 × H100",
-    "afdEP v1 against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128"
+    "afdEP against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128"
     " experts (96 for 1A:3F); BF16 unless noted",
     list(DATA["in_node_h100"]["layouts"].items()),
-    [V1, MASKED],
+    [AFDEP, MASKED],
     3,
-    (V1, MASKED),
+    (AFDEP, MASKED),
 )
 figure(
     "results-in-node-h200",
     "One NVLink domain, 8 × H200",
-    "afdEP v1 against Masked DeepEP; BF16, hidden 2048, top-8 of 128 experts",
+    "afdEP against Masked DeepEP; BF16, hidden 2048, top-8 of 128 experts",
     list(DATA["in_node_h200"]["layouts"].items()),
-    [V1, MASKED],
+    [AFDEP, MASKED],
     3,
-    (V1, MASKED),
+    (AFDEP, MASKED),
 )
 figure(
     "results-cross-node",
     "Across NVLink domains, H200 over InfiniBand (NCCL GIN)",
-    "afdEP v1 against Masked DeepEP; FP8, hidden 2048, top-8 of 128 experts",
+    "afdEP against Masked DeepEP; FP8, hidden 2048, top-8 of 128 experts",
     list(DATA["cross_node"]["layouts"].items()),
-    [V1, MASKED],
+    [AFDEP, MASKED],
     2,
-    (V1, MASKED),
+    (AFDEP, MASKED),
 )
 
 if "cross_node_proposal" in DATA:
@@ -245,43 +245,43 @@ if "cross_node_proposal" in DATA:
     combined = {
         "tokens": switches["tokens"],
         "series": {
-            V1: final["series"][V1][:n],
+            AFDEP: final["series"][AFDEP][:n],
             MASKED: P["sparse_11to1"]["masked_unpaired"]["series"][MASKED],
             "Stagger only": switches["series"]["Stagger only"],
             "Sparse dispatch only": switches["series"]["Sparse dispatch only"],
             SPARSE: final["series"][SPARSE][:n],
         },
         "paired_ratio": {
-            label: final["paired_ratio"][label][:n] for label in (V1, SPARSE)
+            label: final["paired_ratio"][label][:n] for label in (AFDEP, SPARSE)
         },
     }
     figure(
         "results-xn-sparse",
         "Sparse directional hybrid, 11:1 across 12 single-role domains (12 × 2 H200)",
-        "Before the done witness (200944ce); each switch paired against afdEP v1 in its"
+        "Before the done witness (200944ce); each switch paired against afdEP in its"
         " own screen, Masked from an earlier unpaired one",
         [("2 FFN + 22 Attention ranks, FP8, hidden 2048", combined)],
-        [V1, MASKED, SPARSE, "Sparse dispatch only", "Stagger only"],
+        [AFDEP, MASKED, SPARSE, "Sparse dispatch only", "Stagger only"],
         1,
-        (SPARSE, V1, "below"),
+        (SPARSE, AFDEP, "below"),
     )
     figure(
         "results-xn-scaling",
         "Sparse directional hybrid at other layouts",
-        "All three switches against afdEP v1, paired, before the done witness; FP8,"
+        "All three switches against afdEP, paired, before the done witness; FP8,"
         " hidden 2048, top-8 of 128 experts",
         list(P["sparse_scaling"].items()),
-        [V1, MASKED, SPARSE],
+        [AFDEP, MASKED, SPARSE],
         3,
-        (SPARSE, V1, "below"),
+        (SPARSE, AFDEP, "below"),
     )
     figure(
         "results-xn-mixed",
         "Mixed-role directional hybrid: the FFN domain also holds Attention GPUs",
-        "Against afdEP v1, which runs the union hybrid here and matches Masked within"
+        "Against afdEP, which runs the union hybrid here and matches Masked within"
         " 0.5%; 6 × 4 H200, FP8, hidden 2048",
         list(P["mixed_role"].items()),
-        [V1, MASKED, MIXED],
+        [AFDEP, MASKED, MIXED],
         2,
-        (MIXED, V1),
+        (MIXED, AFDEP),
     )
