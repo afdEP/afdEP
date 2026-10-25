@@ -3345,5 +3345,561 @@
   "done_witness_commit": "ede73b32085db141c2193ffa57e629ea79fb398db9375abb0338f18ac83d015b (measured as 7b8ed8b5)",
   "branch_head": "34fa5eac5093fd9a398edade5f44f88ad32c834ee17314e3770817e4ab4601c0 (adds section 18, measured as 81b71eb0, and comment fixes)",
   "_note": "each published tree differs from the measured one only in comments and text (renamed comments and the release's comment fixes)"
+ },
+ "default_from_1_1_0": {
+  "date": "2026-10-25",
+  "change": "The sparse directional hybrid is the directional protocol's default with no switch: AFDEP_HYBRID_STAGGER, AFDEP_HYBRID_SPARSE_DISPATCH, AFDEP_HYBRID_SPARSE_COMBINE and AFDEP_HYBRID_STAGGER_MAX_TOKENS are removed. Host-side resolution only (afdep_suites.hpp); the kernels are the ones measured with all three set and no bound.",
+  "supersedes": "the scope's 'every default unchanged' and 'FP8 payload only: BF16 with the switches has not been run', and the decision 'opt-in until reviewed'",
+  "native_source_sha256": {
+   "sparse_default": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+   "dense_baseline_main": "8e63d39f (origin/main 2681b5a)"
+  },
+  "setup": "6 kermit pods x 4 H200 (InfiniBand, NCCL GIN), one torchrun per pod; GPU suite: -m tests.gpu.deepep --top-k 8 --hybrid on with AFDEP_SCRATCH_MULTIDOMAIN=1 and no AFDEP_HYBRID_* or AFDEP_SHARED_* set",
+  "gpu_suite_21298d5b": {
+   "sdv-fp8-f4-c8": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 832,
+    "capacity": 8,
+    "payload": "fp8",
+    "ffn_ranks": 4,
+    "attention_ranks": 20
+   },
+   "sdv-fp8-f4-c64": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 832,
+    "capacity": 64,
+    "payload": "fp8",
+    "ffn_ranks": 4,
+    "attention_ranks": 20
+   },
+   "sdv-fp8-f8-c8": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 832,
+    "capacity": 8,
+    "payload": "fp8",
+    "ffn_ranks": 8,
+    "attention_ranks": 16
+   },
+   "sdv-fp8-f8-c64": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 832,
+    "capacity": 64,
+    "payload": "fp8",
+    "ffn_ranks": 8,
+    "attention_ranks": 16
+   },
+   "sdv-bf16-f4-c8": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 936,
+    "capacity": 8,
+    "payload": "bf16",
+    "ffn_ranks": 4,
+    "attention_ranks": 20
+   },
+   "sdv-bf16-f4-c64": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 936,
+    "capacity": 64,
+    "payload": "bf16",
+    "ffn_ranks": 4,
+    "attention_ranks": 20
+   },
+   "sdv-bf16-f8-c8": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 936,
+    "capacity": 8,
+    "payload": "bf16",
+    "ffn_ranks": 8,
+    "attention_ranks": 16
+   },
+   "sdv-bf16-f8-c64": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 936,
+    "capacity": 64,
+    "payload": "bf16",
+    "ffn_ranks": 8,
+    "attention_ranks": 16
+   },
+   "sdv-fp8-f4-c2048": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 832,
+    "capacity": 2048,
+    "payload": "fp8",
+    "ffn_ranks": 4,
+    "attention_ranks": 20
+   },
+   "sdv-bf16-f4-c2048": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [],
+    "checked_graph_exchanges_per_rank": 936,
+    "capacity": 2048,
+    "payload": "bf16",
+    "ffn_ranks": 4,
+    "attention_ranks": 20
+   }
+  },
+  "ablation_controls_21298d5b": {
+   "sdv-abl-forward": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [
+     "AFDEP_SHARED_HYBRID_FORWARD"
+    ],
+    "checked_graph_exchanges_per_rank": 832,
+    "capacity": 64,
+    "payload": "fp8",
+    "ffn_ranks": 4,
+    "attention_ranks": 20,
+    "control": "AFDEP_SHARED_HYBRID_FORWARD=1 on every rank: stagger + sparse combine, no sparse dispatch"
+   },
+   "sdv-abl-collect": {
+    "ok": true,
+    "ranks": 24,
+    "digest": "21298d5bf7b1edf35f5af1c3be5486efc417cd9f610c173934caa7b7756b3201",
+    "env_sparse_or_shared": [
+     "AFDEP_SHARED_HYBRID_COLLECT"
+    ],
+    "checked_graph_exchanges_per_rank": 832,
+    "capacity": 64,
+    "payload": "fp8",
+    "ffn_ranks": 4,
+    "attention_ranks": 20,
+    "control": "AFDEP_SHARED_HYBRID_COLLECT=1 on every rank: stagger + sparse dispatch, no sparse combine"
+   }
+  },
+  "rejected_21298d5b": "--role-env ffn:AFDEP_SHARED_HYBRID_FORWARD=1 (FFN ranks only): agreement ValueError in 6/6 pod logs, every pod exits nonzero, no hang",
+  "screens_21298d5b": {
+   "bf16_h4096_4f20a": {
+    "args": "--payload bf16 --routing random --hidden 4096 --experts 128 --top-k 8 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 20 --warmup 100 --iterations 200 --blocks 5; 2 fresh processes per arm, rotated order",
+    "arms": {
+     "dense": "origin/main 8e63d39f",
+     "sparse": "21298d5b",
+     "masked": "21298d5b role_aware=False"
+    },
+    "table": [
+     {
+      "tokens": 1,
+      "dense": {
+       "median_us": 163.12,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 79.12,
+       "geomean_change_pct_vs_dense": -51.49,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 205.47,
+       "geomean_change_pct_vs_dense": 25.96,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 8,
+      "dense": {
+       "median_us": 206.75,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 97.27,
+       "geomean_change_pct_vs_dense": -52.96,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 252.99,
+       "geomean_change_pct_vs_dense": 22.36,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 32,
+      "dense": {
+       "median_us": 231.82,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 136.64,
+       "geomean_change_pct_vs_dense": -41.06,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 272.88,
+       "geomean_change_pct_vs_dense": 17.71,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 64,
+      "dense": {
+       "median_us": 281.94,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 218.19,
+       "geomean_change_pct_vs_dense": -22.61,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 312.76,
+       "geomean_change_pct_vs_dense": 10.93,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 128,
+      "dense": {
+       "median_us": 408.23,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 396.63,
+       "geomean_change_pct_vs_dense": -2.84,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 444.09,
+       "geomean_change_pct_vs_dense": 8.78,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 256,
+      "dense": {
+       "median_us": 694.14,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 689.45,
+       "geomean_change_pct_vs_dense": -0.67,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 726.23,
+       "geomean_change_pct_vs_dense": 4.62,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 512,
+      "dense": {
+       "median_us": 1278.27,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 1289.64,
+       "geomean_change_pct_vs_dense": 0.89,
+       "repeats_faster": 0
+      },
+      "masked": {
+       "median_us": 1324.73,
+       "geomean_change_pct_vs_dense": 3.63,
+       "repeats_faster": 0
+      }
+     }
+    ]
+   },
+   "fp8_h2048_4f20a": {
+    "args": "--payload fp8 --routing random --hidden 2048 --experts 128 --top-k 8 --capacity 2048 --hybrid on --ffn-ranks 4 --attention-ranks 20 --warmup 100 --iterations 200 --blocks 5; 2 fresh processes per arm, rotated order",
+    "arms": {
+     "dense": "origin/main 8e63d39f",
+     "sparse": "21298d5b",
+     "masked": "21298d5b role_aware=False"
+    },
+    "table": [
+     {
+      "tokens": 1,
+      "dense": {
+       "median_us": 138.75,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 70.32,
+       "geomean_change_pct_vs_dense": -49.32,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 185.08,
+       "geomean_change_pct_vs_dense": 33.39,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 8,
+      "dense": {
+       "median_us": 155.03,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 83.13,
+       "geomean_change_pct_vs_dense": -46.38,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 194.66,
+       "geomean_change_pct_vs_dense": 25.57,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 32,
+      "dense": {
+       "median_us": 164.64,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 97.87,
+       "geomean_change_pct_vs_dense": -40.55,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 211.18,
+       "geomean_change_pct_vs_dense": 28.27,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 128,
+      "dense": {
+       "median_us": 236.93,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 224.93,
+       "geomean_change_pct_vs_dense": -5.06,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 277.11,
+       "geomean_change_pct_vs_dense": 16.96,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 512,
+      "dense": {
+       "median_us": 607.48,
+       "geomean_change_pct_vs_dense": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 605.5,
+       "geomean_change_pct_vs_dense": -0.33,
+       "repeats_faster": 1
+      },
+      "masked": {
+       "median_us": 688.36,
+       "geomean_change_pct_vs_dense": 12.98,
+       "repeats_faster": 0
+      }
+     }
+    ]
+   }
+  },
+  "earlier_evidence_now_recorded": {
+   "gpu_suite_34fa5eac": {
+    "date": "2026-10-23",
+    "setup": "6 kermit pods x 4 H200, all three switches set, tests.gpu.deepep --top-k 8 --hybrid on",
+    "runs": {
+     "xnv-fp8-f4-c8": "6/6 exit=0",
+     "xnv-fp8-f4-c64": "6/6 exit=0",
+     "xnv-fp8-f8-c8": "6/6 exit=0",
+     "xnv-fp8-f8-c64": "6/6 exit=0",
+     "xnv-bf16-f4-c8": "6/6 exit=0",
+     "xnv-bf16-f4-c64": "6/6 exit=0",
+     "xnv-bf16-f8-c8": "6/6 exit=0",
+     "xnv-bf16-f8-c64": "6/6 exit=0"
+    }
+   },
+   "bf16_screen_34fa5eac": {
+    "date": "2026-10-23",
+    "args": "BF16, hidden 4096, 4F:20A, capacity 2048, 2 repeats",
+    "arms": {
+     "v1": "1.0.0 dense",
+     "sparse": "34fa5eac, all three switches",
+     "masked": "role_aware=False"
+    },
+    "table": [
+     {
+      "tokens": 1,
+      "v1": {
+       "median_us": 163.53,
+       "geomean_change_pct_vs_v1": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 79.53,
+       "geomean_change_pct_vs_v1": -51.37,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 206.93,
+       "geomean_change_pct_vs_v1": 26.54,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 8,
+      "v1": {
+       "median_us": 208.46,
+       "geomean_change_pct_vs_v1": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 97.57,
+       "geomean_change_pct_vs_v1": -53.19,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 253.99,
+       "geomean_change_pct_vs_v1": 21.84,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 32,
+      "v1": {
+       "median_us": 234.72,
+       "geomean_change_pct_vs_v1": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 141.43,
+       "geomean_change_pct_vs_v1": -39.75,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 275.46,
+       "geomean_change_pct_vs_v1": 17.35,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 64,
+      "v1": {
+       "median_us": 285.32,
+       "geomean_change_pct_vs_v1": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 221.11,
+       "geomean_change_pct_vs_v1": -22.5,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 316.52,
+       "geomean_change_pct_vs_v1": 10.94,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 128,
+      "v1": {
+       "median_us": 410.11,
+       "geomean_change_pct_vs_v1": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 400.29,
+       "geomean_change_pct_vs_v1": -2.39,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 446.21,
+       "geomean_change_pct_vs_v1": 8.8,
+       "repeats_faster": 0
+      }
+     },
+     {
+      "tokens": 256,
+      "v1": {
+       "median_us": 696.71,
+       "geomean_change_pct_vs_v1": 0.0,
+       "repeats_faster": 0
+      },
+      "sparse": {
+       "median_us": 692.41,
+       "geomean_change_pct_vs_v1": -0.62,
+       "repeats_faster": 2
+      },
+      "masked": {
+       "median_us": 727.96,
+       "geomean_change_pct_vs_v1": 4.49,
+       "repeats_faster": 0
+      }
+     }
+    ]
+   },
+   "serving_34fa5eac": {
+    "date": "2026-10-23",
+    "setup": "Qwen3-235B-A22B-FP8, vLLM with the AFD plugin, 20 Attention GPUs (DP20, k4b-k4f) : 4 FFN GPUs (k4a), six kermit 4 x H200 pods, 4,096 in / 2,048 out, one wave per load, one run each; dense = 1.0.0 tree, sparse = 34fa5eac with all three switches",
+    "requests_per_attention_gpu": {
+     "4": {
+      "dense_tpot_ms_median": 43.49,
+      "sparse_tpot_ms_median": 32.47,
+      "tpot_change_pct": -25.4,
+      "decode_tokens_per_s_change_pct": 34.0
+     },
+     "16": {
+      "dense_tpot_ms_median": 51.91,
+      "sparse_tpot_ms_median": 39.79,
+      "tpot_change_pct": -23.3,
+      "decode_tokens_per_s_change_pct": 30.5
+     },
+     "32": {
+      "dense_tpot_ms_median": 58.86,
+      "sparse_tpot_ms_median": 47.64,
+      "tpot_change_pct": -19.1,
+      "decode_tokens_per_s_change_pct": 23.6
+     },
+     "64": {
+      "dense_tpot_ms_median": 72.75,
+      "sparse_tpot_ms_median": 65.1,
+      "tpot_change_pct": -10.5,
+      "decode_tokens_per_s_change_pct": 11.6
+     }
+    }
+   }
+  }
  }
 }

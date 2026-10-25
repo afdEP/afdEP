@@ -23,7 +23,9 @@ The baseline is **Masked DeepEP**: the same vendored DeepEP V2 kernels with
 expert slots, and every rank sends, receives and waits in both phases. The role path
 (`role_aware=True`, the default) keeps the transport and removes only what the roles
 make unnecessary; a change that would speed up Masked DeepEP as well is out of scope.
-Every change keeps a control switch that restores the Masked behaviour.
+Every change keeps a control switch that restores the Masked behaviour, except the
+sparse directional hybrid, which is part of the cross-node protocol from 1.1.0
+(`role_aware=False` still runs Masked).
 
 One exchange in one NVLink domain, with every barrier, the kernels each role runs and
 the inbox regions each rank registers and receives into:
@@ -49,11 +51,15 @@ Across NVLink domains joined by NCCL GPU-Initiated Networking (GIN):
   [§7](docs/design.md#7-directional-hybrid-protocol), with route checks in the kernel
   [§8](docs/design.md#8-route-checks-inside-the-directional-hybrid-dispatch) and staging kept out of remotely written inboxes
   [§11](docs/design.md#11-staging-outside-remotely-written-inboxes-fix);
+- in that protocol, signals only on the channels that carry tokens: sources start on
+  staggered channels, and finish tails and combine signals skip empty channels, up to
+  68% off the small-batch round trip ([what it adds](docs/sparse-hybrid.md),
+  [§17](docs/design.md#17-sparse-directional-hybrid-default-across-nvlink-domains));
 - domains that hold both roles (FFN GPUs sharing a node with Attention GPUs) run
   DeepEP's union hybrid and match Masked within 1.4%; the
   [cross-node additions](#cross-node-additions-opt-in) add a directional path for them.
 
-Opt-in and off by default: the [cross-node additions](#cross-node-additions-opt-in) ([§17](docs/design.md#17-sparse-directional-hybrid-opt-in-across-nvlink-domains), [§18](docs/design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain)) and count-first dispatch [§16](docs/design.md#16-count-first-dispatch-with-a-streaming-ffn-expansion-opt-in-one-nvlink-domain). Every
+Opt-in and off by default: the [cross-node additions](#cross-node-additions-opt-in) ([§18](docs/design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain), [§19](docs/design.md#19-fp8-combine-replies-opt-in-across-nvlink-domains)) and count-first dispatch [§16](docs/design.md#16-count-first-dispatch-with-a-streaming-ffn-expansion-opt-in-one-nvlink-domain). Every
 change, its control and its evidence: [docs/design.md](docs/design.md).
 
 ## Results
@@ -169,6 +175,10 @@ FFN GPUs share their node with Attention GPUs, the union hybrid runs and afdEP-c
 Masked within 1.4%. On real 8-GPU nodes that is the common case at high ratios: an
 11:1 deployment puts 2 FFN and 6 Attention GPUs on one node.
 
+These are 1.0.0's dense directional protocol (tree `958652a3`). From 1.1.0 the protocol
+is sparse: one token at 11:1 takes 74 µs instead of 231 µs, 78% below Masked
+([sparse directional hybrid](#sparse-directional-hybrid)).
+
 <details><summary>Cross-node numbers</summary>
 
 H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; native tree 958652a3. Record: [validation-h200-screens.json](docs/validation-h200-screens.json).
@@ -199,51 +209,34 @@ H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, ca
 
 </details>
 
+## Sparse directional hybrid
+
+From 1.1.0, when every NVLink domain holds one role, the directional protocol signals only
+the channels that carry tokens; there is nothing to configure. Every exchange used to
+signal all C channels (192 at 24 SMs), so at 11:1 an FFN GPU's NIC took 2,112 finish
+atomics in dispatch and sent as many combine signals, whatever the batch. Now each source
+starts on a different channel, publishes its token count so FFN forwarders retire unused
+channels, and receives combine signals only on the channels that replied, plus a done
+witness once every forward warp of the forwarder has finished.
+
+At one token per Attention GPU it cuts the round trip by 68% at 11:1 over 12 domains, 67%
+with two FFN domains, 49% to 51% at 5:1 and 34% with three Attention domains; the gain
+fades from about 128 tokens, where the data dominates. In serving (Qwen3-235B, 20A:4F) it
+cut median TPOT by 25% at 4 requests per Attention GPU and 10% at 64. In one NVLink domain
+nothing changes. Value, costs and every measurement:
+[docs/sparse-hybrid.md](docs/sparse-hybrid.md); design and correctness argument:
+[docs/design.md §17](docs/design.md#17-sparse-directional-hybrid-default-across-nvlink-domains).
+
 ## Cross-node additions (opt-in)
 
-Communication only, like the results above: one dispatch plus combine round trip under
-CUDA graphs, maximum over Attention ranks; no serving results.
+Communication only unless noted, like the results above: one dispatch plus combine round
+trip under CUDA graphs, maximum over Attention ranks.
 
-Across NVLink domains the remaining cost is synchronization that grows with the channel
-count, not with the tokens, plus the union fallback on nodes that hold both roles. Two
-opt-in additions address them. With every switch off, afdEP-comm's default kernels and
-launches are unchanged, and in one NVLink domain nothing changes. Design, correctness
-argument and evidence: [docs/design.md §17](docs/design.md#17-sparse-directional-hybrid-opt-in-across-nvlink-domains) and
-[§18](docs/design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain).
-
-**Sparse directional hybrid** (`AFDEP_HYBRID_STAGGER=1`, `AFDEP_HYBRID_SPARSE_DISPATCH=1`,
-`AFDEP_HYBRID_SPARSE_COMBINE=1`). Every exchange of the directional protocol signals all
-C channels (192 at 24 SMs) whether they carry tokens or not, so at 11:1 an FFN GPU's NIC
-takes 2,112 finish atomics in dispatch and sends as many combine signals. The switches
-start each source on a different channel, publish token counts so FFN forwarders retire
-unused channels, and signal only the channels that replied, plus a done witness sent once
-every forward warp of the forwarder has finished. Set them alike on every rank before
-constructing the `Buffer`; construction rejects a mismatch.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-xn-sparse-dark.svg">
-  <img alt="Sparse directional hybrid against afdEP-comm and Masked at 11:1 over 12 domains" src="docs/assets/results-xn-sparse.svg">
-</picture>
-
-At 11:1 over 12 single-role domains, all three switches cut the round trip by 68%
-against the default (switches off) at one token, 51% at 32 and 7% at 128 tokens, and are
-neutral at 512. These and the scaling screens below ran on trees before the done witness
-(`200944ce`, and `2d22e5e9` at 5:1). The switches compound: sparse combine alone gains
-about 2%, and our untraced reading is that it removes the outbound signals that become
-the bottleneck once the stagger spreads the replies.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-xn-scaling-dark.svg">
-  <img alt="Sparse directional hybrid at other layouts" src="docs/assets/results-xn-scaling.svg">
-</picture>
-
-The gain scales with the number of Attention domains: 34% at one token with
-three Attention domains, 49% at 5:1 over six 4-GPU domains and 67% with two FFN domains.
-The done witness is required for correctness: with the earlier witness on channel 0 only,
-a source could overwrite an inbox the FFN combine still reads (argued from the layout and
-the code; fault injection did not reproduce it). It costs +6.6% at 8 tokens
-at 5:1 and is within ±1.2% elsewhere; the 12-domain layouts have not been re-measured
-with it.
+Two opt-in additions remain across NVLink domains. With both off, afdEP-comm's default
+kernels and launches are unchanged, and in one NVLink domain nothing changes. Design,
+correctness argument and evidence:
+[docs/design.md §18](docs/design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain) and
+[§19](docs/design.md#19-fp8-combine-replies-opt-in-across-nvlink-domains).
 
 **Mixed-role directional hybrid** (`AFDEP_MIXED_HYBRID=1` on every rank, prototype). When
 FFN ranks fill only part of a node, every GPU gets its role individually: each GPU on the
@@ -260,7 +253,7 @@ It cuts the round trip against the default union hybrid by 23% at one token and 
 512 tokens at 11:1, and by 21% and 6% at 23:1. It was measured and validated on 4-GPU
 NVLink domains only (6 × 4 H200, F = 1 to 3, one FFN-holding domain); 8-GPU nodes, fault
 injection for its reply and staging orderings and a two-buffer interleave are not yet
-run. The sparse switches do not apply to this path yet.
+run. The sparse protocol does not apply to this path yet.
 
 **FP8 combine replies** (`AFDEP_HYBRID_FP8_COMBINE=1` on every rank, opt-in). FFN
 forwarders send each reduced reply row across NVLink domains as E4M3 with one power-of-two
@@ -275,71 +268,7 @@ are not measured yet ([docs/design.md §19](docs/design.md#19-fp8-combine-replie
 
 <details><summary>Cross-node numbers</summary>
 
-H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; afdEP-comm (switches off) on 958652a3, the proposal on the tree each dataset's digests name (64 experts at 23:1).
-
-| All three switches (200944ce, before the done witness), 11:1 over 12 domains | T=1 | 8 | 16 | 32 | 64 | 128 | 256 | 512 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 231.5 | 259.5 | 266.3 | 285.0 | 320.9 | 461.0 | 712.4 | 1,220.1 |
-| Cross-node: all three sparse switches, µs | 73.8 | 86.2 | 100.4 | 140.5 | 235.1 | 428.1 | 691.2 | 1,221.1 |
-| Cross-node: all three sparse switches vs afdEP-comm | −68.1% | −66.8% | −62.3% | −50.7% | −26.7% | −7.1% | −3.0% | +0.1% |
-
-| Stagger and sparse dispatch, 11:1 | T=1 | 8 | 16 | 32 | 64 | 128 |
-|---|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 231.3 | 259.9 | 266.8 | 285.2 | 321.4 | 460.7 |
-| Stagger only, µs | 202.7 | 215.0 | 225.9 | 260.8 | 323.5 | 470.8 |
-| Sparse dispatch only, µs | 153.1 | 183.8 | 194.7 | 221.5 | 277.6 | 441.0 |
-| Stagger + sparse dispatch, µs | 131.0 | 144.3 | 154.2 | 197.9 | 280.8 | 452.3 |
-| Stagger only vs afdEP-comm | −12.4% | −17.3% | −15.3% | −8.5% | +0.7% | +2.2% |
-| Sparse dispatch only vs afdEP-comm | −33.8% | −29.3% | −27.0% | −22.3% | −13.6% | −4.3% |
-| Stagger + sparse dispatch vs afdEP-comm | −43.4% | −44.5% | −42.2% | −30.6% | −12.6% | −1.8% |
-
-| Sparse combine, 11:1 | T=1 | 8 | 16 | 32 | 64 | 128 |
-|---|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 231.7 | 260.0 | 266.2 | 285.1 | 321.1 | 460.9 |
-| Sparse combine only, µs | 226.0 | 255.7 | 264.8 | 284.5 | 320.4 | 460.3 |
-| Sparse dispatch + combine, µs | 151.5 | 180.8 | 194.0 | 221.1 | 276.5 | 440.9 |
-| Cross-node: all three sparse switches, µs | 74.3 | 86.3 | 100.4 | 140.8 | 235.5 | 428.0 |
-| Sparse combine only vs afdEP-comm | −2.4% | −1.6% | −0.5% | −0.2% | −0.2% | −0.1% |
-| Sparse dispatch + combine vs afdEP-comm | −34.6% | −30.5% | −27.1% | −22.4% | −13.9% | −4.3% |
-| Cross-node: all three sparse switches vs afdEP-comm | −67.9% | −66.8% | −62.3% | −50.6% | −26.6% | −7.1% |
-
-| Stagger bound, 11:1 | T=1 | 8 | 16 | 32 | 48 | 64 | 128 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 231.6 | 260.2 | 266.3 | 285.0 | 300.1 | 321.5 | 460.7 |
-| Sparse dispatch + combine, µs | 148.3 | 179.8 | 193.4 | 221.2 | 247.7 | 277.3 | 441.0 |
-| + stagger up to 48 tokens, µs | 74.2 | 86.2 | 100.2 | 140.6 | 188.8 | 277.5 | 440.8 |
-| + stagger at every size, µs | 74.0 | 86.3 | 100.4 | 140.6 | 188.5 | 236.1 | 428.6 |
-| Sparse dispatch + combine vs afdEP-comm | −36.0% | −30.9% | −27.4% | −22.4% | −17.5% | −13.7% | −4.3% |
-| + stagger up to 48 tokens vs afdEP-comm | −68.0% | −66.9% | −62.4% | −50.7% | −37.1% | −13.7% | −4.3% |
-| + stagger at every size vs afdEP-comm | −68.0% | −66.8% | −62.3% | −50.7% | −37.2% | −26.6% | −7.0% |
-
-| Two FFN domains, 4F:20A (12 × 2 H200) | T=1 | 8 | 16 | 32 | 64 | 128 | 256 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 207.9 | 221.0 | 224.4 | 240.0 | 288.7 | 403.5 | 615.1 |
-| Cross-node: all three sparse switches, µs | 68.5 | 79.0 | 90.9 | 127.2 | 209.0 | 368.8 | 604.6 |
-| Cross-node: all three sparse switches vs afdEP-comm | −67.1% | −64.3% | −59.5% | −47.0% | −27.6% | −8.6% | −1.7% |
-
-| Three Attention domains, 2F:6A (4 × 2 H200) | T=1 | 8 | 16 | 32 | 64 | 128 | 256 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 99.7 | 115.7 | 118.8 | 121.2 | 132.1 | 166.8 | 244.4 |
-| Cross-node: all three sparse switches, µs | 65.9 | 74.4 | 77.0 | 85.5 | 103.2 | 156.8 | 235.6 |
-| Cross-node: all three sparse switches vs afdEP-comm | −33.9% | −35.7% | −35.2% | −29.5% | −21.9% | −6.0% | −3.6% |
-
-| 5:1, 6 single-role domains (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
-|---|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 137.8 | 155.3 | 165.0 | 235.1 | 604.8 |
-| Cross-node: all three sparse switches, µs | 70.5 | 76.8 | 97.7 | 229.4 | 604.8 |
-| Masked DeepEP, µs | 185.4 | 193.6 | 210.7 | 277.9 | 636.0 |
-| Cross-node: all three sparse switches vs afdEP-comm | −48.8% | −50.5% | −40.8% | −2.4% | −0.0% |
-| Masked DeepEP vs afdEP-comm | +34.5% | +24.7% | +27.7% | +18.2% | +5.2% |
-
-| Done witness cost, 5:1 (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
-|---|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 138.0 | 155.5 | 164.6 | 235.2 | 604.3 |
-| Sparse, earlier witness on channel 0 only (unsafe), µs | 70.8 | 77.3 | 97.6 | 229.5 | 605.0 |
-| Sparse, done witness after every forward warp, µs | 70.7 | 82.3 | 97.7 | 226.8 | 603.8 |
-| Sparse, earlier witness on channel 0 only (unsafe) vs afdEP-comm | −48.7% | −50.3% | −40.7% | −2.4% | +0.1% |
-| Sparse, done witness after every forward warp vs afdEP-comm | −48.8% | −47.1% | −40.7% | −3.6% | −0.1% |
+H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; afdEP-comm (union hybrid) on 958652a3, the mixed-role protocol on the tree each dataset's digests name. The sparse protocol's numbers are in [docs/sparse-hybrid.md](docs/sparse-hybrid.md#numbers).
 
 | 11:1, 2F:22A, 128 experts (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
@@ -356,34 +285,6 @@ H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, ca
 | Masked DeepEP, µs | 279.2 | 319.6 | 352.9 | 436.1 | 1,080.3 |
 | Cross-node: mixed-role directional vs afdEP-comm | −20.7% | −16.2% | −16.8% | −12.4% | −6.2% |
 | Masked DeepEP vs afdEP-comm | −0.4% | +0.1% | −0.2% | −0.3% | −0.2% |
-
-In one NVLink domain, tree `200944ce` matches afdEP-comm (`958652a3`) with the switches off and on; the later
-done witness and the mixed-role path run only with two or more NVLink domains.
-one NVLink domain of 8 × H200 (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks.
-
-| 6A:2F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
-|---|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 24.3 | 29.3 | 35.5 | 53.2 | 152.0 | 502.0 |
-| Tree 200944ce, switches off, µs | 24.2 | 29.3 | 35.3 | 53.2 | 151.9 | 501.6 |
-| Tree 200944ce, switches on, µs | 24.6 | 28.9 | 35.5 | 53.2 | 152.2 | 501.8 |
-| Tree 200944ce, switches off vs afdEP-comm | −0.6% | +0.2% | −0.6% | +0.0% | −0.0% | −0.1% |
-| Tree 200944ce, switches on vs afdEP-comm | +1.0% | −1.2% | +0.2% | +0.1% | +0.2% | −0.0% |
-
-| 7A:1F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
-|---|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 23.8 | 27.2 | 34.1 | 70.3 | 202.0 | 736.8 |
-| Tree 200944ce, switches off, µs | 23.9 | 27.0 | 34.1 | 69.9 | 201.6 | 736.5 |
-| Tree 200944ce, switches on, µs | 23.9 | 27.1 | 33.8 | 69.5 | 201.9 | 736.7 |
-| Tree 200944ce, switches off vs afdEP-comm | +0.3% | −0.8% | −0.0% | −0.6% | −0.2% | −0.0% |
-| Tree 200944ce, switches on vs afdEP-comm | +0.5% | −0.4% | −1.2% | −1.0% | −0.0% | −0.0% |
-
-| 4A:4F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
-|---|---:|---:|---:|---:|---:|---:|
-| afdEP-comm, µs | 24.3 | 26.6 | 27.8 | 39.6 | 96.0 | 296.3 |
-| Tree 200944ce, switches off, µs | 24.3 | 26.5 | 27.8 | 39.9 | 96.0 | 296.5 |
-| Tree 200944ce, switches on, µs | 24.2 | 26.5 | 27.8 | 39.9 | 96.1 | 296.9 |
-| Tree 200944ce, switches off vs afdEP-comm | +0.0% | −0.2% | +0.3% | +0.8% | +0.0% | +0.1% |
-| Tree 200944ce, switches on vs afdEP-comm | −0.6% | −0.1% | +0.3% | +0.9% | +0.2% | +0.2% |
 
 </details>
 
@@ -453,11 +354,11 @@ and [five domains](docs/validation-five-domain.json),
 and larger multi-domain worlds require validation. `allow_hybrid_mode` keeps DeepEP's
 meaning; it does not enable an unvalidated topology.
 
-The cross-node additions are opt-in and validated more narrowly. The sparse switches
-passed the GPU suite on 24 ranks (12 × 2 and 6 × 4 H200) with FP8 only; with the done
-witness, only on 6 × 4 H200 at capacity 2,048
-([record](docs/validation-sparse-hybrid.json)). The mixed-role path passed it on
-6 × 4 H200 with F = 1 to 3 ([record](docs/validation-mixed-hybrid.json)).
+The sparse directional hybrid passed the GPU suite on 24 ranks over 12 × 2 and 6 × 4
+H200, with one and two FFN domains, BF16 and FP8, the 1.1.0 tree included
+([validation](docs/sparse-hybrid.md#validation)). The opt-in cross-node additions are
+validated more narrowly: the mixed-role path passed the suite on 6 × 4 H200 with F = 1 to 3
+([record](docs/validation-mixed-hybrid.json)).
 
 ## Acknowledgments
 

@@ -18,12 +18,14 @@ HERE = Path(__file__).resolve().parent
 DATA = json.loads((HERE / "benchmarks.json").read_text())
 
 AFDEP, MASKED = "afdEP-comm", "Masked DeepEP"
-SPARSE = "Cross-node: all three sparse switches"
+# Across NVLink domains 1.0.0 ran the dense directional protocol; 1.1.0 runs it sparse.
+DENSE, SPARSE = "Dense directional (1.0.0)", "Sparse directional"
 MIXED = "Cross-node: mixed-role directional"
 # Validated categorical slots (light, dark); a colour follows its entity in every
 # figure.
 SERIES = {
     AFDEP: ("#2a78d6", "#3987e5"),
+    DENSE: ("#2a78d6", "#3987e5"),
     MASKED: ("#eb6834", "#d95926"),
     SPARSE: ("#1baf7a", "#199e70"),
     "Sparse dispatch only": ("#eda100", "#c98500"),
@@ -230,7 +232,8 @@ figure(
 figure(
     "results-cross-node",
     "Across NVLink domains, H200 over InfiniBand (NCCL GIN)",
-    "afdEP-comm against Masked DeepEP; FP8, hidden 2048, top-8 of 128 experts",
+    "afdEP-comm 1.0.0 (dense directional) against Masked DeepEP; FP8, hidden 2048,"
+    " top-8 of 128 experts",
     list(DATA["cross_node"]["layouts"].items()),
     [AFDEP, MASKED],
     2,
@@ -240,40 +243,40 @@ figure(
 if "cross_node_proposal" in DATA:
     P = DATA["cross_node_proposal"]
     final = P["sparse_11to1"]["all_three"]
-    switches = P["sparse_11to1"]["switches"]["stagger"]
-    n = len(switches["tokens"])
+    parts = P["sparse_11to1"]["parts"]["stagger"]
+    n = len(parts["tokens"])
     combined = {
-        "tokens": switches["tokens"],
+        "tokens": parts["tokens"],
         "series": {
-            AFDEP: final["series"][AFDEP][:n],
+            DENSE: final["series"][DENSE][:n],
             MASKED: P["sparse_11to1"]["masked_unpaired"]["series"][MASKED],
-            "Stagger only": switches["series"]["Stagger only"],
-            "Sparse dispatch only": switches["series"]["Sparse dispatch only"],
+            "Stagger only": parts["series"]["Stagger only"],
+            "Sparse dispatch only": parts["series"]["Sparse dispatch only"],
             SPARSE: final["series"][SPARSE][:n],
         },
         "paired_ratio": {
-            label: final["paired_ratio"][label][:n] for label in (AFDEP, SPARSE)
+            label: final["paired_ratio"][label][:n] for label in (DENSE, SPARSE)
         },
     }
     figure(
         "results-xn-sparse",
         "Sparse directional hybrid, 11:1 across 12 single-role domains (12 × 2 H200)",
-        "Before the done witness (200944ce); each switch paired against afdEP-comm in"
-        " its own screen, Masked from an earlier unpaired one",
+        "Before the done witness (200944ce); each part paired against the dense"
+        " protocol in its own screen, Masked from an earlier unpaired one",
         [("2 FFN + 22 Attention ranks, FP8, hidden 2048", combined)],
-        [AFDEP, MASKED, SPARSE, "Sparse dispatch only", "Stagger only"],
+        [DENSE, MASKED, SPARSE, "Sparse dispatch only", "Stagger only"],
         1,
-        (SPARSE, AFDEP, "below"),
+        (SPARSE, DENSE, "below"),
     )
     figure(
         "results-xn-scaling",
         "Sparse directional hybrid at other layouts",
-        "All three switches against afdEP-comm, paired, before the done witness; FP8,"
+        "Against the dense protocol of 1.0.0, paired, before the done witness; FP8,"
         " hidden 2048, top-8 of 128 experts",
         list(P["sparse_scaling"].items()),
-        [AFDEP, MASKED, SPARSE],
+        [DENSE, MASKED, SPARSE],
         3,
-        (SPARSE, AFDEP, "below"),
+        (SPARSE, DENSE, "below"),
     )
     figure(
         "results-xn-mixed",

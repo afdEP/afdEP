@@ -333,7 +333,7 @@ z
    <text style="font-weight: 600; font-size: 13px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="7.4304" y="18.39" transform="rotate(-0 7.4304 18.39)">Sparse directional hybrid, 11:1 across 12 single-role domains (12 × 2 H200)</text>
   </g>
   <g id="text_17">
-   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="7.4304" y="37.365" transform="rotate(-0 7.4304 37.365)">Before the done witness (200944ce); each switch paired against afdEP-comm in its own screen, Masked from an earlier unpaired one</text>
+   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="7.4304" y="37.365" transform="rotate(-0 7.4304 37.365)">Before the done witness (200944ce); each part paired against the dense protocol in its own screen, Masked from an earlier unpaired one</text>
   </g>
   <g id="legend_1">
    <g id="line2d_28">
@@ -359,12 +359,12 @@ z
     </g>
    </g>
    <g id="text_18">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="34.6536" y="59.49" transform="rotate(-0 34.6536 59.49)">afdEP-comm</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="34.6536" y="59.49" transform="rotate(-0 34.6536 59.49)">Dense directional (1.0.0)</text>
    </g>
    <g id="line2d_29">
-    <path d="M 13.0536 69.119297 
-L 20.2536 69.119297 
-L 27.4536 69.119297 
+    <path d="M 13.0536 69.426562 
+L 20.2536 69.426562 
+L 27.4536 69.426562 
 " style="fill: none; stroke: #eb6834; stroke-width: 2; stroke-linecap: square"/>
     <defs>
      <path id="m902f7a575b" d="M 0 3.5 
@@ -380,16 +380,16 @@ z
 " style="stroke: #fcfcfb; stroke-width: 2"/>
     </defs>
     <g>
-     <use xlink:href="#m902f7a575b" x="20.2536" y="69.119297" style="fill: #eb6834; stroke: #fcfcfb; stroke-width: 2"/>
+     <use xlink:href="#m902f7a575b" x="20.2536" y="69.426562" style="fill: #eb6834; stroke: #fcfcfb; stroke-width: 2"/>
     </g>
    </g>
    <g id="text_19">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="34.6536" y="72.269297" transform="rotate(-0 34.6536 72.269297)">Masked DeepEP</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="34.6536" y="72.576562" transform="rotate(-0 34.6536 72.576562)">Masked DeepEP</text>
    </g>
    <g id="line2d_30">
-    <path d="M 129.185944 56.34 
-L 136.385944 56.34 
-L 143.585944 56.34 
+    <path d="M 145.29735 56.34 
+L 152.49735 56.34 
+L 159.69735 56.34 
 " style="fill: none; stroke: #1baf7a; stroke-width: 2; stroke-linecap: square"/>
     <defs>
      <path id="me121fc51b8" d="M 0 3.5 
@@ -405,16 +405,16 @@ z
 " style="stroke: #fcfcfb; stroke-width: 2"/>
     </defs>
     <g>
-     <use xlink:href="#me121fc51b8" x="136.385944" y="56.34" style="fill: #1baf7a; stroke: #fcfcfb; stroke-width: 2"/>
+     <use xlink:href="#me121fc51b8" x="152.49735" y="56.34" style="fill: #1baf7a; stroke: #fcfcfb; stroke-width: 2"/>
     </g>
    </g>
    <g id="text_20">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="150.785944" y="59.49" transform="rotate(-0 150.785944 59.49)">Cross-node: all three sparse switches</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="166.89735" y="59.49" transform="rotate(-0 166.89735 59.49)">Sparse directional</text>
    </g>
    <g id="line2d_31">
-    <path d="M 129.185944 69.465937 
-L 136.385944 69.465937 
-L 143.585944 69.465937 
+    <path d="M 145.29735 69.465937 
+L 152.49735 69.465937 
+L 159.69735 69.465937 
 " style="fill: none; stroke: #eda100; stroke-width: 2; stroke-linecap: square"/>
     <defs>
      <path id="m03d97b5e38" d="M 0 3.5 
@@ -430,16 +430,16 @@ z
 " style="stroke: #fcfcfb; stroke-width: 2"/>
     </defs>
     <g>
-     <use xlink:href="#m03d97b5e38" x="136.385944" y="69.465937" style="fill: #eda100; stroke: #fcfcfb; stroke-width: 2"/>
+     <use xlink:href="#m03d97b5e38" x="152.49735" y="69.465937" style="fill: #eda100; stroke: #fcfcfb; stroke-width: 2"/>
     </g>
    </g>
    <g id="text_21">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="150.785944" y="72.615937" transform="rotate(-0 150.785944 72.615937)">Sparse dispatch only</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="166.89735" y="72.615937" transform="rotate(-0 166.89735 72.615937)">Sparse dispatch only</text>
    </g>
    <g id="line2d_32">
-    <path d="M 327.841256 56.34 
-L 335.041256 56.34 
-L 342.241256 56.34 
+    <path d="M 263.041256 56.34 
+L 270.241256 56.34 
+L 277.441256 56.34 
 " style="fill: none; stroke: #e87ba4; stroke-width: 2; stroke-linecap: square"/>
     <defs>
      <path id="m5c6197ea96" d="M 0 3.5 
@@ -455,11 +455,11 @@ z
 " style="stroke: #fcfcfb; stroke-width: 2"/>
     </defs>
     <g>
-     <use xlink:href="#m5c6197ea96" x="335.041256" y="56.34" style="fill: #e87ba4; stroke: #fcfcfb; stroke-width: 2"/>
+     <use xlink:href="#m5c6197ea96" x="270.241256" y="56.34" style="fill: #e87ba4; stroke: #fcfcfb; stroke-width: 2"/>
     </g>
    </g>
    <g id="text_22">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="349.441256" y="59.49" transform="rotate(-0 349.441256 59.49)">Stagger only</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="284.641256" y="59.49" transform="rotate(-0 284.641256 59.49)">Stagger only</text>
    </g>
   </g>
  </g>
