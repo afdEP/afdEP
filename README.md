@@ -459,17 +459,50 @@ witness, only on 6 × 4 H200 at capacity 2,048
 ([record](docs/validation-sparse-hybrid.json)). The mixed-role path passed it on
 6 × 4 H200 with F = 1 to 3 ([record](docs/validation-mixed-hybrid.json)).
 
-## Credits and licenses
+## Acknowledgments
 
-afdEP-comm builds on [DeepEP](https://github.com/deepseek-ai/DeepEP) by DeepSeek: its native
-transport is DeepEP V2's elastic dispatch and combine, vendored under the MIT License
-(Copyright (c) 2025 DeepSeek) and specialized for the two AFD roles. The snapshot reached
-this project through [FastAFD](https://github.com/hao-ai-lab/FastAFD) (MIT, Copyright (c)
-2026 sgl-project) and the [AFD plugin](https://github.com/ms-llmd/afd-plugin) (Apache-2.0).
-afdEP-comm's own Python code is Apache-2.0, and its changes to the native transport are MIT.
-It is an independent project, not affiliated with or endorsed by DeepSeek or the DeepEP
-authors. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists every origin, license and
-local change.
+afdEP-comm's communication kernels are DeepEP's. [DeepEP](https://github.com/deepseek-ai/DeepEP),
+by Chenggang Zhao, Shangyan Zhou, Liyue Zhang, Chengqi Deng, Zhean Xu, Yuxuan Liu, Kuai Yu,
+Jiashi Li and Liang Zhao at DeepSeek, provides the V2 elastic dispatch and combine transport
+that afdEP-comm vendors and specializes for the two AFD roles. It runs on NVIDIA NCCL's GIN
+backend.
+
+The DeepEP V2 snapshot reached this project through [FastAFD](https://github.com/hao-ai-lab/FastAFD),
+by Yichao Fu, Yuxuan Zhang, Ruitian Wang, Junda Chen and Hao Zhang at
+[Hao AI Lab](https://haoailab.com), and through the [AFD plugin](https://github.com/ms-llmd/afd-plugin).
+Attention-FFN disaggregation comes from [MegaScale-Infer](https://arxiv.org/abs/2504.02263)
+(ByteDance Seed), which introduced disaggregated expert parallelism and an M2N communication
+library, and [Step-3](https://arxiv.org/abs/2507.19427) (StepFun), which named it AFD.
+
+If you use afdEP-comm, please also cite DeepEP and FastAFD as their authors ask:
+
+```bibtex
+@misc{deepep2025,
+      title={DeepEP: an efficient expert-parallel communication library},
+      author={Chenggang Zhao and Shangyan Zhou and Liyue Zhang and Chengqi Deng and Zhean Xu and Yuxuan Liu and Kuai Yu and Jiashi Li and Liang Zhao},
+      year={2025},
+      publisher = {GitHub},
+      howpublished = {\url{https://github.com/deepseek-ai/DeepEP}},
+}
+
+@misc{fastafd2026,
+  title  = {FastAFD: Open-Source Large-Scale Attention-FFN Disaggregation on Blackwell NVL72},
+  author = {Fu, Yichao and Zhang, Yuxuan and Wang, Ruitian and Chen, Junda and Zhang, Hao},
+  year   = {2026},
+  url    = {https://github.com/hao-ai-lab/FastAFD},
+  note   = {Technical blog and open-source release}
+}
+```
+
+## Licenses
+
+afdEP-comm's own Python code is Apache-2.0. The vendored native transport and afdEP-comm's
+changes to it are MIT: DeepEP's license (Copyright (c) 2025 DeepSeek) and FastAFD's license,
+whose copyright line reads Copyright (c) 2026 sgl-project because FastAFD started from a
+mini-sglang codebase, both ship with the code. The adapters taken from the AFD plugin keep
+its Apache-2.0 attribution. afdEP-comm is an independent project, not affiliated with or
+endorsed by DeepSeek, the DeepEP authors or the FastAFD authors.
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists every origin, license and local change.
 
 [Design and evidence](docs/design.md) · [v0 validation](docs/validation.md) ·
 [Contributing](CONTRIBUTING.md) · [Licenses and provenance](THIRD_PARTY_NOTICES.md)
