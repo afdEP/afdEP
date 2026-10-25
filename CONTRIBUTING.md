@@ -1,6 +1,6 @@
 # Contributing
 
-afdEP is an EP communication library for AFD. Keep routing policy, quantization,
+afdEP-comm is an EP communication library for AFD. Keep routing policy, quantization,
 model weights/GEMMs, and serving scheduling outside the core. Hardware/topology
 support belongs to backends; update [support](README.md#support) with evidence.
 

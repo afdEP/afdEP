@@ -1,7 +1,16 @@
-afdEP
-Copyright afdEP contributors.
+afdEP-comm
+Copyright afdEP-comm contributors (formerly afdEP).
 
-The DeepEP V2 elastic transport contains MIT-licensed code from DeepSeek,
-retained through FastAFD and the AFD plugin. Python/build adapters retain
-Apache-2.0 AFD plugin attribution. See THIRD_PARTY_NOTICES.md and the
-vendored LICENSE, PROVENANCE.json and LOCAL_CHANGES.json.
+afdEP-comm builds on DeepEP by DeepSeek (https://github.com/deepseek-ai/DeepEP).
+Its native transport under afdep/third_party/deepep_v2 is derived from DeepEP V2,
+Copyright (c) 2025 DeepSeek, MIT License, as carried by FastAFD
+(https://github.com/hao-ai-lab/FastAFD), Copyright (c) 2026 sgl-project, MIT License,
+and by the AFD plugin (https://github.com/ms-llmd/afd-plugin), Apache-2.0.
+afdEP-comm's changes to that transport are also MIT-licensed. Its Python and build
+adapters are Apache-2.0 and retain the AFD plugin's attribution.
+
+afdEP-comm is an independent project. It is not affiliated with, sponsored by or
+endorsed by DeepSeek, the DeepEP authors or the FastAFD authors.
+
+See THIRD_PARTY_NOTICES.md and, in afdep/third_party/deepep_v2, LICENSE,
+LICENSE.FastAFD, PROVENANCE.json and LOCAL_CHANGES.json.

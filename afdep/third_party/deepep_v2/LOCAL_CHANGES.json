@@ -40,6 +40,9 @@
     }
   },
   "added_files": {
+    "LICENSE.FastAFD": {
+      "sha256": "de93fca1c2ab406b177d405d0b05e0598ed22f082ce1b5acb5ee7991007f096c"
+    },
     "csrc/kernels/elastic/afdep_roles.hpp": {
       "sha256": "4231a5321913bc1c8af4dfb21e3a3c7cef41bce99c7fcac43359e63cd2b73267"
     },

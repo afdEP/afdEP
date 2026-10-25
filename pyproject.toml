@@ -3,19 +3,20 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "afdep"
-version = "1.0.0"
+name = "afdep-comm"
+version = "1.1.0"
 description = "Expert-parallel communication for Attention-FFN Disaggregation"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "Apache-2.0"
+license = "Apache-2.0 AND MIT"
 license-files = [
     "LICENSE",
     "NOTICE",
     "THIRD_PARTY_NOTICES.md",
     "afdep/third_party/deepep_v2/LICENSE",
+    "afdep/third_party/deepep_v2/LICENSE.FastAFD",
 ]
-authors = [{ name = "afdEP contributors" }]
+authors = [{ name = "afdEP-comm contributors" }]
 dependencies = ["torch>=2.6", "ninja>=1.11", "setuptools>=77", "packaging>=23"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -31,9 +32,9 @@ classifiers = [
 dev = ["pytest>=8", "ruff>=0.9", "build>=1.2"]
 
 [project.urls]
-Homepage = "https://github.com/afdEP/afdEP"
-Repository = "https://github.com/afdEP/afdEP"
-Issues = "https://github.com/afdEP/afdEP/issues"
+Homepage = "https://github.com/afdEP/afdEP-comm"
+Repository = "https://github.com/afdEP/afdEP-comm"
+Issues = "https://github.com/afdEP/afdEP-comm/issues"
 
 [tool.setuptools.packages.find]
 include = ["afdep*"]
