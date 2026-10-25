@@ -44,7 +44,7 @@ def test_pinned_origin_and_declared_role_specialization():
 
 
 def test_role_template_parameters_default_to_upstream_kernels():
-    """Generic (Masked) instantiations omit role arguments and keep upstream code."""
+    """Unspecialized (baseline) instantiations keep the upstream kernels."""
     impls = VENDOR_ROOT / "deep_ep/include/deep_ep/impls"
     combine = (impls / "combine.cuh").read_text()
     assert "bool kAfdSkipEntryBarrier = false," in combine
@@ -70,7 +70,7 @@ def test_role_template_parameters_default_to_upstream_kernels():
 
 # Device sources before the role suites (native digest 8205d02b). The role suites
 # size launches of these kernels and add separate role kernels; they never edit a
-# shared kernel, so Masked and every shared instantiation keep their code, include
+# shared kernel, so the baseline and every shared instantiation keep their code, include
 # hash and cubin.
 SHARED_KERNEL_SHA256 = {
     "dispatch.cuh": (

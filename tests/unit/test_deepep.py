@@ -11,6 +11,7 @@ from unittest.mock import Mock
 import pytest
 
 from afdep import deepep
+from benchmarks.fastafd import FastAFDBuffer, FastAFDConfig
 
 
 class Tensor:
@@ -140,7 +141,6 @@ def config(**kwargs):
         top_k=16,
         ffn_ranks=2,
         attention_ranks=2,
-        role_aware=False,
     )
     return deepep.DeepEPConfig(**(settings | kwargs))
 
@@ -154,26 +154,23 @@ def test_real_and_logical_expert_counts():
         config(num_experts=15)
 
 
-def test_role_aware_receive_bounds_use_source_geometry():
-    generic = config(capacity_tokens_per_rank=2048)
-    roles = replace(generic, role_aware=True)
-    assert generic.receive_rows(2048) == 66_560
-    assert roles.receive_rows(2048) == 33_792
-    assert roles.logical_experts == generic.logical_experts
-    with pytest.raises(ValueError, match="role_aware must be a boolean"):
-        replace(generic, role_aware=1)
+def test_receive_bounds_count_attention_sources_only():
+    afdep = config(capacity_tokens_per_rank=2048)
+    # FastAFD's symmetric group counts every rank as a source.
+    fastafd = FastAFDConfig(**vars(afdep))
+    assert fastafd.receive_rows(2048) == 66_560
+    assert afdep.receive_rows(2048) == 33_792
+    assert afdep.logical_experts == fastafd.logical_experts
+    assert not hasattr(afdep, "role_aware")
 
 
-def test_role_aware_requires_explicit_geometry_and_preserves_generic_ctor(runtime):
-    with pytest.raises(RuntimeError, match="explicit ffn_ranks"):
-        elastic(runtime, role_aware=True)
-    runtime.module.ElasticBuffer.assert_not_called()
-    generic = elastic(runtime)
+def test_ffn_ranks_select_the_afd_transport_and_keep_the_upstream_ctor(runtime):
+    upstream = elastic(runtime)
     assert len(runtime.module.ElasticBuffer.call_args.args) == 13
-    # Union sizing for the generic buffer; role-sized inboxes for the role path.
+    # Symmetric sizing without ffn_ranks (the baseline); role-sized inboxes with it.
     assert runtime.module.calculate_elastic_buffer_size.call_args.args[-1] == 0
-    generic.close()
-    roles = elastic(runtime, role_aware=True, ffn_ranks=2)
+    upstream.close()
+    roles = elastic(runtime, ffn_ranks=2)
     assert len(runtime.module.ElasticBuffer.call_args.args) == 14
     assert runtime.module.ElasticBuffer.call_args.args[-1] == 2
     assert runtime.module.calculate_elastic_buffer_size.call_args.args[-1] == 2
@@ -190,7 +187,7 @@ def test_count_first_configuration_must_agree(runtime):
 
     runtime.dist.all_gather_object = split
     with pytest.raises(ValueError, match="same count-first configuration"):
-        elastic(runtime, role_aware=True, ffn_ranks=2)
+        elastic(runtime, ffn_ranks=2)
     runtime.native.destroy.assert_called_once()
     runtime.module.destroy_nccl_comm.assert_called_once_with(17)
 
@@ -209,7 +206,7 @@ def disagree_on_hybrid_configuration(runtime, other):
 def test_sparse_hybrid_configuration_must_agree(runtime):
     disagree_on_hybrid_configuration(runtime, (0, False, False, 2, False, 0))
     with pytest.raises(ValueError, match="same hybrid configuration"):
-        elastic(runtime, role_aware=True, ffn_ranks=2)
+        elastic(runtime, ffn_ranks=2)
     runtime.native.destroy.assert_called_once()
     runtime.module.destroy_nccl_comm.assert_called_once_with(17)
 
@@ -218,13 +215,13 @@ def test_fp8_combine_configuration_must_agree(runtime):
     # A rank that latched FP8 combine replies would mis-decode its peers' BF16 rows.
     disagree_on_hybrid_configuration(runtime, (0, False, False, 0, True, 0))
     with pytest.raises(ValueError, match="same hybrid configuration"):
-        elastic(runtime, role_aware=True, ffn_ranks=2)
+        elastic(runtime, ffn_ranks=2)
     runtime.native.destroy.assert_called_once()
     runtime.module.destroy_nccl_comm.assert_called_once_with(17)
 
 
 def test_fp8_combine_is_reported_when_every_rank_latched_it(runtime):
-    assert elastic(runtime, role_aware=True, ffn_ranks=2).fp8_combine is False
+    assert elastic(runtime, ffn_ranks=2).fp8_combine is False
     runtime.native.get_afd_sparse_hybrid_config.return_value = (
         0,
         True,
@@ -233,9 +230,9 @@ def test_fp8_combine_is_reported_when_every_rank_latched_it(runtime):
         True,
         64,
     )
-    transport = elastic(runtime, role_aware=True, ffn_ranks=2)
+    transport = elastic(runtime, ffn_ranks=2)
     assert transport.fp8_combine is True and transport.fp8_combine_min_bucket == 64
-    buffer = deepep.DeepEPBuffer(group=runtime.group, config=config(role_aware=True))
+    buffer = deepep.DeepEPBuffer(group=runtime.group, config=config())
     assert buffer.fp8_combine is True and buffer.fp8_combine_min_bucket == 64
 
 
@@ -257,7 +254,7 @@ def test_fp8_combine_min_bucket_must_agree(runtime):
 
     runtime.dist.all_gather_object = split
     with pytest.raises(ValueError, match="same hybrid configuration"):
-        elastic(runtime, role_aware=True, ffn_ranks=2)
+        elastic(runtime, ffn_ranks=2)
     runtime.native.destroy.assert_called_once()
 
 
@@ -266,13 +263,13 @@ def test_count_first_arm_is_rejected_collectively(runtime):
     with pytest.raises(
         ValueError, match="AFDEP_COUNT_FIRST_ARM must be full or source"
     ):
-        elastic(runtime, role_aware=True, ffn_ranks=2)
+        elastic(runtime, ffn_ranks=2)
     runtime.native.destroy.assert_called_once()
     runtime.module.destroy_nccl_comm.assert_called_once_with(17)
 
 
-def test_role_aware_source_owns_no_dummy_payload_arena(runtime):
-    buffer = deepep.DeepEPBuffer(group=runtime.group, config=config(role_aware=True))
+def test_source_owns_no_dummy_payload_arena(runtime):
+    buffer = deepep.DeepEPBuffer(group=runtime.group, config=config())
     assert buffer._zero_output.shape == (0, 256)
     x, ids, weights = Tensor((2, 256)), Tensor((2, 16), "i64"), Tensor((2, 16), "fp32")
     buffer.source_dispatch(x, ids, weights, bucket=8)
@@ -281,9 +278,9 @@ def test_role_aware_source_owns_no_dummy_payload_arena(runtime):
     assert runtime.native.combine.call_args.args[0].shape == (0, 256)
 
 
-def test_role_aware_worker_rejects_source_payload(runtime):
+def test_ffn_worker_rejects_source_payload(runtime):
     runtime.group.rank = lambda: 0
-    buffer = elastic(runtime, role_aware=True, ffn_ranks=2)
+    buffer = elastic(runtime, ffn_ranks=2)
     with pytest.raises(ValueError, match="cannot originate tokens"):
         buffer.dispatch(
             Tensor((2, 256)),
@@ -295,6 +292,14 @@ def test_role_aware_worker_rejects_source_payload(runtime):
             do_cpu_sync=False,
         )
     runtime.native.dispatch.assert_not_called()
+
+
+def test_fastafd_baseline_runs_upstream_deepep_with_full_source_bounds(runtime):
+    buffer = FastAFDBuffer(group=runtime.group, config=FastAFDConfig(**vars(config())))
+    assert len(runtime.module.ElasticBuffer.call_args.args) == 13
+    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-1] == 0
+    assert buffer._zero_output.shape == (buffer.config.receive_rows(16), 256)
+    buffer.close()
 
 
 def test_facade_accepts_topk_above_local_experts_and_owns_bootstrap(
@@ -325,10 +330,10 @@ def test_explicit_disable_rejects_multidomain_before_buffer_creation(
     runtime.module.destroy_nccl_comm.assert_called_once_with(17)
 
 
-def test_role_aware_accepts_multidomain_with_gin(runtime, monkeypatch):
+def test_afd_transport_accepts_multidomain_with_gin(runtime, monkeypatch):
     monkeypatch.delenv("EP_DISABLE_GIN", raising=False)
     runtime.module.get_physical_domain_size.return_value = (2, 2)
-    buffer = elastic(runtime, role_aware=True, ffn_ranks=2)
+    buffer = elastic(runtime, ffn_ranks=2)
     assert buffer.physical_domain == (2, 2)
     assert runtime.module.ElasticBuffer.call_args.args[-1] == 2
     buffer.close()
@@ -409,14 +414,11 @@ def test_role_worker_dispatches_empty_and_preserves_receipt(runtime):
     assert runtime.native.combine.call_args.args[0] is rows
 
 
-def test_public_api_enables_specialization_without_loading_torch():
+def test_public_api_is_the_afd_transport_without_loading_torch():
     from afdep import Buffer, Config
 
     value = Config(2048, 4096, 128, 8, 2, 2)
-    assert value.role_aware
-    assert value.receive_rows(2048) < replace(value, role_aware=False).receive_rows(
-        2048
-    )
+    assert value.receive_rows(2048) < FastAFDConfig(**vars(value)).receive_rows(2048)
     assert Buffer is deepep.DeepEPBuffer
     assert Config is deepep.DeepEPConfig
 

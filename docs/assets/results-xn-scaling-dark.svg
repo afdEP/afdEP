@@ -692,12 +692,12 @@ z
     </g>
    </g>
    <g id="text_47">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #f0efec" x="168.56775" y="59.49" transform="rotate(-0 168.56775 59.49)">Masked DeepEP</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #f0efec" x="168.56775" y="59.49" transform="rotate(-0 168.56775 59.49)">FastAFD's DeepEP M2N</text>
    </g>
    <g id="line2d_76">
-    <path d="M 248.700094 56.34 
-L 255.900094 56.34 
-L 263.100094 56.34 
+    <path d="M 280.253531 56.34 
+L 287.453531 56.34 
+L 294.653531 56.34 
 " style="fill: none; stroke: #199e70; stroke-width: 2; stroke-linecap: square"/>
     <defs>
      <path id="macc04e4410" d="M 0 3.5 
@@ -713,11 +713,11 @@ z
 " style="stroke: #1a1a19; stroke-width: 2"/>
     </defs>
     <g>
-     <use xlink:href="#macc04e4410" x="255.900094" y="56.34" style="fill: #199e70; stroke: #1a1a19; stroke-width: 2"/>
+     <use xlink:href="#macc04e4410" x="287.453531" y="56.34" style="fill: #199e70; stroke: #1a1a19; stroke-width: 2"/>
     </g>
    </g>
    <g id="text_48">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #f0efec" x="270.300094" y="59.49" transform="rotate(-0 270.300094 59.49)">Sparse directional</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #f0efec" x="301.853531" y="59.49" transform="rotate(-0 301.853531 59.49)">Sparse directional</text>
    </g>
   </g>
  </g>

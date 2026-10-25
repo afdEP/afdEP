@@ -13,17 +13,17 @@ from benchmarks.screen import summarize
 
 def test_summary_pairs_each_repeat_against_the_first_arm():
     processes = [
-        {"median_us": {"masked": {1: 10.0, 8: 20.0}, "afd": {1: 9.0, 8: 22.0}}},
-        {"median_us": {"masked": {1: 12.0, 8: 20.0}, "afd": {1: 12.0, 8: 18.0}}},
+        {"median_us": {"fastafd": {1: 10.0, 8: 20.0}, "afdep": {1: 9.0, 8: 22.0}}},
+        {"median_us": {"fastafd": {1: 12.0, 8: 20.0}, "afdep": {1: 12.0, 8: 18.0}}},
     ]
-    table = summarize(processes, ["masked", "afd"])
+    table = summarize(processes, ["fastafd", "afdep"])
     assert [row["tokens"] for row in table] == [1, 8]
-    first = table[0]["afd"]
+    first = table[0]["afdep"]
     assert first["median_us"] == 10.5
     assert first["paired_change_pct"] == pytest.approx([-10.0, 0.0])
     assert first["repeats_faster"] == 1
     assert first["geomean_change_pct"] == pytest.approx(100 * (math.sqrt(0.9) - 1))
-    assert table[1]["masked"]["paired_change_pct"] == [0.0, 0.0]
+    assert table[1]["fastafd"]["paired_change_pct"] == [0.0, 0.0]
 
 
 def fake_run(digests, calls):
@@ -106,4 +106,4 @@ def test_screen_reads_a_nested_metric_of_another_module(tmp_path, monkeypatch):
         module="benchmarks.overlap",
         metric="attention.gemm_us_per_gemm",
     )
-    assert screen.run_arm("afd", {}, 0, args, []) == ({1: 7.5}, "d")
+    assert screen.run_arm("afdep", {}, 0, args, []) == ({1: 7.5}, "d")

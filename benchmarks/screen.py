@@ -17,8 +17,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Arms are Config overrides. Masked keeps DeepEP's union protocol and dummy slots.
-DEFAULT_ARMS = {"masked": {"role_aware": False}, "afd": {}}
+# Arms are Config overrides; "_baseline": "fastafd" runs FastAFD's DeepEP M2N
+# (benchmarks/fastafd.py) instead of afdEP-comm.
+DEFAULT_ARMS = {"fastafd": {"_baseline": "fastafd"}, "afdep": {}}
 ENV_KEY = "_env"
 # "_tree" runs the arm from another source tree, imported alone (PYTHONSAFEPATH);
 # "_digest" is the native source digest every rank of the arm must report.

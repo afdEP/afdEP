@@ -23,7 +23,7 @@
       70.6,
       192.7
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       31.7,
       34.4,
       36.0,
@@ -32,7 +32,7 @@
       201.0
      ]
     },
-    "control": "Masked DeepEP",
+    "control": "FastAFD's DeepEP M2N",
     "paired_ratio": {
      "afdEP-comm": [
       0.654,
@@ -42,7 +42,7 @@
       0.896,
       0.959
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.0,
       1.0,
       1.0,
@@ -70,7 +70,7 @@
       127.3,
       383.2
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       39.1,
       47.9,
       55.7,
@@ -79,7 +79,7 @@
       392.6
      ]
     },
-    "control": "Masked DeepEP",
+    "control": "FastAFD's DeepEP M2N",
     "paired_ratio": {
      "afdEP-comm": [
       0.728,
@@ -89,7 +89,7 @@
       0.936,
       0.976
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.0,
       1.0,
       1.0,
@@ -117,7 +117,7 @@
       88.7,
       269.9
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       34.3,
       35.7,
       38.9,
@@ -126,7 +126,7 @@
       274.1
      ]
     },
-    "control": "Masked DeepEP",
+    "control": "FastAFD's DeepEP M2N",
     "paired_ratio": {
      "afdEP-comm": [
       0.705,
@@ -136,7 +136,7 @@
       0.924,
       0.985
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.0,
       1.0,
       1.0,
@@ -164,7 +164,7 @@
       109.4,
       367.8
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       36.4,
       38.6,
       44.8,
@@ -173,7 +173,7 @@
       372.1
      ]
     },
-    "control": "Masked DeepEP",
+    "control": "FastAFD's DeepEP M2N",
     "paired_ratio": {
      "afdEP-comm": [
       0.686,
@@ -183,7 +183,7 @@
       0.916,
       0.989
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.0,
       1.0,
       1.0,
@@ -211,7 +211,7 @@
       59.6,
       188.3
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       30.5,
       31.3,
       32.8,
@@ -220,7 +220,7 @@
       197.7
      ]
     },
-    "control": "Masked DeepEP",
+    "control": "FastAFD's DeepEP M2N",
     "paired_ratio": {
      "afdEP-comm": [
       0.658,
@@ -230,7 +230,7 @@
       0.878,
       0.953
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.0,
       1.0,
       1.0,
@@ -258,7 +258,7 @@
       62.5,
       159.1
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       32.3,
       35.6,
       36.7,
@@ -267,7 +267,7 @@
       167.8
      ]
     },
-    "control": "Masked DeepEP",
+    "control": "FastAFD's DeepEP M2N",
     "paired_ratio": {
      "afdEP-comm": [
       0.659,
@@ -277,7 +277,7 @@
       0.871,
       0.948
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.0,
       1.0,
       1.0,
@@ -311,7 +311,7 @@
       152.0,
       502.0
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       32.2,
       38.1,
       43.7,
@@ -324,7 +324,7 @@
      "afdEP-comm": [
       "958652a3"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -340,7 +340,7 @@
       1.0,
       1.0
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.32318,
       1.30183,
       1.23211,
@@ -368,7 +368,7 @@
       202.0,
       736.8
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       39.3,
       46.4,
       53.4,
@@ -381,7 +381,7 @@
      "afdEP-comm": [
       "958652a3"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -397,7 +397,7 @@
       1.0,
       1.0
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.65242,
       1.70311,
       1.56273,
@@ -425,7 +425,7 @@
       96.0,
       296.3
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       31.1,
       35.1,
       36.1,
@@ -438,7 +438,7 @@
      "afdEP-comm": [
       "958652a3"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -454,7 +454,7 @@
       1.0,
       1.0
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.27776,
       1.32076,
       1.30022,
@@ -488,7 +488,7 @@
       329.9,
       473.1
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       339.4,
       354.3,
       352.2,
@@ -501,7 +501,7 @@
      "afdEP-comm": [
       "958652a3"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -517,7 +517,7 @@
       1.0,
       1.0
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.43829,
       1.33772,
       1.29203,
@@ -543,7 +543,7 @@
       235.1,
       604.8
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       185.4,
       193.6,
       210.7,
@@ -555,7 +555,7 @@
      "afdEP-comm": [
       "958652a3"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -570,7 +570,7 @@
       1.0,
       1.0
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.34549,
       1.24704,
       1.27702,
@@ -597,7 +597,7 @@
       230.7,
       257.7
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       168.9,
       189.9,
       201.0,
@@ -610,7 +610,7 @@
      "afdEP-comm": [
       "958652a3"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -626,7 +626,7 @@
       1.0,
       1.0
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.01326,
       1.00119,
       1.00293,
@@ -652,7 +652,7 @@
       333.5,
       763.8
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       211.3,
       235.7,
       264.6,
@@ -664,7 +664,7 @@
      "afdEP-comm": [
       "958652a3"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -679,7 +679,7 @@
       1.0,
       1.0
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       0.99594,
       1.00139,
       0.99844,
@@ -761,7 +761,7 @@
      ]
     }
    },
-   "masked_unpaired": {
+   "baseline_unpaired": {
     "tokens": [
      1,
      8,
@@ -771,7 +771,7 @@
      128
     ],
     "series": {
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       339.4,
       354.3,
       352.2,
@@ -781,7 +781,7 @@
      ]
     },
     "digests": {
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -1233,7 +1233,7 @@
       229.4,
       604.8
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       185.4,
       193.6,
       210.7,
@@ -1248,7 +1248,7 @@
      "Sparse directional": [
       "2d22e5e9"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -1270,7 +1270,7 @@
       0.97566,
       0.99999
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       1.34549,
       1.24704,
       1.27702,
@@ -1373,7 +1373,7 @@
       284.1,
       701.6
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       211.3,
       235.7,
       264.6,
@@ -1388,7 +1388,7 @@
      "Cross-node: mixed-role directional": [
       "81b71eb0"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -1410,7 +1410,7 @@
       0.85186,
       0.91862
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       0.99594,
       1.00139,
       0.99844,
@@ -1442,7 +1442,7 @@
       383.4,
       1015.5
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       279.2,
       319.6,
       352.9,
@@ -1457,7 +1457,7 @@
      "Cross-node: mixed-role directional": [
       "81b71eb0"
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       "958652a3"
      ]
     },
@@ -1479,7 +1479,7 @@
       0.87645,
       0.93794
      ],
-     "Masked DeepEP": [
+     "FastAFD's DeepEP M2N": [
       0.99613,
       1.00057,
       0.99847,

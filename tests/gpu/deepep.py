@@ -19,6 +19,7 @@ import torch.distributed as dist
 
 from afdep import Buffer, Config
 from afdep._build import source_digest
+from benchmarks.fastafd import BASELINE, FastAFDBuffer, make
 
 DEFAULT_HIDDEN = 256
 EXPERTS_PER_FFN = 4
@@ -116,6 +117,8 @@ def expert_rows(received, worker: int, config: Config):
 class Exchange:
     def __init__(self, buffer: Buffer, rows: int):
         self.buffer, self.config, self.rows = buffer, buffer.config, rows
+        # FastAFD's symmetric group gives sources receive bounds; afdEP-comm none.
+        self.afdep = not isinstance(buffer, FastAFDBuffer)
         if buffer.role == "attention":
             dtype = (
                 torch.float8_e4m3fn if self.config.payload == "fp8" else torch.bfloat16
@@ -184,7 +187,7 @@ class Exchange:
                 bucket=bucket,
                 read_host_counts=host_counts,
             )
-            if self.config.role_aware:
+            if self.afdep:
                 assert self.buffer.transport._pending.recv_shape == (
                     0,
                     self.config.hidden_size,
@@ -193,7 +196,7 @@ class Exchange:
         received = self.buffer.worker_receive(
             bucket=bucket, read_host_counts=host_counts
         )
-        if self.config.role_aware and not host_counts:
+        if self.afdep and not host_counts:
             assert received.recv_x.shape[0] == self.config.receive_rows(bucket)
         rows = expert_rows(received, self.buffer.role_rank, self.config)
         if delay and self.buffer.role_rank == 0:
@@ -491,7 +494,9 @@ def main() -> None:
     parser.add_argument("--num-qps", type=int, default=0, help="0 = automatic")
     parser.add_argument("--hybrid", choices=("on", "off"), default="on")
     parser.add_argument(
-        "--generic", action="store_true", help="Control: disable role specialization"
+        "--baseline",
+        choices=(BASELINE,),
+        help="Run on the baseline, FastAFD's DeepEP M2N (benchmarks/fastafd.py)",
     )
     parser.add_argument(
         "--hidden-size",
@@ -526,8 +531,8 @@ def main() -> None:
     COLLECT_VIEW = args.collect_view
     if min(args.capacity, args.graph_steps, args.num_sms) < 1:
         parser.error("capacity, graph-steps and num-sms must be positive")
-    if args.invalid_route and (args.generic or args.capacity < 8):
-        parser.error("invalid-route requires role specialization and capacity>=8")
+    if args.invalid_route and (args.baseline or args.capacity < 8):
+        parser.error("invalid-route requires afdEP-comm (no baseline) and capacity>=8")
     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
     dist.init_process_group("gloo", timeout=timedelta(seconds=300))
     world = dist.get_world_size()
@@ -543,26 +548,27 @@ def main() -> None:
         # FFN ranks are [0, ffn_ranks); transport controls are read on every call.
         if (dist.get_rank() < args.ffn_ranks) == (role == "ffn"):
             os.environ[key] = value
-    config = Config(
-        args.capacity,
-        args.hidden_size,
-        args.experts_per_ffn * args.ffn_ranks,
-        args.top_k,
-        args.ffn_ranks,
-        world - args.ffn_ranks,
+    buffer = make(
+        dist.group.WORLD,
+        args.baseline,
+        capacity_tokens_per_rank=args.capacity,
+        hidden_size=args.hidden_size,
+        num_experts=args.experts_per_ffn * args.ffn_ranks,
+        top_k=args.top_k,
+        ffn_ranks=args.ffn_ranks,
+        attention_ranks=world - args.ffn_ranks,
         payload=args.payload,
         num_sms=args.num_sms,
         num_qps=args.num_qps,
         allow_hybrid_mode=args.hybrid == "on",
-        role_aware=not args.generic,
         cpu_timeout_s=10 if args.invalid_route else 120,
         gpu_timeout_s=10 if args.invalid_route else 120,
     )
-    buffer = Buffer(group=dist.group.WORLD, config=config)
+    config, afdep = buffer.config, args.baseline is None
     # One NVLink domain, or NVLink domains joined by GIN (recorded per rank).
     if buffer.physical_domain[0] * buffer.physical_domain[1] != config.world_size:
         raise ValueError("physical domain does not cover the world")
-    if config.role_aware and buffer.role == "attention":
+    if afdep and buffer.role == "attention":
         native_dispatch = buffer.transport.dispatch
 
         def checked_source_host_counts(*args, **kwargs):
@@ -626,7 +632,7 @@ def main() -> None:
         "registered_transport_bytes": buffer.num_buffer_bytes,
         "receive_bound_rows": (
             0
-            if config.role_aware and buffer.role == "attention"
+            if afdep and buffer.role == "attention"
             else config.receive_rows(config.capacity_tokens_per_rank)
         ),
         "source_zero_output_bytes": (

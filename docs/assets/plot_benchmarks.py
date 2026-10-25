@@ -17,7 +17,7 @@ from matplotlib.ticker import FixedLocator, NullLocator  # noqa: E402
 HERE = Path(__file__).resolve().parent
 DATA = json.loads((HERE / "benchmarks.json").read_text())
 
-AFDEP, MASKED = "afdEP-comm", "Masked DeepEP"
+AFDEP, FASTAFD = "afdEP-comm", "FastAFD's DeepEP M2N"
 # Across NVLink domains 1.0.0 ran the dense directional protocol; 1.1.0 runs it sparse.
 DENSE, SPARSE = "Dense directional (1.0.0)", "Sparse directional"
 MIXED = "Cross-node: mixed-role directional"
@@ -26,7 +26,7 @@ MIXED = "Cross-node: mixed-role directional"
 SERIES = {
     AFDEP: ("#2a78d6", "#3987e5"),
     DENSE: ("#2a78d6", "#3987e5"),
-    MASKED: ("#eb6834", "#d95926"),
+    FASTAFD: ("#eb6834", "#d95926"),
     SPARSE: ("#1baf7a", "#199e70"),
     "Sparse dispatch only": ("#eda100", "#c98500"),
     "Stagger only": ("#e87ba4", "#d55181"),
@@ -213,31 +213,32 @@ def figure(stem, title, subtitle, panels, order, cols, headline=None):
 figure(
     "results-in-node-h100",
     "One NVLink domain, 4 × H100",
-    "afdEP-comm against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128"
-    " experts (96 for 1A:3F); BF16 unless noted",
+    "afdEP-comm against FastAFD's DeepEP M2N; top-8 of 128 experts (96 for 1A:3F);"
+    " BF16 unless noted",
     list(DATA["in_node_h100"]["layouts"].items()),
-    [AFDEP, MASKED],
+    [AFDEP, FASTAFD],
     3,
-    (AFDEP, MASKED),
+    (AFDEP, FASTAFD),
 )
 figure(
     "results-in-node-h200",
     "One NVLink domain, 8 × H200",
-    "afdEP-comm against Masked DeepEP; BF16, hidden 2048, top-8 of 128 experts",
+    "afdEP-comm against FastAFD's DeepEP M2N; BF16, hidden 2048, top-8 of 128 experts",
     list(DATA["in_node_h200"]["layouts"].items()),
-    [AFDEP, MASKED],
+    [AFDEP, FASTAFD],
     3,
-    (AFDEP, MASKED),
+    (AFDEP, FASTAFD),
 )
 figure(
     "results-cross-node",
     "Across NVLink domains, H200 over InfiniBand (NCCL GIN)",
-    "afdEP-comm 1.0.0 (dense directional) against Masked DeepEP; FP8, hidden 2048,"
+    "afdEP-comm 1.0.0 (dense directional) against FastAFD's DeepEP M2N; FP8, hidden"
+    " 2048,"
     " top-8 of 128 experts",
     list(DATA["cross_node"]["layouts"].items()),
-    [AFDEP, MASKED],
+    [AFDEP, FASTAFD],
     2,
-    (AFDEP, MASKED),
+    (AFDEP, FASTAFD),
 )
 
 if "cross_node_proposal" in DATA:
@@ -249,7 +250,7 @@ if "cross_node_proposal" in DATA:
         "tokens": parts["tokens"],
         "series": {
             DENSE: final["series"][DENSE][:n],
-            MASKED: P["sparse_11to1"]["masked_unpaired"]["series"][MASKED],
+            FASTAFD: P["sparse_11to1"]["baseline_unpaired"]["series"][FASTAFD],
             "Stagger only": parts["series"]["Stagger only"],
             "Sparse dispatch only": parts["series"]["Sparse dispatch only"],
             SPARSE: final["series"][SPARSE][:n],
@@ -262,9 +263,9 @@ if "cross_node_proposal" in DATA:
         "results-xn-sparse",
         "Sparse directional hybrid, 11:1 across 12 single-role domains (12 × 2 H200)",
         "Before the done witness (200944ce); each part paired against the dense"
-        " protocol in its own screen, Masked from an earlier unpaired one",
+        " protocol in its own screen, the baseline from an earlier unpaired one",
         [("2 FFN + 22 Attention ranks, FP8, hidden 2048", combined)],
-        [DENSE, MASKED, SPARSE, "Sparse dispatch only", "Stagger only"],
+        [DENSE, FASTAFD, SPARSE, "Sparse dispatch only", "Stagger only"],
         1,
         (SPARSE, DENSE, "below"),
     )
@@ -274,17 +275,17 @@ if "cross_node_proposal" in DATA:
         "Against the dense protocol of 1.0.0, paired, before the done witness; FP8,"
         " hidden 2048, top-8 of 128 experts",
         list(P["sparse_scaling"].items()),
-        [DENSE, MASKED, SPARSE],
+        [DENSE, FASTAFD, SPARSE],
         3,
         (SPARSE, DENSE, "below"),
     )
     figure(
         "results-xn-mixed",
         "Mixed-role directional hybrid: the FFN domain also holds Attention GPUs",
-        "Against afdEP-comm, which runs the union hybrid here and matches Masked within"
-        " 0.5%; 6 × 4 H200, FP8, hidden 2048",
+        "Against afdEP-comm, which runs the union hybrid here and matches FastAFD's"
+        " DeepEP M2N within 0.5%; 6 × 4 H200, FP8, hidden 2048",
         list(P["mixed_role"].items()),
-        [AFDEP, MASKED, MIXED],
+        [AFDEP, FASTAFD, MIXED],
         2,
         (MIXED, AFDEP),
     )
