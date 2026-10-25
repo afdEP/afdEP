@@ -2,10 +2,10 @@
 # SPDX-FileCopyrightText: Copyright contributors to the AFD plugin project
 """AFD role endpoints over the pinned DeepEP V2 ElasticBuffer.
 
-Adapted from afd-plugin 1198c52, deepep_m2n/{buffer,layout}.py. This backend
-retains DeepEP's union-rank protocol and dummy Attention expert slots.
-It specializes unused role buffers and epilogues while preserving transport
-credits. Model code, quantization and expert computation stay with the caller.
+Adapted from afd-plugin 1198c52, deepep_m2n/{buffer,layout}.py. DeepEP's expert
+numbering stays uniform (Attention ranks keep empty expert blocks); the transport
+is specialized for the FFN and Attention roles while preserving its credits.
+Model code, quantization and expert computation stay with the caller.
 """
 
 from __future__ import annotations
@@ -51,7 +51,6 @@ class Config:
     rdma_traffic_class: int = 0
     cpu_timeout_s: int = 120
     gpu_timeout_s: int = 120
-    role_aware: bool = True
 
     def __post_init__(self) -> None:
         for name in (
@@ -74,8 +73,6 @@ class Config:
                 raise ValueError(f"{name} must be a nonnegative int32 integer")
         if type(self.allow_hybrid_mode) is not bool:
             raise ValueError("allow_hybrid_mode must be a boolean")
-        if type(self.role_aware) is not bool:
-            raise ValueError("role_aware must be a boolean")
         if (
             type(self.rdma_traffic_class) is not int
             or not 0 <= self.rdma_traffic_class <= 255
@@ -114,7 +111,10 @@ class Config:
         return self.world_size * self.experts_per_rank
 
     def receive_rows(self, bucket: int) -> int:
-        sources = self.attention_ranks if self.role_aware else self.world_size
+        """FFN receive rows for one bucket: only Attention ranks send."""
+        return self._receive_rows(self.attention_ranks, bucket)
+
+    def _receive_rows(self, sources: int, bucket: int) -> int:
         rows = sources * bucket * min(self.top_k, self.experts_per_rank)
         rows += (self.expert_alignment - 1) * self.experts_per_rank
         return (
@@ -163,6 +163,11 @@ class ElasticBuffer:
     owns the CPU Gloo group and must collectively call close/destroy outside
     CUDA capture. No process-global communicator registry or environment changes.
     EP_DISABLE_GIN=1 is an application choice for a single NVLink domain.
+
+    With ``ffn_ranks`` it is afdEP-comm's AFD transport: FFN ranks [0, ffn_ranks)
+    receive and reply, the others send. Without it, it is DeepEP V2 as upstream
+    ships it, a symmetric group, which is how FastAFD's DeepEP M2N runs AFD (the
+    baseline in benchmarks/fastafd.py).
     """
 
     def __init__(
@@ -180,7 +185,6 @@ class ElasticBuffer:
         use_fp8_dispatch: bool = False,
         num_sms: int = 0,
         num_qps: int = 0,
-        role_aware: bool = False,
         ffn_ranks: int | None = None,
     ) -> None:
         # Intentional optional imports: configuration/package inspection stays CPU-only.
@@ -192,7 +196,7 @@ class ElasticBuffer:
         self.capacity_tokens_per_rank = capacity_tokens_per_rank
         self.num_experts, self.hidden_size, self.top_k = num_experts, hidden_size, top_k
         self.allow_hybrid_mode, self._fp8 = allow_hybrid_mode, use_fp8_dispatch
-        self.role_aware, self.ffn_ranks = role_aware, ffn_ranks
+        self.ffn_ranks, afd = ffn_ranks, ffn_ranks is not None
         self._owner, self._pending, self._closed = object(), None, False
         settings = {
             "capacity": capacity_tokens_per_rank,
@@ -206,7 +210,6 @@ class ElasticBuffer:
             "fp8": use_fp8_dispatch,
             "num_sms": num_sms,
             "num_qps": num_qps,
-            "role_aware": role_aware,
             "ffn_ranks": ffn_ranks,
         }
         error, module, device_sms = None, None, 0
@@ -235,15 +238,12 @@ class ElasticBuffer:
             if (
                 type(allow_hybrid_mode) is not bool
                 or type(use_fp8_dispatch) is not bool
-                or type(role_aware) is not bool
             ):
-                raise ValueError("hybrid, FP8 and role_aware settings must be booleans")
+                raise ValueError("hybrid and FP8 settings must be booleans")
             if ffn_ranks is not None and (
                 type(ffn_ranks) is not int or not 0 < ffn_ranks < self.world_size
             ):
                 raise ValueError("ffn_ranks must leave positive FFN and source ranks")
-            if role_aware and ffn_ranks is None:
-                raise ValueError("role_aware requires explicit ffn_ranks")
             if (
                 type(rdma_traffic_class) is not int
                 or not 0 <= rdma_traffic_class <= 255
@@ -255,7 +255,7 @@ class ElasticBuffer:
                 )
             if num_experts % self.world_size:
                 raise ValueError("num_experts must divide evenly over the group")
-            if role_aware and top_k > ffn_ranks * (num_experts // self.world_size):
+            if afd and top_k > ffn_ranks * (num_experts // self.world_size):
                 raise ValueError("top_k exceeds the real FFN expert count")
             if (
                 self.world_size > MAX_RANKS
@@ -333,7 +333,7 @@ class ElasticBuffer:
                     True,
                     # Role-sized inboxes: only sources write FFN dispatch regions
                     # and only FFN ranks write Attention combine regions.
-                    ffn_ranks if role_aware else 0,
+                    ffn_ranks if afd else 0,
                 )
             )
             native_args = (
@@ -352,7 +352,7 @@ class ElasticBuffer:
                 True,
             )
             self._runtime = module.ElasticBuffer(
-                *native_args, *([ffn_ranks] if role_aware else [])
+                *native_args, *([ffn_ranks] if afd else [])
             )
         except Exception:
             module.destroy_nccl_comm(self._nccl_comm)
@@ -445,8 +445,8 @@ class ElasticBuffer:
             )
         if x.shape[0] > bucket:
             raise ValueError("source input exceeds its bucket")
-        if self.role_aware and self.rank < self.ffn_ranks and x.shape[0] != 0:
-            raise ValueError("role-aware FFN ranks cannot originate tokens")
+        if self.ffn_ranks is not None and self.rank < self.ffn_ranks and x.shape[0]:
+            raise ValueError("FFN ranks cannot originate tokens")
         num_sms = self._num_sms()
         result = self._runtime.dispatch(
             x.contiguous(),
@@ -598,22 +598,7 @@ class Buffer:
         self.role_rank = (
             self.rank if self.role == "ffn" else self.rank - config.ffn_ranks
         )
-        self.transport = ElasticBuffer(
-            group=group,
-            capacity_tokens_per_rank=config.capacity_tokens_per_rank,
-            hidden_size=config.hidden_size,
-            num_experts=config.logical_experts,
-            top_k=config.top_k,
-            allow_hybrid_mode=config.allow_hybrid_mode,
-            rdma_traffic_class=config.rdma_traffic_class,
-            cpu_timeout_s=config.cpu_timeout_s,
-            gpu_timeout_s=config.gpu_timeout_s,
-            use_fp8_dispatch=config.payload == "fp8",
-            num_sms=config.num_sms,
-            num_qps=config.num_qps,
-            role_aware=config.role_aware,
-            ffn_ranks=config.ffn_ranks,
-        )
+        self.transport = self._open_transport(group)
         self.physical_domain = self.transport.physical_domain
         self.logical_domain = self.transport.logical_domain
         self.num_buffer_bytes = self.transport.num_buffer_bytes
@@ -628,16 +613,35 @@ class Buffer:
         )
         self._allocate_role_storage()
 
+    def _open_transport(self, group: dist.ProcessGroup) -> ElasticBuffer:
+        config = self.config
+        return ElasticBuffer(
+            group=group,
+            capacity_tokens_per_rank=config.capacity_tokens_per_rank,
+            hidden_size=config.hidden_size,
+            num_experts=config.logical_experts,
+            top_k=config.top_k,
+            allow_hybrid_mode=config.allow_hybrid_mode,
+            rdma_traffic_class=config.rdma_traffic_class,
+            cpu_timeout_s=config.cpu_timeout_s,
+            gpu_timeout_s=config.gpu_timeout_s,
+            use_fp8_dispatch=config.payload == "fp8",
+            num_sms=config.num_sms,
+            num_qps=config.num_qps,
+            ffn_ranks=config.ffn_ranks,
+        )
+
+    def _source_output_rows(self) -> int:
+        """Rows of the source's zero combine input: Attention ranks receive none."""
+        return 0
+
     def _allocate_role_storage(self) -> None:
         torch, c = self._torch, self.config
         device = torch.device("cuda", self.device)
         self._zero_output = None
         if self.role == "attention":
             self._zero_output = torch.zeros(
-                (
-                    0 if c.role_aware else c.receive_rows(c.capacity_tokens_per_rank),
-                    c.hidden_size,
-                ),
+                (self._source_output_rows(), c.hidden_size),
                 dtype=torch.bfloat16,
                 device=device,
             )

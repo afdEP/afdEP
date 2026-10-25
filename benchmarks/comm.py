@@ -21,9 +21,9 @@ from pathlib import Path
 import torch
 import torch.distributed as dist
 
-from afdep import Buffer, Config
 from afdep._build import source_digest
 
+from .fastafd import BASELINE_KEY, make
 from .screen import DEFAULT_ARMS
 
 METRIC = "per block: max Attention-rank CUDA-event us per exchange"
@@ -61,8 +61,10 @@ class Arm:
 
     def __init__(self, name, overrides, common):
         self.name = name
-        self.config = Config(**(common | overrides))
-        self.buffer = Buffer(group=dist.group.WORLD, config=self.config)
+        overrides = dict(overrides)
+        self.baseline = overrides.pop(BASELINE_KEY, None)
+        self.buffer = make(dist.group.WORLD, self.baseline, **(common | overrides))
+        self.config = self.buffer.config
         self.graph = None
         self.result = None
 
@@ -258,6 +260,7 @@ def main():
     metadata = {
         "rank": rank,
         "arms": {arm.name: asdict(arm.config) for arm in arms},
+        "baselines": {arm.name: arm.baseline for arm in arms},
         "registered_bytes": {arm.name: arm.buffer.num_buffer_bytes for arm in arms},
         "transport_sms": {
             arm.name: arm.buffer.transport._resolved_num_sms for arm in arms
