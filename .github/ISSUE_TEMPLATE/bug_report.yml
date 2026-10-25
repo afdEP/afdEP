@@ -48,7 +48,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Output of `python -m afdep doctor --build` on one rank (it includes the afdEP version and native source digest).
+      description: Output of `python -m afdep doctor --build` on one rank (it includes the afdEP-comm version and native source digest).
       render: json
     validations:
       required: true

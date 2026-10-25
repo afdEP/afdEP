@@ -8,6 +8,9 @@
   "source_directory": "afd_plugin/connectors/gpu/deepep_m2n/csrc/deepep",
   "intermediary_repository": "https://github.com/hao-ai-lab/FastAFD",
   "intermediary_commit": "3c7161949310b6d59d6b4cf9bf997a4935c8113b",
+  "intermediary_license": "MIT",
+  "intermediary_copyright": "Copyright (c) 2026 sgl-project",
+  "intermediary_license_file": "LICENSE.FastAFD",
   "pin_limit": "The original DeepEP revision is not recorded in the FastAFD snapshot; the immutable plugin revision and complete file hashes identify this vendored input.",
   "local_changes": [
     "Opt-in afdEP role specialization: receive allocation, fused direct-dispatch route checks and empty-side completion through normal stream events (v0), followed by entry-barrier removal, directional counts, directed per-CTA exit, role-sized buffers, the directional hybrid protocol and generated role kernels. Exact added and modified hashes in LOCAL_CHANGES.json. Frozen file_sha256 identifies the unchanged origin snapshot."

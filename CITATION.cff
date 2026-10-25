@@ -1,0 +1,55 @@
+cff-version: 1.2.0
+message: "If you use afdEP-comm, please cite it and the projects it builds on, DeepEP and FastAFD."
+title: afdEP-comm
+type: software
+authors:
+  - name: afdEP-comm contributors
+version: 1.1.0
+license:
+  - Apache-2.0
+  - MIT
+repository-code: "https://github.com/afdEP/afdEP-comm"
+abstract: >-
+  Expert-parallel communication for Attention-FFN Disaggregation: DeepEP V2's
+  dispatch and combine transport, specialized for Attention and FFN roles.
+references:
+  - type: software
+    title: "DeepEP: an efficient expert-parallel communication library"
+    authors:
+      - family-names: Zhao
+        given-names: Chenggang
+      - family-names: Zhou
+        given-names: Shangyan
+      - family-names: Zhang
+        given-names: Liyue
+      - family-names: Deng
+        given-names: Chengqi
+      - family-names: Xu
+        given-names: Zhean
+      - family-names: Liu
+        given-names: Yuxuan
+      - family-names: Yu
+        given-names: Kuai
+      - family-names: Li
+        given-names: Jiashi
+      - family-names: Zhao
+        given-names: Liang
+    year: 2025
+    url: "https://github.com/deepseek-ai/DeepEP"
+    license: MIT
+  - type: software
+    title: "FastAFD: Open-Source Large-Scale Attention-FFN Disaggregation on Blackwell NVL72"
+    authors:
+      - family-names: Fu
+        given-names: Yichao
+      - family-names: Zhang
+        given-names: Yuxuan
+      - family-names: Wang
+        given-names: Ruitian
+      - family-names: Chen
+        given-names: Junda
+      - family-names: Zhang
+        given-names: Hao
+    year: 2026
+    url: "https://github.com/hao-ai-lab/FastAFD"
+    license: MIT

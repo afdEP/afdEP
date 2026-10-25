@@ -41,6 +41,7 @@ def main() -> None:
             assert any(
                 name.endswith("/licenses/THIRD_PARTY_NOTICES.md") for name in names
             )
+            assert any(name.endswith("/LICENSE.FastAFD") for name in names)
     for sdist in sdists:
         with tarfile.open(sdist) as archive:
             names = {name.split("/", 1)[-1] for name in archive.getnames()}

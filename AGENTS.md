@@ -1,6 +1,6 @@
-# afdEP engineering
+# afdEP-comm engineering
 
-afdEP is a general EP communication library for AFD: N Attention token sources
+afdEP-comm is a general EP communication library for AFD: N Attention token sources
 communicate with M expert workers. Keep model/GEMM, routing, quantization policy,
 and serving scheduling outside the core. Vendor DeepEP V2 kernels; no external deep_ep or vLLM runtime dependency.
 

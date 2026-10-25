@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1069" viewBox="0 0 1240 1069" role="img" aria-labelledby="title desc" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-<title id="title">One exchange in one NVLink domain: Masked DeepEP and afdEP</title>
-<desc id="desc">Two swimlane flowcharts, Attention GPUs and FFN GPUs, through initialization, dispatch, copy epilogue, expert GEMM, combine and reduce epilogue. Masked DeepEP registers a union window, runs an all-rank barrier at the entry and exit of dispatch and of combine, exchanges counts with every rank and runs every kernel on every rank. afdEP lays the same window out by role, sends counts from Attention to FFN only, runs no all-rank barrier (each phase receiver waits for its senders per-CTA arrivals), starts the FFN copy epilogue at the counts, and runs each epilogue only on the role that needs it.</desc>
+<title id="title">One exchange in one NVLink domain: Masked DeepEP and afdEP-comm</title>
+<desc id="desc">Two swimlane flowcharts, Attention GPUs and FFN GPUs, through initialization, dispatch, copy epilogue, expert GEMM, combine and reduce epilogue. Masked DeepEP registers a union window, runs an all-rank barrier at the entry and exit of dispatch and of combine, exchanges counts with every rank and runs every kernel on every rank. afdEP-comm lays the same window out by role, sends counts from Attention to FFN only, runs no all-rank barrier (each phase receiver waits for its senders per-CTA arrivals), starts the FFN copy epilogue at the counts, and runs each epilogue only on the role that needs it.</desc>
 <defs><marker id="arreb6834" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#eb6834"/></marker><marker id="arr2a78d6" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#2a78d6"/></marker></defs>
 <rect width="1240" height="1069" fill="#fcfcfb"/>
 <text x="20" y="40" font-size="24" font-weight="700" fill="#0b0b0b" text-anchor="start">One exchange in one NVLink domain, step by step</text>
@@ -12,7 +12,7 @@
 <text x="466.0" y="142" font-size="13" font-weight="600" fill="#52514e" text-anchor="middle">FFN GPUs (F0, F1)</text>
 <rect x="640" y="86" width="590" height="933" rx="14" fill="#eef4fc"/>
 <rect x="640" y="86" width="590" height="5" rx="2.5" fill="#2a78d6"/>
-<text x="656" y="118" font-size="18" font-weight="700" fill="#0b0b0b" text-anchor="start">afdEP (role path)</text>
+<text x="656" y="118" font-size="18" font-weight="700" fill="#0b0b0b" text-anchor="start">afdEP-comm (role path)</text>
 <text x="784.0" y="142" font-size="13" font-weight="600" fill="#52514e" text-anchor="middle">Attention GPUs (A0, A1)</text>
 <text x="1086.0" y="142" font-size="13" font-weight="600" fill="#52514e" text-anchor="middle">FFN GPUs (F0, F1)</text>
 <text x="36" y="170" font-size="13.5" font-weight="700" fill="#52514e" text-anchor="start">Initialization, once: registered NVLink window</text>

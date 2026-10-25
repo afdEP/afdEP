@@ -17,7 +17,7 @@ from matplotlib.ticker import FixedLocator, NullLocator  # noqa: E402
 HERE = Path(__file__).resolve().parent
 DATA = json.loads((HERE / "benchmarks.json").read_text())
 
-AFDEP, MASKED = "afdEP", "Masked DeepEP"
+AFDEP, MASKED = "afdEP-comm", "Masked DeepEP"
 SPARSE = "Cross-node: all three sparse switches"
 MIXED = "Cross-node: mixed-role directional"
 # Validated categorical slots (light, dark); a colour follows its entity in every
@@ -211,7 +211,7 @@ def figure(stem, title, subtitle, panels, order, cols, headline=None):
 figure(
     "results-in-node-h100",
     "One NVLink domain, 4 × H100",
-    "afdEP against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128"
+    "afdEP-comm against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128"
     " experts (96 for 1A:3F); BF16 unless noted",
     list(DATA["in_node_h100"]["layouts"].items()),
     [AFDEP, MASKED],
@@ -221,7 +221,7 @@ figure(
 figure(
     "results-in-node-h200",
     "One NVLink domain, 8 × H200",
-    "afdEP against Masked DeepEP; BF16, hidden 2048, top-8 of 128 experts",
+    "afdEP-comm against Masked DeepEP; BF16, hidden 2048, top-8 of 128 experts",
     list(DATA["in_node_h200"]["layouts"].items()),
     [AFDEP, MASKED],
     3,
@@ -230,7 +230,7 @@ figure(
 figure(
     "results-cross-node",
     "Across NVLink domains, H200 over InfiniBand (NCCL GIN)",
-    "afdEP against Masked DeepEP; FP8, hidden 2048, top-8 of 128 experts",
+    "afdEP-comm against Masked DeepEP; FP8, hidden 2048, top-8 of 128 experts",
     list(DATA["cross_node"]["layouts"].items()),
     [AFDEP, MASKED],
     2,
@@ -258,8 +258,8 @@ if "cross_node_proposal" in DATA:
     figure(
         "results-xn-sparse",
         "Sparse directional hybrid, 11:1 across 12 single-role domains (12 × 2 H200)",
-        "Before the done witness (200944ce); each switch paired against afdEP in its"
-        " own screen, Masked from an earlier unpaired one",
+        "Before the done witness (200944ce); each switch paired against afdEP-comm in"
+        " its own screen, Masked from an earlier unpaired one",
         [("2 FFN + 22 Attention ranks, FP8, hidden 2048", combined)],
         [AFDEP, MASKED, SPARSE, "Sparse dispatch only", "Stagger only"],
         1,
@@ -268,7 +268,7 @@ if "cross_node_proposal" in DATA:
     figure(
         "results-xn-scaling",
         "Sparse directional hybrid at other layouts",
-        "All three switches against afdEP, paired, before the done witness; FP8,"
+        "All three switches against afdEP-comm, paired, before the done witness; FP8,"
         " hidden 2048, top-8 of 128 experts",
         list(P["sparse_scaling"].items()),
         [AFDEP, MASKED, SPARSE],
@@ -278,7 +278,7 @@ if "cross_node_proposal" in DATA:
     figure(
         "results-xn-mixed",
         "Mixed-role directional hybrid: the FFN domain also holds Attention GPUs",
-        "Against afdEP, which runs the union hybrid here and matches Masked within"
+        "Against afdEP-comm, which runs the union hybrid here and matches Masked within"
         " 0.5%; 6 × 4 H200, FP8, hidden 2048",
         list(P["mixed_role"].items()),
         [AFDEP, MASKED, MIXED],

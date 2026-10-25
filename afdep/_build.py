@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Copyright contributors to the AFD plugin project
 """Lazy standalone build of the pinned DeepEP V2 transport.
 
-Adapted from afd-plugin 1198c52, deepep_m2n/{buffer,jit_build}.py, and afdEP's
+Adapted from afd-plugin 1198c52, deepep_m2n/{buffer,jit_build}.py, and afdEP-comm's
 native builder. Origin hashes and opt-in local changes are in PROVENANCE.json.
 AFDEP_CACHE_DIR selects the extension cache; EP_JIT_CACHE_DIR retains its
 upstream meaning for DeepEP's later kernel compilations.
