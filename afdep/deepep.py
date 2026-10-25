@@ -380,7 +380,7 @@ class ElasticBuffer:
         if count_first[0][1] not in ("full", "source"):
             self.close()
             raise ValueError("AFDEP_COUNT_FIRST_ARM must be full or source")
-        # So do the sparse directional hybrid switches, as each rank resolves them
+        # So do the sparse directional hybrid parts, as each rank resolves them
         # (role-local shape controls can turn them off on one role only), the
         # mixed-role F and the FP8 combine replies the native buffer latched.
         sparse = self._gather(tuple(self._runtime.get_afd_sparse_hybrid_config()))
@@ -388,7 +388,8 @@ class ElasticBuffer:
             self.close()
             raise ValueError(
                 "Every DeepEP rank must use the same hybrid configuration "
-                "(AFDEP_HYBRID_* and AFDEP_MIXED_HYBRID switches)"
+                "(AFDEP_HYBRID_FP8_COMBINE*, AFDEP_MIXED_HYBRID and "
+                "AFDEP_SHARED_* controls)"
             )
         # Lossy FP8 combine replies across NVLink domains (AFDEP_HYBRID_FP8_COMBINE=1),
         # for buckets of at least fp8_combine_min_bucket tokens.
