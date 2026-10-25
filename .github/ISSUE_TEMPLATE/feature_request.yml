@@ -15,9 +15,9 @@ body:
       description: >-
         For optimizations: which property of the Attention and FFN roles (one-way dataflow,
         idle role resources, the Attention:FFN ratio) makes it AFD-specific. A change that
-        would speed up Masked DeepEP as well belongs upstream; see docs/design.md.
+        would speed up FastAFD's DeepEP M2N as well belongs upstream; see docs/design.md.
   - type: textarea
     id: evidence
     attributes:
       label: Evidence or plan to measure
-      description: Paired fresh-process screens against Masked DeepEP and the change's own control switch, with native source digests.
+      description: Paired fresh-process screens against FastAFD's DeepEP M2N (benchmarks/fastafd.py) and the change's own control switch, with native source digests.

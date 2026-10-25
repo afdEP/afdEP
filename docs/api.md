@@ -53,10 +53,11 @@ domain (and no more ranks than top-k), each token's only reply row is already it
 final output. That call then skips the reduce kernel and returns a strided `[T,H]`
 view of the registered combine inbox. Treat the view as read-only. It is valid
 until the next `source_dispatch` on the same Buffer is enqueued; copy it if the
-caller needs it longer. Other layouts return the ordinary result. In one NVLink domain the role-aware path sizes them by role: FFN
-dispatch inboxes for the Attention sources and, when ranks do not exceed top-k,
-Attention combine inboxes for the FFN ranks; every rank registers the same size.
-Generic buffers and `AFDEP_UNION_BUFFERS=1` keep DeepEP's union sizing.
+caller needs it longer. Other layouts return the ordinary result. In one NVLink domain
+registered buffers are sized by role: FFN dispatch inboxes for the Attention sources and,
+when ranks do not exceed top-k, Attention combine inboxes for the FFN ranks; every rank
+registers the same size. `AFDEP_UNION_BUFFERS=1` keeps DeepEP's symmetric sizing as a
+measurement control.
 
 Operations order their internal communication stream with the current CUDA
 stream using DeepEP events. Use caller stream dependencies before passing data
@@ -68,12 +69,12 @@ work and frees registered storage; destroy graphs before closing the Buffer.
 
 ## Transport and tuning
 
-The role path preserves DeepEP's uniform logical expert slots and collective participation.
-Attention dummy slots are never legal routing targets. `role_aware=True` is the
-public default. `role_aware=False` is an unspecialized control using the same
-backend; `afdep.deepep.ElasticBuffer` retains the low-level connector interface.
-Low-level callers must explicitly pass `role_aware=True, ffn_ranks=M` to enable
-the specializations; the high-level `Buffer` does this from `Config`.
+afdEP-comm keeps DeepEP's uniform logical expert numbering (Attention ranks own empty
+expert blocks, never legal routing targets) and its collective participation. The
+low-level connector interface is `afdep.deepep.ElasticBuffer`: pass `ffn_ranks=M` for
+afdEP-comm's transport, as `Buffer` does from `Config`. Without `ffn_ranks` it runs DeepEP
+V2 as upstream ships it, over a symmetric group; the benchmarks use that for the
+baseline, FastAFD's DeepEP M2N ([benchmarks/fastafd.py](../benchmarks/fastafd.py)).
 
 `allow_hybrid_mode`, `num_sms`, `num_qps`, timeouts and RDMA traffic class pass
 through to the pinned transport. `num_sms=0` selects approximately 24/132 of the

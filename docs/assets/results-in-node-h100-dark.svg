@@ -1174,7 +1174,7 @@ L 804.074961 307.692842
    <text style="font-weight: 600; font-size: 13px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #f0efec" x="9.936" y="18.39" transform="rotate(-0 9.936 18.39)">One NVLink domain, 4 × H100</text>
   </g>
   <g id="text_87">
-   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #c3c2b7" x="9.936" y="37.365" transform="rotate(-0 9.936 37.365)">afdEP-comm against Masked DeepEP (DeepEP V2, role_aware=False); top-8 of 128 experts (96 for 1A:3F); BF16 unless noted</text>
+   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #c3c2b7" x="9.936" y="37.365" transform="rotate(-0 9.936 37.365)">afdEP-comm against FastAFD's DeepEP M2N; top-8 of 128 experts (96 for 1A:3F); BF16 unless noted</text>
   </g>
   <g id="legend_1">
    <g id="line2d_149">
@@ -1225,7 +1225,7 @@ z
     </g>
    </g>
    <g id="text_89">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #f0efec" x="122.535562" y="59.49" transform="rotate(-0 122.535562 59.49)">Masked DeepEP</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #f0efec" x="122.535562" y="59.49" transform="rotate(-0 122.535562 59.49)">FastAFD's DeepEP M2N</text>
    </g>
   </g>
  </g>

@@ -47,7 +47,7 @@ resolved them alike and rejects a mismatch instead of hanging.
 | Several NVLink domains, each holding one role (directional hybrid) | Sparse, always |
 | One NVLink domain | Unchanged: the sparse kernels and launch branches require two or more NVLink domains |
 | FFN GPUs sharing a domain with Attention GPUs | Union hybrid, or the opt-in mixed-role protocol ([§18](design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain)); sparse does not apply yet |
-| Masked DeepEP (`role_aware=False`) | Unchanged |
+| The baseline, FastAFD's DeepEP M2N | Not affected: it runs DeepEP V2 unspecialized |
 
 ## What it adds
 
@@ -71,13 +71,13 @@ comments). Top-8 of 128 experts, capacity 2,048, 24 SMs, H200 over InfiniBand (N
 The gain grows with the number of Attention domains, because each one adds C signals to
 the FFN NICs: −34% at one token with three, −49% with five and −68% with eleven. It holds
 with two FFN domains, and it fades once the data dominates, from about 128 tokens per
-Attention GPU. Against Masked DeepEP, one token at 11:1 takes 73.8 µs instead of
-339.4 µs (−78%, against an earlier unpaired Masked run), and at 5:1 with hidden 4096,
+Attention GPU. Against FastAFD's DeepEP M2N, one token at 11:1 takes 73.8 µs instead of
+339.4 µs (−78%, against an earlier unpaired baseline run), and at 5:1 with hidden 4096,
 79.1 µs instead of 205.5 µs on the 1.1.0 tree (−62%, paired in the same screen).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/results-xn-sparse-dark.svg">
-  <img alt="Sparse directional hybrid against the dense 1.0.0 protocol and Masked at 11:1 over 12 domains" src="assets/results-xn-sparse.svg">
+  <img alt="Sparse directional hybrid against the dense 1.0.0 protocol and FastAFD's DeepEP M2N at 11:1 over 12 domains" src="assets/results-xn-sparse.svg">
 </picture>
 
 The parts compound. At 11:1 and one token, the stagger alone gains 12% and sparse
@@ -227,9 +227,9 @@ H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, ca
 |---|---:|---:|---:|---:|---:|
 | Dense directional (1.0.0), µs | 137.8 | 155.3 | 165.0 | 235.1 | 604.8 |
 | Sparse directional, µs | 70.5 | 76.8 | 97.7 | 229.4 | 604.8 |
-| Masked DeepEP, µs | 185.4 | 193.6 | 210.7 | 277.9 | 636.0 |
+| FastAFD's DeepEP M2N, µs | 185.4 | 193.6 | 210.7 | 277.9 | 636.0 |
 | Sparse directional vs dense | −48.8% | −50.5% | −40.8% | −2.4% | −0.0% |
-| Masked DeepEP vs dense | +34.5% | +24.7% | +27.7% | +18.2% | +5.2% |
+| FastAFD's DeepEP M2N vs dense | +34.5% | +24.7% | +27.7% | +18.2% | +5.2% |
 
 | Done witness cost, 5:1 (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|

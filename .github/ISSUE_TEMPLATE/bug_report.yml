@@ -27,9 +27,10 @@ body:
     attributes:
       label: Path
       options:
-        - Role path (role_aware=True, the default)
-        - Masked (role_aware=False)
-        - Both
+        - One NVLink domain
+        - Across NVLink domains, one role per domain (directional hybrid)
+        - Across NVLink domains, FFN and Attention GPUs sharing a domain
+        - The baseline benchmark (benchmarks/fastafd.py)
     validations:
       required: true
   - type: input

@@ -13,26 +13,33 @@ Routing, quantization, expert compute and serving scheduling stay with the calle
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/communication-dark.svg">
-  <img alt="Masked DeepEP and afdEP-comm: who sends, receives and waits in each phase" src="docs/assets/communication.svg">
+  <img alt="FastAFD's DeepEP M2N and afdEP-comm: who sends, receives and waits in each phase" src="docs/assets/communication.svg">
 </picture>
 
 ## What afdEP-comm changes
 
-The baseline is **Masked DeepEP**: the same vendored DeepEP V2 kernels with
-`role_aware=False`. Every rank then joins a union world, Attention ranks hold dummy
-expert slots, and every rank sends, receives and waits in both phases. The role path
-(`role_aware=True`, the default) keeps the transport and removes only what the roles
-make unnecessary; a change that would speed up Masked DeepEP as well is out of scope.
-Every change keeps a control switch that restores the Masked behaviour, except the
-sparse directional hybrid, which is part of the cross-node protocol from 1.1.0
-(`role_aware=False` still runs Masked).
+Every result here is measured against **FastAFD's DeepEP M2N**, the way
+[FastAFD](https://github.com/hao-ai-lab/FastAFD) runs AFD over DeepEP V2
+([`DeepEPM2NAdapter`](https://github.com/hao-ai-lab/FastAFD/blob/3c7161949310b6d59d6b4cf9bf997a4935c8113b/python/minisgl/moe/deepep_m2n_adapter.py)). DeepEP sees one symmetric
+expert-parallel group: Attention ranks hold dummy expert slots that no token routes to,
+and every rank sends, receives and waits in both phases. The
+[AFD plugin](https://github.com/ms-llmd/afd-plugin) served the same code in vLLM through
+its `deepep_m2n` connector.
+
+afdEP-comm runs the same DeepEP V2 kernels and removes only what the two roles make
+unnecessary: Attention GPUs only send in dispatch and only receive in combine, and FFN
+GPUs the reverse. A change that would speed up FastAFD's DeepEP M2N as well is out of
+scope. The benchmarks run the baseline over the same vendored kernels and harness
+([benchmarks/fastafd.py](benchmarks/fastafd.py)). Every change keeps an environment
+control that reverts it for measurement, except the sparse directional hybrid, which is
+part of the cross-node protocol from 1.1.0.
 
 One exchange in one NVLink domain, with every barrier, the kernels each role runs and
 the inbox regions each rank registers and receives into:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/pipeline-dark.svg">
-  <img alt="Flowcharts of one exchange in one NVLink domain: Masked DeepEP and afdEP-comm, stage by stage" src="docs/assets/pipeline.svg">
+  <img alt="Flowcharts of one exchange in one NVLink domain: FastAFD's DeepEP M2N and afdEP-comm, stage by stage" src="docs/assets/pipeline.svg">
 </picture>
 
 In one NVLink domain:
@@ -56,7 +63,7 @@ Across NVLink domains joined by NCCL GPU-Initiated Networking (GIN):
   68% off the small-batch round trip ([what it adds](docs/sparse-hybrid.md),
   [§17](docs/design.md#17-sparse-directional-hybrid-default-across-nvlink-domains));
 - domains that hold both roles (FFN GPUs sharing a node with Attention GPUs) run
-  DeepEP's union hybrid and match Masked within 1.4%; the
+  DeepEP's union hybrid and match FastAFD's DeepEP M2N within 1.4%; the
   [cross-node additions](#cross-node-additions-opt-in) add a directional path for them.
 
 Opt-in and off by default: the [cross-node additions](#cross-node-additions-opt-in) ([§18](docs/design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain), [§19](docs/design.md#19-fp8-combine-replies-opt-in-across-nvlink-domains)) and count-first dispatch [§16](docs/design.md#16-count-first-dispatch-with-a-streaming-ffn-expansion-opt-in-one-nvlink-domain). Every
@@ -71,19 +78,20 @@ of the per-repeat paired changes, as in [docs/design.md](docs/design.md). These 
 serving results. Data: [benchmarks.json](docs/assets/benchmarks.json); figures:
 [plot_benchmarks.py](docs/assets/plot_benchmarks.py).
 
-The Masked baseline is the deployed one: on 4 × H200 afdEP-comm's Masked arm matches the
-Masked DeepEP that afd-plugin serves within −0.4% to +1.2% at 2A2F and −0.2% to +0.3% at
-3A:1F, from 1 to 2,048 tokens ([record](docs/validation-masked-equivalence.json)).
+The baseline arm is the code FastAFD and the plugin ran: on 4 × H200 it matches the AFD
+plugin's own `deepep_m2n` buffer (FastAFD's DeepEP V2 snapshot with the plugin's three
+build patches) within −0.4% to +1.2% at 2A2F and −0.2% to +0.3% at 3A:1F, from 1 to
+2,048 tokens ([record](docs/validation-fastafd-equivalence.json)).
 
 ### One NVLink domain
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-in-node-h100-dark.svg">
-  <img alt="afdEP-comm against Masked DeepEP on 4 H100, six layouts" src="docs/assets/results-in-node-h100.svg">
+  <img alt="afdEP-comm against FastAFD's DeepEP M2N on 4 H100, six layouts" src="docs/assets/results-in-node-h100.svg">
 </picture>
 
 On 4 × H100, afdEP-comm cuts the one-token round trip by 27–35% against
-Masked and the 2,048-token one by 1–5%, and is faster in every
+FastAFD's DeepEP M2N and the 2,048-token one by 1–5%, and is faster in every
 repeat of every cell. This tree (`bd4db4da`) has the changes of sections 1–4; sections 10
 and 13–15 came later and report their own gains on top.
 
@@ -94,44 +102,44 @@ and 13–15 came later and report their own gains on top.
 | 2A2F, hidden 2,048, random routing | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 20.7 | 24.8 | 26.3 | 35.3 | 70.6 | 192.7 |
-| Masked DeepEP, µs | 31.7 | 34.4 | 36.0 | 44.3 | 78.7 | 201.0 |
-| afdEP-comm vs Masked DeepEP | −34.6% | −29.1% | −26.5% | −20.2% | −10.4% | −4.1% |
+| FastAFD's DeepEP M2N, µs | 31.7 | 34.4 | 36.0 | 44.3 | 78.7 | 201.0 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −34.6% | −29.1% | −26.5% | −20.2% | −10.4% | −4.1% |
 
 | 2A2F, hidden 4,096, random routing | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 28.4 | 39.2 | 46.3 | 61.5 | 127.3 | 383.2 |
-| Masked DeepEP, µs | 39.1 | 47.9 | 55.7 | 68.7 | 136.2 | 392.6 |
-| afdEP-comm vs Masked DeepEP | −27.2% | −18.9% | −18.4% | −10.3% | −6.4% | −2.4% |
+| FastAFD's DeepEP M2N, µs | 39.1 | 47.9 | 55.7 | 68.7 | 136.2 | 392.6 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −27.2% | −18.9% | −18.4% | −10.3% | −6.4% | −2.4% |
 
 | 2A2F, hidden 2,048, skew routing | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 24.1 | 25.7 | 29.5 | 41.2 | 88.7 | 269.9 |
-| Masked DeepEP, µs | 34.3 | 35.7 | 38.9 | 50.1 | 95.9 | 274.1 |
-| afdEP-comm vs Masked DeepEP | −29.5% | −27.6% | −24.1% | −17.5% | −7.6% | −1.5% |
+| FastAFD's DeepEP M2N, µs | 34.3 | 35.7 | 38.9 | 50.1 | 95.9 | 274.1 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −29.5% | −27.6% | −24.1% | −17.5% | −7.6% | −1.5% |
 
 | 3A:1F, hidden 2,048, random routing | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 24.8 | 27.4 | 33.0 | 45.9 | 109.4 | 367.8 |
-| Masked DeepEP, µs | 36.4 | 38.6 | 44.8 | 55.8 | 119.5 | 372.1 |
-| afdEP-comm vs Masked DeepEP | −31.4% | −29.4% | −26.5% | −17.5% | −8.4% | −1.1% |
+| FastAFD's DeepEP M2N, µs | 36.4 | 38.6 | 44.8 | 55.8 | 119.5 | 372.1 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −31.4% | −29.4% | −26.5% | −17.5% | −8.4% | −1.1% |
 
 | 1A:3F, hidden 2,048, random routing | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 19.9 | 21.5 | 23.1 | 29.4 | 59.6 | 188.3 |
-| Masked DeepEP, µs | 30.5 | 31.3 | 32.8 | 39.7 | 67.7 | 197.7 |
-| afdEP-comm vs Masked DeepEP | −34.2% | −31.3% | −29.3% | −24.9% | −12.2% | −4.7% |
+| FastAFD's DeepEP M2N, µs | 30.5 | 31.3 | 32.8 | 39.7 | 67.7 | 197.7 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −34.2% | −31.3% | −29.3% | −24.9% | −12.2% | −4.7% |
 
 | 2A2F FP8, hidden 2,048, random routing | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 21.3 | 25.9 | 26.8 | 34.5 | 62.5 | 159.1 |
-| Masked DeepEP, µs | 32.3 | 35.6 | 36.7 | 43.5 | 71.8 | 167.8 |
-| afdEP-comm vs Masked DeepEP | −34.1% | −27.8% | −26.8% | −20.6% | −12.9% | −5.2% |
+| FastAFD's DeepEP M2N, µs | 32.3 | 35.6 | 36.7 | 43.5 | 71.8 | 167.8 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −34.1% | −27.8% | −26.8% | −20.6% | −12.9% | −5.2% |
 
 </details>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-in-node-h200-dark.svg">
-  <img alt="afdEP-comm against Masked DeepEP on 8 H200, three layouts" src="docs/assets/results-in-node-h200.svg">
+  <img alt="afdEP-comm against FastAFD's DeepEP M2N on 8 H200, three layouts" src="docs/assets/results-in-node-h200.svg">
 </picture>
 
 On 8 × H200 the one-token reduction grows with the Attention:FFN ratio:
@@ -145,20 +153,20 @@ afdEP-comm is still 13% faster at 2,048 tokens.
 | 6A:2F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 24.3 | 29.3 | 35.5 | 53.2 | 152.0 | 502.0 |
-| Masked DeepEP, µs | 32.2 | 38.1 | 43.7 | 61.2 | 157.9 | 507.9 |
-| afdEP-comm vs Masked DeepEP | −24.4% | −23.2% | −18.8% | −13.1% | −3.8% | −1.2% |
+| FastAFD's DeepEP M2N, µs | 32.2 | 38.1 | 43.7 | 61.2 | 157.9 | 507.9 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −24.4% | −23.2% | −18.8% | −13.1% | −3.8% | −1.2% |
 
 | 7A:1F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 23.8 | 27.2 | 34.1 | 70.3 | 202.0 | 736.8 |
-| Masked DeepEP, µs | 39.3 | 46.4 | 53.4 | 97.3 | 244.6 | 847.4 |
-| afdEP-comm vs Masked DeepEP | −39.5% | −41.3% | −36.0% | −27.8% | −17.4% | −13.0% |
+| FastAFD's DeepEP M2N, µs | 39.3 | 46.4 | 53.4 | 97.3 | 244.6 | 847.4 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −39.5% | −41.3% | −36.0% | −27.8% | −17.4% | −13.0% |
 
 | 4A:4F | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 24.3 | 26.6 | 27.8 | 39.6 | 96.0 | 296.3 |
-| Masked DeepEP, µs | 31.1 | 35.1 | 36.1 | 47.4 | 102.8 | 302.9 |
-| afdEP-comm vs Masked DeepEP | −21.7% | −24.3% | −23.1% | −16.5% | −6.7% | −2.2% |
+| FastAFD's DeepEP M2N, µs | 31.1 | 35.1 | 36.1 | 47.4 | 102.8 | 302.9 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −21.7% | −24.3% | −23.1% | −16.5% | −6.7% | −2.2% |
 
 </details>
 
@@ -166,17 +174,17 @@ afdEP-comm is still 13% faster at 2,048 tokens.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-cross-node-dark.svg">
-  <img alt="afdEP-comm against Masked DeepEP across NVLink domains, four layouts" src="docs/assets/results-cross-node.svg">
+  <img alt="afdEP-comm against FastAFD's DeepEP M2N across NVLink domains, four layouts" src="docs/assets/results-cross-node.svg">
 </picture>
 
 With one role per NVLink domain the directional protocol cuts the one-token round
 trip by 30% at 11:1 over 12 domains and by 26% at 5:1 over 6 domains. When the
 FFN GPUs share their node with Attention GPUs, the union hybrid runs and afdEP-comm matches
-Masked within 1.4%. On real 8-GPU nodes that is the common case at high ratios: an
+FastAFD's DeepEP M2N within 1.4%. On real 8-GPU nodes that is the common case at high ratios: an
 11:1 deployment puts 2 FFN and 6 Attention GPUs on one node.
 
 These are 1.0.0's dense directional protocol (tree `958652a3`). From 1.1.0 the protocol
-is sparse: one token at 11:1 takes 74 µs instead of 231 µs, 78% below Masked
+is sparse: one token at 11:1 takes 74 µs instead of 231 µs, 78% below FastAFD's DeepEP M2N
 ([sparse directional hybrid](#sparse-directional-hybrid)).
 
 <details><summary>Cross-node numbers</summary>
@@ -186,26 +194,26 @@ H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, ca
 | 11:1, 12 single-role domains (12 × 2 H200) | T=1 | 8 | 16 | 32 | 64 | 128 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 236.1 | 264.9 | 272.7 | 287.3 | 329.9 | 473.1 |
-| Masked DeepEP, µs | 339.4 | 354.3 | 352.2 | 361.8 | 399.7 | 494.5 |
-| afdEP-comm vs Masked DeepEP | −30.5% | −25.2% | −22.6% | −20.6% | −17.5% | −4.3% |
+| FastAFD's DeepEP M2N, µs | 339.4 | 354.3 | 352.2 | 361.8 | 399.7 | 494.5 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −30.5% | −25.2% | −22.6% | −20.6% | −17.5% | −4.3% |
 
 | 5:1, 6 single-role domains (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 137.8 | 155.3 | 165.0 | 235.1 | 604.8 |
-| Masked DeepEP, µs | 185.4 | 193.6 | 210.7 | 277.9 | 636.0 |
-| afdEP-comm vs Masked DeepEP | −25.7% | −19.8% | −21.7% | −15.4% | −4.9% |
+| FastAFD's DeepEP M2N, µs | 185.4 | 193.6 | 210.7 | 277.9 | 636.0 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −25.7% | −19.8% | −21.7% | −15.4% | −4.9% |
 
 | 11:1, mixed-role FFN node (3 × 8 H200) | T=1 | 8 | 16 | 32 | 64 | 128 |
 |---|---:|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 166.8 | 189.7 | 200.4 | 214.5 | 230.7 | 257.7 |
-| Masked DeepEP, µs | 168.9 | 189.9 | 201.0 | 213.9 | 228.1 | 255.6 |
-| afdEP-comm vs Masked DeepEP | −1.3% | −0.1% | −0.3% | +0.3% | +1.1% | +0.8% |
+| FastAFD's DeepEP M2N, µs | 168.9 | 189.9 | 201.0 | 213.9 | 228.1 | 255.6 |
+| afdEP-comm vs FastAFD's DeepEP M2N | −1.3% | −0.1% | −0.3% | +0.3% | +1.1% | +0.8% |
 
 | 11:1, mixed-role FFN domain (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 212.1 | 235.4 | 265.0 | 333.5 | 763.8 |
-| Masked DeepEP, µs | 211.3 | 235.7 | 264.6 | 332.4 | 760.4 |
-| afdEP-comm vs Masked DeepEP | +0.4% | −0.1% | +0.2% | +0.3% | +0.4% |
+| FastAFD's DeepEP M2N, µs | 211.3 | 235.7 | 264.6 | 332.4 | 760.4 |
+| afdEP-comm vs FastAFD's DeepEP M2N | +0.4% | −0.1% | +0.2% | +0.3% | +0.4% |
 
 </details>
 
@@ -246,7 +254,7 @@ Attention-only nodes just send and collect.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-xn-mixed-dark.svg">
-  <img alt="Mixed-role directional hybrid against afdEP-comm and Masked" src="docs/assets/results-xn-mixed.svg">
+  <img alt="Mixed-role directional hybrid against afdEP-comm and FastAFD's DeepEP M2N" src="docs/assets/results-xn-mixed.svg">
 </picture>
 
 It cuts the round trip against the default union hybrid by 23% at one token and 8% at
@@ -274,17 +282,17 @@ H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, capacity 2,048, 24 SMs; 
 |---|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 212.1 | 235.4 | 265.0 | 333.5 | 763.8 |
 | Cross-node: mixed-role directional, µs | 163.0 | 189.0 | 207.5 | 284.1 | 701.6 |
-| Masked DeepEP, µs | 211.3 | 235.7 | 264.6 | 332.4 | 760.4 |
+| FastAFD's DeepEP M2N, µs | 211.3 | 235.7 | 264.6 | 332.4 | 760.4 |
 | Cross-node: mixed-role directional vs afdEP-comm | −23.2% | −19.7% | −21.7% | −14.8% | −8.1% |
-| Masked DeepEP vs afdEP-comm | −0.4% | +0.1% | −0.2% | −0.3% | −0.4% |
+| FastAFD's DeepEP M2N vs afdEP-comm | −0.4% | +0.1% | −0.2% | −0.3% | −0.4% |
 
 | 23:1, 1F:23A, 64 experts (6 × 4 H200) | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
 | afdEP-comm, µs | 280.3 | 319.4 | 353.4 | 437.5 | 1,082.7 |
 | Cross-node: mixed-role directional, µs | 222.2 | 267.6 | 294.0 | 383.4 | 1,015.5 |
-| Masked DeepEP, µs | 279.2 | 319.6 | 352.9 | 436.1 | 1,080.3 |
+| FastAFD's DeepEP M2N, µs | 279.2 | 319.6 | 352.9 | 436.1 | 1,080.3 |
 | Cross-node: mixed-role directional vs afdEP-comm | −20.7% | −16.2% | −16.8% | −12.4% | −6.2% |
-| Masked DeepEP vs afdEP-comm | −0.4% | +0.1% | −0.2% | −0.3% | −0.2% |
+| FastAFD's DeepEP M2N vs afdEP-comm | −0.4% | +0.1% | −0.2% | −0.3% | −0.2% |
 
 </details>
 

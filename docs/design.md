@@ -1,13 +1,18 @@
-# afdEP-comm: Masked DeepEP adapted to AFD
+# afdEP-comm: DeepEP V2 specialized for AFD roles
 
-Baseline: **Masked DeepEP** = the vendored DeepEP V2 kernels with `role_aware=False`
-(union world, dummy Attention expert slots, upstream combine). afdEP-comm's changes are
-opt-in on the role path (`role_aware=True`), in one NVLink domain and across
-NVLink domains joined by GIN; generic
-instantiations keep the upstream template arguments and kernels.
+Baseline: **FastAFD's DeepEP M2N**, the way [FastAFD](https://github.com/hao-ai-lab/FastAFD)
+runs AFD over DeepEP V2 ([`DeepEPM2NAdapter`](https://github.com/hao-ai-lab/FastAFD/blob/3c7161949310b6d59d6b4cf9bf997a4935c8113b/python/minisgl/moe/deepep_m2n_adapter.py)): one
+symmetric expert-parallel group, dummy expert slots on Attention ranks, every rank
+sending, receiving and waiting in both phases, upstream combine. The benchmarks run it
+over the same vendored kernels ([benchmarks/fastafd.py](../benchmarks/fastafd.py)); tables
+below call it FastAFD M2N. afdEP-comm's changes apply in one NVLink domain and across
+NVLink domains joined by GIN, and the baseline's unspecialized instantiations keep the
+upstream template arguments and kernels. Records written before 1.1.0 call the baseline
+"Masked" or "Masked DeepEP" and its arm `role_aware=False`, and afdEP-comm "the role
+path"; 1.1.0 removed that flag.
 
 Digests: native source digests in the records are those of the trees as measured.
-`958652a3` is the tree of commit `32c871d`, which merged the directional role path; the
+`958652a3` is the tree of commit `32c871d`, which merged the directional protocol; the
 commits after it changed only comments, notices and other text in the native tree
 (the 1.0.0 release tree is `131efc37`). Older digests name the trees each section
 measured; the 4 × H100 result below, for example, is `bd4db4da`, which predates
@@ -22,7 +27,7 @@ differs from it only in section 17's host-side switch functions, which no longer
 the environment, and in comments and the hash records; no kernel changed.
 
 afdEP-comm ships a change only if it depends on the AFD roles. A change that would
-speed up Masked DeepEP as well is a DeepEP improvement, not an AFD one, and is
+speed up FastAFD's DeepEP M2N as well is a DeepEP improvement, not an AFD one, and is
 rejected here even when it is faster (R1–R3). Every shipped change keeps a
 measurement control switch, except section 17 from 1.1.0: the sparse directional hybrid
 is the directional protocol itself, measured against the dense protocol of 1.0.0 as its
@@ -32,7 +37,7 @@ own tree ([value and evidence](sparse-hybrid.md)).
 
 Communication-only, 4 × H100 in one NVLink domain, E128/top-k 8 (E96 for
 1A:3F), capacity 2,048, BF16 unless noted, CUDA graphs, 24 transport SMs;
-median of three fresh-process repeats, max over Attention ranks. Each cell: role path µs (Masked µs, geometric-mean paired
+median of three fresh-process repeats, max over Attention ranks. Each cell: afdEP-comm µs (FastAFD M2N µs, geometric-mean paired
 change). Every cell was faster in all three repeats.
 
 | Layout / hidden / routing | T=1 | 8 | 32 | 128 | 512 | 2,048 |
@@ -45,8 +50,8 @@ change). Every cell was faster in all three repeats.
 | 2A2F FP8, 2,048, random | 21.3 (32.3, −34.1%) | 25.9 (35.6, −27.8%) | 26.8 (36.7, −26.8%) | 34.5 (43.5, −20.6%) | 62.5 (71.8, −12.9%) | 159.1 (167.8, −5.2%) |
 
 On the build before the per-CTA release, FP8 at H4096 measured −21.4% to −2.5%
-against Masked. Eager exchanges up to 128 tokens are bound by host launches (55–62 µs per round trip in both arms) and too noisy to rank; a
-profiled trace shows the role path issuing fewer host API calls than Masked. From
+against FastAFD M2N. Eager exchanges up to 128 tokens are bound by host launches (55–62 µs per round trip in both arms) and too noisy to rank; a
+profiled trace shows afdEP-comm issuing fewer host API calls than FastAFD M2N. From
 512 tokens eager runs are faster in every repeat (−3.6% and −2.0% at 2,048)
 ([record](validation-fp8-eager.json)).
 
@@ -59,27 +64,28 @@ same native digest ([matrix](validation-cta-exit.json),
 [validation-clean.json](validation-clean.json)). These
 are communication-only measurements, not serving claims.
 
-**The Masked baseline is the deployed Masked DeepEP.** afdEP-comm's Masked arm runs this tree
-with every role-path change compiled out. Timed against afd-plugin's `deepep_m2n`
-buffer (the FastAFD `3c71619` DeepEP V2 snapshot the plugin serves with, role
-specialization off) through the same exchange, routes and timing on 4 × H200, it
+**The baseline arm is the code FastAFD and the plugin ran.** It runs this tree's DeepEP
+V2 kernels unspecialized (benchmarks/fastafd.py). Timed against the AFD plugin's
+`deepep_m2n` buffer (FastAFD's `3c71619` DeepEP V2 snapshot with the plugin's three
+build patches, which has no role specialization) through the same exchange, routes and
+timing on 4 × H200, it
 matches within −0.4% to +1.2% at 2A2F and −0.2% to +0.3% at 3A:1F from 1 to 2,048
-tokens; against that reference the role path is 29.8% (2A2F) and 37.3% (3A:1F) faster
-at one token and 3.6% / 4.6% at 2,048 ([record](validation-masked-equivalence.json)).
+tokens; against that reference afdEP-comm is 29.8% (2A2F) and 37.3% (3A:1F) faster
+at one token and 3.6% / 4.6% at 2,048 ([record](validation-fastafd-equivalence.json)).
 
 The role suites (sections 14 and 15) also give compute back the SMs that the
 shared launches held. Under a synthetic GEMM load on a side stream, an FFN GEMM in
 one NVLink domain takes 5–28% longer than alone, against 18–87% with the shared kernel
-and 20–48% under Masked (1–512 tokens, 2A2F and 3A:1F). In directional hybrid
+and 20–48% under FastAFD M2N (1–512 tokens, 2A2F and 3A:1F). In directional hybrid
 (8F:8A) an Attention GEMM takes 5–7% longer than alone, against 31–44% with the
-shared shapes or Masked; the exchanges get faster too.
+shared shapes or FastAFD M2N; the exchanges get faster too.
 
 ## Shipped (AFD-specific)
 
 Contribution of each change on the clean build (before the per-CTA release of
 section 3, which `AFDEP_GRID_SYNC_EXIT=1` measures separately): each arm switches one change
 off with its control variable; cells are the paired change against the full
-role path (positive = slower), and every control at up to 128 tokens was slower
+afdEP-comm (positive = slower), and every control at up to 128 tokens was slower
 in all three repeats ([record](validation-ablation.json)).
 
 | Arm (H2048 / H4096 random) | T=1 | 8 | 32 | 128 | 512 | 2,048 |
@@ -87,7 +93,7 @@ in all three repeats ([record](validation-ablation.json)).
 | `AFDEP_KEEP_ENTRY_BARRIERS=1` | +32.5% / +22.5% | +26.5% / +18.2% | +23.2% / +15.8% | +18.0% / +11.2% | +9.4% / +5.9% | +4.0% / +2.0% |
 | `AFDEP_UNION_NOTIFY=1` | +6.9% / +5.9% | +6.0% / +4.8% | +6.6% / +4.0% | +5.3% / +0.6% | +0.2% / +0.2% | +0.1% / +0.1% |
 | `AFDEP_ALL_RANK_EXIT=1` | +4.3% / +3.4% | +4.5% / +6.7% | +4.4% / +8.3% | +2.3% / −0.8% | +0.1% / +0.4% | +0.3% / +0.1% |
-| Masked | +39.1% / +27.5% | +29.5% / +19.1% | +28.9% / +25.7% | +20.5% / +8.7% | +9.1% / +5.8% | +3.6% / +1.8% |
+| FastAFD M2N | +39.1% / +27.5% | +29.5% / +19.1% | +28.9% / +25.7% | +20.5% / +8.7% | +9.1% / +5.8% | +3.6% / +1.8% |
 
 Section 4 (role-sized buffers) is a memory change and is latency-neutral
 against its control.
@@ -96,12 +102,12 @@ against its control.
 
 Upstream dispatch and combine each open with an all-rank NVLink barrier plus a
 grid sync, so every call waits for the slowest peer to arrive before writing. On
-the role path both are implied by order (proof beside `afdep_skip_entry_barriers`
+afdEP-comm both are implied by order (proof beside `afdep_skip_entry_barriers`
 in `csrc/kernels/elastic/afdep_roles.hpp`): each rank runs complete
 dispatch→combine pairs on one ordered stream, the main kernels launch without
 PDL after their epilogues, and every exchange-(N+1) remote write follows an exit
 barrier that each peer reaches only after its exchange-N inbox reads. All
-role-path ranks skip both barriers; exit barriers, credits, counters and
+afdEP-comm's ranks skip both barriers; exit barriers, credits, counters and
 lifetimes are unchanged. `AFDEP_KEEP_ENTRY_BARRIERS=1` restores them as a
 measurement control.
 
@@ -121,7 +127,7 @@ reuse and invalid-route assertions.
 Upstream dispatch reduces the union count vector (every rank and logical expert)
 across all transport CTAs on every rank, sends it to every peer and waits for
 every peer's vector, so Attention ranks wait for always-zero counts and FFN ranks
-reduce their own zero counts. On the role path Attention sources reduce and send
+reduce their own zero counts. In afdEP-comm Attention sources reduce and send
 only FFN rank/expert counts to FFN ranks and wait for none; FFN ranks skip their
 own reduction and wait only for source counts. Prefix sums and host counts keep
 their canonical positions (sources publish zeros). `AFDEP_UNION_NOTIFY=1` restores
@@ -159,8 +165,8 @@ TMA stores and releases its own arrival; receivers wait for round × sender CTAs
 resets the slot counters. `AFDEP_GRID_SYNC_EXIT=1` keeps the grid-synced release
 as a control; against it the control is slower in every cell and repeat (H2048
 random: +9.7% at one token, 22.68 vs 20.74 µs, to +0.9% at 2,048; H4096 +7.1%
-to +0.4%). With it the one-token round trip is 20.7 µs at H2048 (Masked 31.6)
-and 28.4 µs at H4096 (Masked 38.6)
+to +0.4%). With it the one-token round trip is 20.7 µs at H2048 (FastAFD M2N 31.6)
+and 28.4 µs at H4096 (FastAFD M2N 38.6)
 ([record](validation-cta-exit.json)).
 
 ### 4. Role-sized registered buffers
@@ -168,7 +174,7 @@ and 28.4 µs at H4096 (Masked 38.6)
 AFD basis: in one NVLink domain only Attention sources write FFN dispatch inboxes
 and only FFN ranks write Attention combine inboxes. Union sizing reserves a
 dispatch region for every rank (FFN ranks never send) and, in the rank layout, a
-combine region for every rank (Attention ranks never reply). The role path sizes
+combine region for every rank (Attention ranks never reply). afdEP-comm sizes
 dispatch for the N sources (source s writes region s - F; the copy epilogue reads
 with the same offset) and combine for the F FFN senders. Every rank registers the
 same maximum, as the symmetric window requires. Without the rank layout
@@ -176,7 +182,7 @@ same maximum, as the symmetric window requires. Without the rank layout
 
 | Layout (capacity 2,048, H2048, top-k 8, BF16) | Registered | vs union |
 |---|---:|---:|
-| Union (Masked) | 34.6 MB | — |
+| Union (FastAFD M2N) | 34.6 MB | — |
 | 2A2F | 17.3 MB | −50% |
 | 3A:1F | 26.0 MB | −25% |
 | 1A:3F | 25.6 MB | −26% |
@@ -187,25 +193,25 @@ and both ratios pass ([record](validation-buffers.json)).
 
 ### 5. Attention:FFN ratios
 
-The role-path kernels are written in terms of FFN and source rank counts. The
+afdEP-comm's kernels are written in terms of FFN and source rank counts. The
 GPU suite takes `--ffn-ranks`; 3 Attention + 1 FFN and 1 Attention + 3 FFN pass
-the full case set (BF16/FP8, small and large, generic controls, delayed FFN and
+the full case set (BF16/FP8, small and large, baseline runs, delayed FFN and
 Attention peers). Their latency is in the result table.
 
 ### 6. Two NVLink domains
 
 The role API previously rejected more than one physical NVLink domain. Across
-two waldorf nodes (2 × H200 each, InfiniBand GIN) the role path passes all 14
-cross-node cases (BF16/FP8, hybrid on/off, small/large, generic controls, and
+two waldorf nodes (2 × H200 each, InfiniBand GIN) afdEP-comm passes all 14
+cross-node cases (BF16/FP8, hybrid on/off, small/large, baseline runs, and
 3:1 / 1:3 layouts that mix roles in a domain), so the check only requires GIN
 ([record](validation-cross-node.json)). Sections 1–4 are single-domain.
 
-Across three nodes (6 ranks) the role path passes all 14 cases with one FFN
+Across three nodes (6 ranks) afdEP-comm passes all 14 cases with one FFN
 domain and two Attention domains, with two FFN domains and one Attention domain,
 and with mixed-role domains. With more than one FFN domain, DeepEP's hybrid
 combine rounds each FFN domain's partial to BF16 before the cross-domain sum, so
 the GPU suite's reference now rounds once per reduction stage (FFN rank, FFN
-domain, total); Masked showed the same one-ulp difference against the old
+domain, total); FastAFD M2N showed the same one-ulp difference against the old
 single-rounding reference ([record](validation-three-domain.json)).
 
 Three-node latency, one FFN node and two Attention nodes (6 ranks, H2048 random,
@@ -213,35 +219,35 @@ three repeats, every cell faster than both controls in all repeats):
 
 | Arm | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| Role path (directional) | 84.1 µs | 94.0 | 98.8 | 134.0 | 321.2 | 924.6 |
+| afdEP-comm (directional) | 84.1 µs | 94.0 | 98.8 | 134.0 | 321.2 | 924.6 |
 | `AFDEP_UNION_HYBRID=1` | +28.6% | +28.3% | +27.5% | +16.9% | +5.9% | +2.3% |
-| Masked | +26.6% (106.5) | +27.4% (119.1) | +26.7% (125.4) | +16.1% (155.4) | +5.5% (339.4) | +1.8% (940.7) |
+| FastAFD M2N | +26.6% (106.5) | +27.4% (119.1) | +26.7% (125.4) | +16.1% (155.4) | +5.5% (339.4) | +1.8% (940.7) |
 
 Two FFN nodes with one Attention node (2 × H200 each, 6 ranks) pass BF16
-small/large, FP8 large and the generic control, and measure 74.7 µs at one token
-against Masked's 104.4 (−28.5%) to −3.1% at 2,048, every cell faster than both
+small/large, FP8 large and the baseline run, and measure 74.7 µs at one token
+against FastAFD M2N's 104.4 (−28.5%) to −3.1% at 2,048, every cell faster than both
 controls in all repeats (same record).
 
 Two FFN domains with two Attention domains (four single-GPU pods, each its own
 domain over InfiniBand GIN; three share a node, so absolute latency is not a
-deployment number) also pass BF16/FP8 small and large and the generic control,
-and the directional protocol measures 76.5 µs at one token against Masked's
+deployment number) also pass BF16/FP8 small and large and the baseline run,
+and the directional protocol measures 76.5 µs at one token against FastAFD M2N's
 118.4 (−35%), −35% up to 32 tokens and −3.1% at 2,048, every cell faster than
 both controls in all repeats ([record](validation-four-domain.json)).
 
 Five single-GPU domains (two FFN, three Attention, on three nodes) pass BF16
-small/large, FP8 large and the generic control, and measure 95.1 µs at one token
-against Masked's 156.5 (−39%) to −2.5% at 2,048, every cell faster in all
+small/large, FP8 large and the baseline run, and measure 95.1 µs at one token
+against FastAFD M2N's 156.5 (−39%) to −2.5% at 2,048, every cell faster in all
 repeats ([record](validation-five-domain.json)).
 
 Eight ranks in four two-GPU domains (4 × 2 H200, physical domain [4, 2]) pass
-BF16 small/large, FP8 large and the generic control with two FFN and two
+BF16 small/large, FP8 large and the baseline run with two FFN and two
 Attention domains and with one FFN and three Attention domains. One-token round
-trips: 85.5 µs against Masked's 129.4 (−34%) and 100.2 µs against 129.1 (−22%);
+trips: 85.5 µs against FastAFD M2N's 129.4 (−34%) and 100.2 µs against 129.1 (−22%);
 −3.0% and −1.4% at 2,048, every cell faster than both controls in all repeats
 ([record](validation-eight-rank.json)).
 
-The gain over Masked grows with the number of domains (two: −17% at one token;
+The gain over FastAFD M2N grows with the number of domains (two: −17% at one token;
 three: −21%; four: −35%; five: −39%), as the union protocol's reverse-direction
 tails, counts and barriers scale with domain pairs.
 
@@ -286,12 +292,12 @@ in every repeat; [record](validation-cross-node-final.json)):
 
 | Arm | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| Role path | 73.0 µs | 80.3 | 83.3 | 103.9 | 201.4 | 542.4 |
+| afdEP-comm | 73.0 µs | 80.3 | 83.3 | 103.9 | 201.4 | 542.4 |
 | `AFDEP_UNION_HYBRID=1` | +22.4% | +23.5% | +26.5% | +17.7% | +8.3% | +2.1% |
-| Masked | +20.6% (88.3) | +22.1% (98.2) | +25.2% (104.3) | +16.5% (121.1) | +7.6% (216.6) | +1.4% (550.4) |
+| FastAFD M2N | +20.6% (88.3) | +22.1% (98.2) | +25.2% (104.3) | +16.5% (121.1) | +7.6% (216.6) | +1.4% (550.4) |
 
-FP8 dispatch across nodes matches: 73.3 µs at one token (Masked 88.0, −17%),
-82.7 µs at 32 (Masked 103.7, −20%) and −2.9% at 2,048, every cell faster in all
+FP8 dispatch across nodes matches: 73.3 µs at one token (FastAFD M2N 88.0, −17%),
+82.7 µs at 32 (FastAFD M2N 103.7, −20%) and −2.9% at 2,048, every cell faster in all
 repeats (same record).
 
 The 14 cross-node cases pass on the final native digest
@@ -304,7 +310,7 @@ were shared with other workloads.
 
 AFD basis: the route guard exists only because the union world gives Attention
 ranks dummy expert slots. A route into them would send tokens to a rank that
-holds no experts. Masked never launches it. On the direct path the dispatch
+holds no experts. FastAFD M2N never launches it. On the direct path the dispatch
 warps already check their own routes. In hybrid mode the guard ran as a separate
 non-PDL kernel ahead of every source dispatch. A kernel trace of the two-node T=1
 graph showed 0.9 µs for the kernel (1.5 µs at 512 tokens) plus a 0.45 µs edge
@@ -318,9 +324,9 @@ and repeat; [record](validation-route-guard.json):
 
 | Arm | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| Role path | 70.8 µs | 79.2 | 82.0 | 103.5 | 200.5 | 539.2 |
+| afdEP-comm | 70.8 µs | 79.2 | 82.0 | 103.5 | 200.5 | 539.2 |
 | `AFDEP_HYBRID_ROUTE_GUARD=1` | +2.7% | +1.2% | +1.4% | +1.1% | +0.7% | +0.5% |
-| Masked | +25.2% (88.8) | +24.1% (98.4) | +27.3% (104.4) | +17.1% (121.3) | +7.8% (216.1) | +2.0% (550.4) |
+| FastAFD M2N | +25.2% (88.8) | +24.1% (98.4) | +27.3% (104.4) | +17.1% (121.3) | +7.8% (216.1) | +2.0% (550.4) |
 
 On the same native digest:
 - the 14 cross-node cases pass;
@@ -345,7 +351,7 @@ up to 512 tokens; [record](validation-attention-entry-sync.json):
 
 | Arm | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| Role path | 70.7 µs | 78.2 | 81.2 | 102.6 | 199.6 | 539.3 |
+| afdEP-comm | 70.7 µs | 78.2 | 81.2 | 102.6 | 199.6 | 539.3 |
 | `AFDEP_ATTENTION_GRID_SYNC=1` | +0.4% | +1.3% | +1.1% | +0.7% | +0.6% | −0.1% |
 
 On the same native digest, the 14 cross-node cases pass. So do the single-domain
@@ -356,7 +362,7 @@ cases.
 
 AFD basis: DeepEP's FFN combine reduces each token's local top-k rows with a
 branch-free prefix of ceil(top_k / ranks) slots. That is an expected local row
-count for tokens spread over every rank, and on the role path it counts the
+count for tokens spread over every rank, and in afdEP-comm it counts the
 Attention ranks, which hold no experts. With one FFN rank, every token's top-k
 rows are local, so all top_k slots are valid on every token and the whole
 reduction takes the branch-free path. `AFDEP_UNION_REDUCE_PREFIX=1` keeps the
@@ -371,15 +377,15 @@ all repeats ([record](validation-single-ffn-reduce.json)):
 
 | Layout (GPU, hidden) | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| 2A1F (H200, H2048) | +16.4% (20.1 µs; Masked 32.1) | +23.6% | +24.1% | +23.1% | +16.5% | +8.1% |
-| 5A1F (H200, H2048) | +16.5% (23.1 µs; Masked 35.5) | +23.3% | +23.0% | +10.0% | +11.1% | +5.5% |
-| 3A:1F (H100, H2048) | +9.6% (22.4 µs; Masked 36.4) | +19.3% | +24.4% | +17.0% | +4.3% | +3.9% |
-| 3A:1F (H100, H4096) | +21.1% (27.6 µs; Masked 48.2) | +32.9% | +31.6% | +18.2% | +18.9% | +13.4% |
+| 2A1F (H200, H2048) | +16.4% (20.1 µs; FastAFD M2N 32.1) | +23.6% | +24.1% | +23.1% | +16.5% | +8.1% |
+| 5A1F (H200, H2048) | +16.5% (23.1 µs; FastAFD M2N 35.5) | +23.3% | +23.0% | +10.0% | +11.1% | +5.5% |
+| 3A:1F (H100, H2048) | +9.6% (22.4 µs; FastAFD M2N 36.4) | +19.3% | +24.4% | +17.0% | +4.3% | +3.9% |
+| 3A:1F (H100, H4096) | +21.1% (27.6 µs; FastAFD M2N 48.2) | +32.9% | +31.6% | +18.2% | +18.9% | +13.4% |
 
 On the same native digest, all of these pass on a 6-GPU H200 pod:
 - the GPU matrix with its invalid-route cases;
 - 3A:1F, 1A:3F, 2A1F, 4A2F and 5A1F, BF16 and FP8, small and large;
-- the 2A1F and 5A1F generic controls.
+- the 2A1F and 5A1F baseline runs.
 
 ### 11. Staging outside remotely written inboxes (fix)
 
@@ -419,25 +425,25 @@ Results ([record](validation-staging-fix.json)):
 
 ### 12. Direct GIN path: in-kernel route checks
 
-With hybrid off across NVLink domains (direct RDMA to every rank), the role path
-used to run Masked's union kernels plus the route-guard kernel. Its dispatch now
+With hybrid off across NVLink domains (direct RDMA to every rank), afdEP-comm
+used to run FastAFD M2N's union kernels plus the route-guard kernel. Its dispatch now
 instantiates the role template with `kAfdFfnRanks = F`, so routes are checked
 in-kernel as in sections 8 and 1. The barrier, count and exit protocol is still
 union.
 
 Against the guard-kernel control the change is −1.0% to −1.6% at every size up to
-512 tokens across two nodes, and it brings the path level with Masked. Direct
+512 tokens across two nodes, and it brings the path level with FastAFD M2N. Direct
 BF16/FP8 small and large cases and all eight invalid-route cases pass
 ([record](validation-direct-gin-routes.json)).
 
-Why this path matters at decode sizes: Masked with hybrid off is within 4% of
+Why this path matters at decode sizes: FastAFD M2N with hybrid off is within 4% of
 hybrid on at 1–32 tokens across two nodes. With two Attention domains it ties or
-beats the role path's directional hybrid at 8 tokens (97.3 vs 99.1 µs). So the
+beats afdEP-comm's directional hybrid at 8 tokens (97.3 vs 99.1 µs). So the
 one-hop direct path is the base for porting sections 1–3 to RDMA.
 
 **Known limitation (pre-existing).** With one or three FFN ranks on 2-GPU pods,
-an FFN and an Attention rank share a node, and direct mode fails for Masked as
-well as for the role path. The likely cause is DeepEP's direct GIN mode mixing
+an FFN and an Attention rank share a node, and direct mode fails for FastAFD M2N as
+well as for afdEP-comm. The likely cause is DeepEP's direct GIN mode mixing
 same-node NVLink stores with RDMA signals. Direct-mode work is therefore limited
 to role-pure nodes.
 
@@ -458,15 +464,15 @@ repeats ([record](validation-collect-view.json)):
 
 | Layout (H100, H2048) | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| 2A1F | +8.1% (19.2 µs; Masked 35.3) | +9.9% | +6.1% | +6.6% | +2.7% | +2.0% |
-| 3A:1F | +5.0% (20.2 µs; Masked 36.9) | +8.3% | +8.2% | +6.2% | +1.9% | +1.5% |
+| 2A1F | +8.1% (19.2 µs; FastAFD M2N 35.3) | +9.9% | +6.1% | +6.6% | +2.7% | +2.0% |
+| 3A:1F | +5.0% (20.2 µs; FastAFD M2N 36.9) | +8.3% | +8.2% | +6.2% | +1.9% | +1.5% |
 
 ### 14. Role suites (launch only what each role uses)
 
-On the role path an Attention rank runs {dispatch send, combine receive} and an FFN
+In afdEP-comm an Attention rank runs {dispatch send, combine receive} and an FFN
 rank {dispatch receive, combine send}, but the shared path launched the same kernels, in the
-same shape, on both roles. Masked ranks send and receive in every phase, so every
-warp class works there; on the role path some classes never do.
+same shape, on both roles. FastAFD M2N ranks send and receive in every phase, so every
+warp class works there; in afdEP-comm some classes never do.
 
 This is the idle-warp anomaly. In the shared directional hybrid launches (1F:1A, native
 `8205d02b`, one token), both roles launched the dispatch as 24 blocks × 640 threads
@@ -489,7 +495,7 @@ released the copy epilogue at entry, which then sat on every SM through the wait
 
 The other cost seen with idle warps, each extra Attention domain adding time at small
 batches, is not a warp problem. It is hybrid's per-channel signalling, which the role
-path already halves against Masked; the 3:1 analysis below measures it and names the
+path already halves against FastAFD M2N; the 3:1 analysis below measures it and names the
 protocol change that would remove it, which section 17 implements.
 
 The role suites (`csrc/kernels/elastic/afdep_suites.hpp`) pick each role's kernel
@@ -524,7 +530,7 @@ and owns channels, so an idle warp class cannot release anything by exiting. SM-
 reserved per exchange (grid × kernel time, an upper bound), mean over the eight GPUs
 of a role, 8F:8A on two 8 × H200 nodes (development digest, same device sources):
 
-| | Role suites | shared shapes | Masked |
+| | Role suites | shared shapes | FastAFD M2N |
 |---|---:|---:|---:|
 | Attention, 1 token | 699 | 1,705 | 2,582 |
 | Attention, 512 tokens | 1,257 | 5,419 | 6,426 |
@@ -545,16 +551,16 @@ repeats, every repeat agreeing:
 
 | | 1 token | 32 | 512 |
 |---|---:|---:|---:|
-| Attention GEMM µs (solo 24.3–25.8): role suites / shared shapes / Masked | 26.1–26.5 / 33.8–34.3 / 33.3–34.5 | 26.0–26.4 / 32.4–32.9 / 32.3–33.0 | 25.9–26.2 / 35.7–35.8 / 35.8–36.0 |
+| Attention GEMM µs (solo 24.3–25.8): role suites / shared shapes / FastAFD M2N | 26.1–26.5 / 33.8–34.3 / 33.3–34.5 | 26.0–26.4 / 32.4–32.9 / 32.3–33.0 | 25.9–26.2 / 35.7–35.8 / 35.8–36.0 |
 | Exchange µs under load | 119–128 / 124–131 / 139–150 | 142–144 / 146–152 / 172–177 | 366–368 / 368–371 / 383–394 |
 
 The SMs the collect frees go to compute: Attention GEMMs take 5–7% longer than alone,
-against 31–44% with the shared shapes or Masked, and the exchanges also get slightly
+against 31–44% with the shared shapes or FastAFD M2N, and the exchanges also get slightly
 faster.
 
 **Latency without load.** Round trip, three fresh-process repeats, InfiniBand between
 nodes. Each cell: role suites µs (the shared shapes, geometric-mean paired change;
-Masked µs):
+FastAFD M2N µs):
 
 | Layout | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
@@ -568,7 +574,7 @@ Masked µs):
 The role suites are faster than the shared shapes in 59 of 60 repeat cells (the other is
 −0.5%) and than an isolated tree before the role suites (`8205d02b`) in 58 of 60. An earlier two-node
 screen on the development digest had 12 of 15; differences at 512 tokens are within
-run-to-run noise. Masked is 4–38% slower ([record](validation-role-suites.json)).
+run-to-run noise. FastAFD M2N is 4–38% slower ([record](validation-role-suites.json)).
 
 **Correctness.** Every rank of every run records its native digest. Passing:
 - two nodes 1F:1A (all controls), three pods with two FFN or two Attention domains,
@@ -597,7 +603,7 @@ the two patches again pass, with 2,533 deferrals.
 
 On the final digest, 8F:8A on two 8 × H100 nodes (another cluster than the latency
 table above), the role suites are faster than the shared shapes in all 15 repeat cells
-(geometric mean 0.3–0.8%) and Masked is 7–23% slower.
+(geometric mean 0.3–0.8%) and FastAFD M2N is 7–23% slower.
 
 ### 15. FFN receive: copy-epilogue trigger at the counts (one NVLink domain)
 
@@ -607,7 +613,7 @@ receive CTA has triggered. The FFN's payload warps have nothing to send, so they
 reach the trigger right after kernel entry, and the epilogue then occupies every SM,
 waiting, for the whole count and arrival wait. In a one-token 2A2F trace of the shared kernel on
 4 × H100 it launched 1.2 µs into each FFN rank's dispatch and stayed resident for
-8.8–11.3 µs. A Masked FFN also sends, so its trigger fires near the end.
+8.8–11.3 µs. A FastAFD M2N FFN also sends, so its trigger fires near the end.
 
 `afdep_ffn_dispatch.cuh` is `dispatch.cuh` (generated by `tests/role_kernels.py`) in
 which only the notify warps trigger: CTA 0 triggers once every source's counts have
@@ -619,8 +625,8 @@ Measured on 4 × H200, fresh-process screens, native digest `9675783b`:
 
 | Without load (5 repeats) | T=1 | 8 | 32 | 128 | 512 | 2,048 |
 |---|---:|---:|---:|---:|---:|---:|
-| 2A2F, µs (the shared shape; Masked) | 19.8 (20.2; 28.2) | 23.3 (23.4; 31.4) | 24.6 (24.6; 32.4) | 32.3 (32.4; 40.2) | 66.2 (66.5; 73.0) | 181.3 (181.1; 188.0) |
-| 3A:1F view, µs (the shared shape; Masked) | 18.5 (18.5; 32.5) | 20.8 (20.6; 35.3) | 23.8 (24.0; 40.0) | 35.4 (35.5; 50.5) | 96.3 (96.4; 110.6) | 322.5 (322.6; 342.6) |
+| 2A2F, µs (the shared shape; FastAFD M2N) | 19.8 (20.2; 28.2) | 23.3 (23.4; 31.4) | 24.6 (24.6; 32.4) | 32.3 (32.4; 40.2) | 66.2 (66.5; 73.0) | 181.3 (181.1; 188.0) |
+| 3A:1F view, µs (the shared shape; FastAFD M2N) | 18.5 (18.5; 32.5) | 20.8 (20.6; 35.3) | 23.8 (24.0; 40.0) | 35.4 (35.5; 50.5) | 96.3 (96.4; 110.6) | 322.5 (322.6; 342.6) |
 
 No cell is slower than the in-tree shared shape in all repeats. Against an isolated tree
 before the role suites, one cell (2A2F, one token) is slower in 5 of 5 by a median 0.26% (0.05 µs); the
@@ -632,12 +638,12 @@ role kernel's ranges never overlap the others'):
 
 | Under load | 2A2F, 1 token | 2A2F, 512 | 3A:1F, 1 token | 3A:1F, 512 |
 |---|---:|---:|---:|---:|
-| FFN GEMM µs (solo 24.5–24.9): role kernel / shared shape / Masked | 25.8–25.9 / 28.2–29.5 / 29.2–29.5 | 30.2–30.7 / 45.8–46.1 / 35.5–36.2 | 25.2–26.0 / 31.2–31.6 / 30.8–30.9 | 31.2–31.6 / 40.4–41.2 / 36.0–36.5 |
+| FFN GEMM µs (solo 24.5–24.9): role kernel / shared shape / FastAFD M2N | 25.8–25.9 / 28.2–29.5 / 29.2–29.5 | 30.2–30.7 / 45.8–46.1 / 35.5–36.2 | 25.2–26.0 / 31.2–31.6 / 30.8–30.9 | 31.2–31.6 / 40.4–41.2 / 36.0–36.5 |
 | Exchange µs | 34.3–34.7 / 35.9–37.0 / 43.4–43.6 | 111.9–112.2 / 120.4–121.1 / 119.4–121.1 | 34.6–34.7 / 37.9–38.6 / 47.4–47.8 | 148.0–149.4 / 150.3–151.7 / 163.6–165.9 |
 | Makespan ms | 6.86–6.93 / 7.19–7.40 / 8.68–8.72 | 22.39–22.43 / 24.08–24.22 / 23.87–24.21 | 6.93–6.94 / 7.58–7.71 / 9.48–9.56 | 29.59–29.88 / 30.07–30.34 / 32.72–33.18 |
 
-With the shared kernel, FFN GEMMs at 512 tokens ran slower than under Masked (starved
-behind the resident epilogue); with the count trigger the role path wins every cell.
+With the shared kernel, FFN GEMMs at 512 tokens ran slower than under FastAFD M2N (starved
+behind the resident epilogue); with the count trigger afdEP-comm wins every cell.
 
 Two other trigger points were measured on the same pod. Triggering after the
 arrival wait gave the same compute gain but cost 0.3–0.6 µs without load (the
@@ -651,14 +657,14 @@ repeats, by about 0.4 µs; in the final-digest run above, in 3 of 5 (geometric m
 
 Correctness on `9675783b`: the GPU matrix, both ratios, the collect view, hidden
 7168, 7 transport SMs, every control, runs with the FFN on the shared kernel and the
-Attention on the role path, and fault injection (late sender CTA, late prefix sum,
+Attention in afdEP-comm, and fault injection (late sender CTA, late prefix sum,
 late receiver pass; a receiver counting one arrival per sender returns stale rows and
 one expecting an extra arrival times out) ([record](validation-role-suites.json)).
 
 ### 16. Count-first dispatch with a streaming FFN expansion (opt-in, one NVLink domain)
 
 AFD basis: in one NVLink domain the FFN only receives in dispatch, so its idle SMs could
-expand rows into expert slots while the sources are still pushing. A Masked FFN also
+expand rows into expert slots while the sources are still pushing. A FastAFD M2N FFN also
 sends and must wait for its own sends. The 3:1 analysis below showed why the expansion
 cannot start early today: it needs the per-expert prefix sums, and the counts behind
 them arrive with the end of the payload on the same link.
@@ -733,7 +739,7 @@ runs pass: 2A2F, 3A:1F and 1A:3F; BF16 and FP8; hidden 7168 and FP8 8192; the co
 view; 7 and 23 transport SMs; the source-only arm; every screen knob; every control;
 and mixed role kernels with `AFDEP_PAYLOAD_FIRST=1`. A configuration mismatch is
 rejected at construction, and invalid routes stop at the in-kernel assertion. With
-count-first off, the GPU matrix (18 runs) and four role-path cases pass on the same
+count-first off, the GPU matrix (18 runs) and four afdEP-comm cases pass on the same
 digest. Fault injection (3A:1F and 2A2F, every patch's marker firing): late rows, flags
 released late after their stores, late counts, a late prefix-ready release and late
 prefix sums all pass; an epilogue that skips the row wait gives mismatches, and one that
@@ -755,7 +761,7 @@ per-channel signals scale with the channel count C, not with the tokens. Every s
 sends a finish tail on all C channels (S·C RDMA atomics into each FFN NIC: 2,112 at
 11:1 with 24 SMs), the FFN signals every source on every channel in combine (another
 S·C, out of the same NIC), and token i of every source rides channel i mod C, so at small
-batches all S first tokens queue on FFN forward warp 0. Masked DeepEP has the same
+batches all S first tokens queue on FFN forward warp 0. FastAFD's DeepEP M2N has the same
 signals, but there every domain sends and receives in both phases. Here the flow is
 one-directional, so they converge on the few FFN NICs, and each source knows exactly
 which channels it used. Three parts, each through kernels generated by
@@ -814,13 +820,13 @@ the kernels read those controls at every launch: set them before constructing th
 12 pods × 2 H200 (piggy, InfiniBand, GIN): 2 FFN ranks in one domain, 22 Attention ranks
 in 11 domains, FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs (C = 192),
 CUDA graphs, 2 fresh processes per arm in rotated order, every Attention rank's round
-trip checked. Paired against the default role path on `958652a3` (1.0.0's dense
+trip checked. Paired against afdEP-comm 1.0.0 on `958652a3` (1.0.0's dense
 protocol); each arm on the digest shown:
 
 | Arm (µs at T=1; change at each T) | T=1 | 8 | 16 | 32 | 64 | 128 |
 |---|---:|---:|---:|---:|---:|---:|
-| Default role path | 231.3 µs | 259.9 | 266.8 | 285.2 | 321.4 | 460.7 |
-| Masked DeepEP (earlier run, same layout) | +43.8% | +33.8% | +29.2% | +26.0% | +21.2% | +4.5% |
+| afdEP-comm 1.0.0 (dense) | 231.3 µs | 259.9 | 266.8 | 285.2 | 321.4 | 460.7 |
+| FastAFD's DeepEP M2N (earlier run, same layout) | +43.8% | +33.8% | +29.2% | +26.0% | +21.2% | +4.5% |
 | Parts off (`e551ab70`, `841bc731`) | −0.03 to −0.63% | −0.37 to +0.08% | ≤ ±0.17% | ≤ ±0.11% | ≤ ±0.14% | ≤ ±0.08% |
 | Stagger (`c301de5b`) | −12.4% | −17.3% | −15.3% | −8.5% | +0.7% | +2.2% |
 | Sparse dispatch (`c301de5b`) | −33.8% | −29.3% | −27.0% | −22.4% | −13.6% | −4.3% |
@@ -837,7 +843,7 @@ witness below), all three parts, paired again with 256 and 512 tokens added:
 | Default (µs) | 231.5 | 259.5 | 266.3 | 285.0 | 320.9 | 461.0 | 712.4 | 1,220.1 |
 | All three (µs) | 73.8 | 86.2 | 100.4 | 140.5 | 235.1 | 428.1 | 691.2 | 1,221.1 |
 | Paired change (both repeats) | −68.2% to −68.0% | −66.8% | −62.3% | −50.7% | −26.8% to −26.7% | −7.2% to −7.0% | −3.0% to −2.9% | +0.0% to +0.2% |
-| Against Masked (earlier run, unpaired) | −78.3% | −75.7% | −71.5% | −61.2% | −41.2% | −13.4% | – | – |
+| Against FastAFD M2N (earlier run, unpaired) | −78.3% | −75.7% | −71.5% | −61.2% | −41.2% | −13.4% | – | – |
 
 The gain scales with S, the number of Attention domains, and holds with two FFN
 domains (both on `200944ce`, 2 repeats, every repeat faster):
@@ -854,9 +860,9 @@ mixed-role layout shows what remains (2 repeats each; default `958652a3`):
 |---|---:|---:|---:|---:|---:|
 | Single-role domains 5:1 (4F:20A), default µs | 137.8 | 155.3 | 165.0 | 235.1 | 604.8 |
 | same, all three parts (`2d22e5e9`) | −48.8% | −50.5% | −40.8% | −2.4% | 0.0% |
-| same, Masked | +34.5% | +24.7% | +27.7% | +18.2% | +5.2% |
-| Mixed-role 11:1 (FFN domain 2F + 2A: union hybrid), role path µs | 211.5 | 234.9 | 264.2 | 332.4 | 763.8 |
-| same, Masked | −0.3% | +0.0% | +0.3% | +0.0% | −0.4% |
+| same, FastAFD M2N | +34.5% | +24.7% | +27.7% | +18.2% | +5.2% |
+| Mixed-role 11:1 (FFN domain 2F + 2A: union hybrid), afdEP-comm µs | 211.5 | 234.9 | 264.2 | 332.4 | 763.8 |
+| same, FastAFD M2N | −0.3% | +0.0% | +0.3% | +0.0% | −0.4% |
 | same, 8 SMs instead of 24 | −17.1% | −16.3% | −13.7% | +18.2% | +55.8% |
 
 These 12-domain and kermit 5:1 screens predate the done witness. The tree with it
@@ -864,7 +870,7 @@ These 12-domain and kermit 5:1 screens predate the done witness. The tree with i
 elsewhere against `2d22e5e9` (see Correctness). The 12-domain layouts have not been
 re-measured with it.
 
-In mixed-role domains the role path runs the union hybrid and matches Masked within
+In mixed-role domains afdEP-comm runs the union hybrid and matches FastAFD M2N within
 0.5%, and its small-batch cost is again channel-bound (8 SMs: −17% at one token, but
 +56% at 512). The sparse protocol does not apply there; section 18 adds a directional protocol for
 mixed-role domains.
@@ -875,7 +881,7 @@ domains (only the construction-time agreement gather runs in every topology), an
 paired screen agrees (`200944ce` against `958652a3`, 2 repeats; the later done witness and
 section 18 are also gated on two or more domains):
 
-| In-node, one NVLink domain of 8 H200, BF16 (1–2,048 tokens) | Default µs at T=1 / 2,048 | Parts off | Parts on | Masked at T=1 / 2,048 |
+| In-node, one NVLink domain of 8 H200, BF16 (1–2,048 tokens) | Default µs at T=1 / 2,048 | Parts off | Parts on | FastAFD M2N at T=1 / 2,048 |
 |---|---|---|---|---|
 | 6A:2F | 24.3 / 502.0 | −0.6% to +0.2% | −1.2% to +1.0% | +32.3% / +1.2% |
 | 7A:1F | 23.8 / 736.8 | −0.8% to +0.3% | −1.2% to +0.5% | +65.2% / +15.0% |
@@ -924,7 +930,7 @@ exists only in the single-role directional protocol of section 7, and its
 proof depends on each phase flowing one way (sources receive only combine signals, FFN
 domains only dispatch traffic). The S:1 ratio is what concentrates the cost on the FFN
 NICs. The underlying idea, signalling only used channels, would plausibly also help
-DeepEP V2's union hybrid at small batches, where Masked spends extra signals on dummy
+DeepEP V2's union hybrid at small batches, where FastAFD M2N spends extra signals on dummy
 Attention domains; that is neither implemented nor measured. For 1.1.0 the maintainers
 decided to make it the directional protocol's default regardless, since it exists only
 in that protocol.
@@ -949,7 +955,7 @@ section 18. Value, costs and every table: [sparse-hybrid.md](sparse-hybrid.md).
 AFD basis: at high Attention:FFN ratios the FFN group is smaller than a node, so on 8-GPU
 (or 4-GPU) nodes the FFN ranks share their NVLink domain with Attention ranks. The
 directional protocol (section 7) needs one role per domain, so these layouts fall back to
-the union hybrid, which matches Masked within 1.4%: AFD buys nothing there. Measured on kermit
+the union hybrid, which matches FastAFD M2N within 1.4%: AFD buys nothing there. Measured on kermit
 (6 pods × 4 H200, FP8), at 11:1 the union path takes 211.8 µs at one token, and its
 small-batch cost is synchronisation, not data: cutting the transport from 24 to 8 SMs
 saves 17% at one token but costs 56% at 512, and a per-kernel trace shows every GPU,
@@ -988,20 +994,20 @@ arm in rotated order, every Attention rank's round trip checked, every repeat fa
 
 | 2 FFN + 22 Attention (11:1), 128 experts | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| Union role path, default (`958652a3`), µs | 212.1 | 235.4 | 265.0 | 333.5 | 763.8 |
+| afdEP-comm, union hybrid, default (`958652a3`), µs | 212.1 | 235.4 | 265.0 | 333.5 | 763.8 |
 | Mixed-role directional (`81b71eb0`) | **−23.2%** | **−19.7%** | **−21.7%** | **−14.8%** | **−8.1%** |
-| Masked | −0.4% | +0.1% | −0.2% | −0.3% | −0.4% |
+| FastAFD M2N | −0.4% | +0.1% | −0.2% | −0.3% | −0.4% |
 
 | 1 FFN + 23 Attention (23:1), 64 experts | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| Union role path, default (`958652a3`), µs | 280.3 | 319.4 | 353.4 | 437.5 | 1,082.7 |
+| afdEP-comm, union hybrid, default (`958652a3`), µs | 280.3 | 319.4 | 353.4 | 437.5 | 1,082.7 |
 | Mixed-role directional (`81b71eb0`) | **−20.7%** | **−16.2%** | **−16.8%** | **−12.4%** | **−6.2%** |
-| Masked | −0.4% | +0.1% | −0.2% | −0.3% | −0.2% |
+| FastAFD M2N | −0.4% | +0.1% | −0.2% | −0.3% | −0.2% |
 
 At 11:1 the first screen, on `d1c3c18a` (before the call-top-k slice check, a host-only
 change), measured −22.8 / −19.8 / −21.7 / −14.9 / −8.0%. With 128 experts at F = 1 the
 union world exceeds DeepEP's expert workspace (24 × 128 logical experts), for union,
-Masked and mixed alike, hence 64 experts there.
+FastAFD M2N and mixed alike, hence 64 experts there.
 
 The gain is the synchronisation section 7 removed for single-role domains (rail barriers,
 the dense two-way signals and waits, the union count exchange, Attention-domain barriers
@@ -1083,7 +1089,7 @@ the fifth and sixth elements of the tuple section 17 checks; `afdep/deepep.py` r
 mismatch on every rank and exposes the values as `Buffer.fp8_combine` and
 `Buffer.fp8_combine_min_bucket`. The minimum defaults to 0, every bucket; negative values
 clamp to 0, so neither turns FP8 off, and it reports 0 whenever FP8 is off. It is on only in the directional hybrid: one NVLink domain,
-mixed-role domains (section 18), `AFDEP_UNION_HYBRID=1`, generic buffers, deterministic mode
+mixed-role domains (section 18), `AFDEP_UNION_HYBRID=1`, the baseline's buffers, deterministic mode
 and builds without SM90 features report it off, and `AFDEP_SHARED_ROLE_KERNELS=1` turns it off
 (set on one role only, the check rejects it). Each combine asserts it still runs the
 directional hybrid with the expanded, unweighted layout. It composes with the stagger and
@@ -1147,7 +1153,7 @@ Status ([record](validation-fp8-combine.json), kermit H200 over InfiniBand, 2026
 - Not yet: per-layer MoE-output error and next-token KL.
 
 Against this document's rule (ship only role-dependent changes): the byte cut itself would
-also shrink Masked's combine, so it was merged as opt-in (#12), as section 17 was, and stays
+also shrink FastAFD M2N's combine, so it was merged as opt-in (#12), as section 17 was, and stays
 off by default; the implementation exists only in the directional protocol, where the S:1
 ratio concentrates reply bytes on the FFN NICs. It is also the one place the library
 quantizes (AGENTS.md keeps quantization policy with the caller): opt-in, lossy and off by
@@ -1188,18 +1194,18 @@ section 3, which costs about 3 µs at small T) recovers all of it: −15% at 512
 bound by FFN ingress.
 
 **Not an AFD change.** A 64-SM combine grid for every rank, with the per-CTA exit
-intact (only the SM count passed to combine changes), gives the role path −15.6% at
-512 tokens and −20.1% at 2,048, and gives Masked −13.9% and −21.1%. The role path
-stays ahead of Masked at either grid (14–17% at 512 tokens, 5–6% at 2,048). The only
+intact (only the SM count passed to combine changes), gives afdEP-comm −15.6% at
+512 tokens and −20.1% at 2,048, and gives FastAFD M2N −13.9% and −21.1%. afdEP-comm
+stays ahead of FastAFD M2N at either grid (14–17% at 512 tokens, 5–6% at 2,048). The only
 role-specific difference is small: under the GEMM load of section 14 the Attention
-GEMM rises 0.5 µs at 2,048 tokens on the role path (its extra combine CTAs exit at
-once) and 1.3 µs under Masked. The FFN GEMM rises 0.5 µs on the role path. Sizing the
+GEMM rises 0.5 µs at 2,048 tokens in afdEP-comm (its extra combine CTAs exit at
+once) and 1.3 µs under FastAFD M2N. The FFN GEMM rises 0.5 µs in afdEP-comm. Sizing the
 combine grid by the FFN's load is therefore a deployment setting for any EP backend at
 high Attention:FFN ratios, not an afdEP-comm change, and is not shipped (as R1–R3).
 
 **AFD-specific candidate: expansion during ingress (section 16).** The
 FFN sends nothing in dispatch, so its idle SMs could expand rows while the sources are
-still pushing; a Masked FFN also sends and cannot. R4 tried this at 2A2F and gained
+still pushing; a FastAFD M2N FFN also sends and cannot. R4 tried this at 2A2F and gained
 nothing. At 3A:1F the copy is 24% of the round trip, but a timing bound, with the copy
 epilogue started at the FFN receive's count trigger without its whole-dispatch
 dependency (wrong data; scratch `073ced76`), gains only 0.6–0.8% at 128–512 tokens and
@@ -1224,11 +1230,11 @@ payload warps idle a fixed time at entry so their count stores lead (scratch
 The lead the counts need grows with the token count, and at one token a short lead
 is free because the FFN waits for the counts anyway. A sender that releases its
 payload exactly when its counts are published therefore bounds the gain at about 12–13%
-from 512 tokens. Shipping it needs two changes, both on the role path only: the
+from 512 tokens. Shipping it needs two changes, both in afdEP-comm only: the
 Attention dispatch publishes counts before payload, and the FFN copy epilogue starts at
 the count trigger and waits per chunk of slots (sources interleaved, a counter per
 source and chunk, so the fence is paid per chunk rather than per token as in R4).
-Masked cannot do either: its FFN also sends, and every rank's epilogue must wait for
+FastAFD M2N cannot do either: its FFN also sends, and every rank's epilogue must wait for
 its own sends. Section 16 builds it; it gains −11% at 2,048 tokens but not at 512, and
 ships off by default.
 
@@ -1238,7 +1244,7 @@ final digest, 3 repeats:
 
 | 4F:12A | T=1 | 8 | 32 | 128 | 512 |
 |---|---:|---:|---:|---:|---:|
-| Role suites, µs (the shared shapes; Masked) | 108.7 (+0.7%; +29%) | 127.8 (+0.2%; +19%) | 137.4 (+0.1%; +19%) | 194.4 (+0.1%; +12%) | 493.5 (+0.05%; +4.7%) |
+| Role suites, µs (the shared shapes; FastAFD M2N) | 108.7 (+0.7%; +29%) | 127.8 (+0.2%; +19%) | 137.4 (+0.1%; +19%) | 194.4 (+0.1%; +12%) | 493.5 (+0.05%; +4.7%) |
 
 Without compute load the role suites match the shared shapes here; their gain is the SMs
 they free (section 14). The time is again on the FFN side: at 512 tokens an Attention
@@ -1253,16 +1259,16 @@ add latency at one token, 100 → 143 µs). Nor is it the three-into-one fan-in:
 against 312 µs for the same 1,536 tokens from three sources. The limit is the FFN
 GPU's own receive-and-forward rate, about 21 GB/s here whatever the fan-in, and 3:1
 triples the tokens each FFN GPU carries. That rate belongs to the transport and
-applies to Masked as well.
+applies to FastAFD M2N as well.
 
 **Per extra Attention domain at small batches.** At one token per Attention rank,
 4-GPU domains, final digest, 3 repeats:
 
 | Round trip at T=1 | 1 Attention domain (4F:4A) | 2 (4F:8A) | Per extra domain |
 |---|---:|---:|---:|
-| Role path, directional hybrid | 77.7 µs | 88.8 | +11.2 |
-| Masked, hybrid | 95.5 | 116.6 | +21.1 |
-| Direct, role path (= Masked, section 12) | 92.7 | 96.0 | +3.3 |
+| afdEP-comm, directional hybrid | 77.7 µs | 88.8 | +11.2 |
+| FastAFD M2N, hybrid | 95.5 | 116.6 | +21.1 |
+| Direct, afdEP-comm (= FastAFD M2N, section 12) | 92.7 | 96.0 | +3.3 |
 
 Direct pays little per source but is slower than hybrid from 32 tokens (131 against
 108 µs with two domains, 761 against 351 at 512), so it is no 3:1 answer. The hybrid
@@ -1285,7 +1291,7 @@ AFD-specific (counts flow one way; the FFN never sends in dispatch), modelled at
 needs. It is not part of the role suites, which keep the shipped protocol; section 17
 implements it across NVLink domains (the sparse protocol). Fewer channels
 are a protocol-neutral setting (16 instead of 24 SMs saved 9 µs at 4F:12A and one token,
-flat at 512) but help Masked as well.
+flat at 512) but help FastAFD M2N as well.
 
 ## Parked
 
@@ -1301,31 +1307,31 @@ the AFD plugin's layouts all have N ≥ F.
 The FFN combine reduction's branch-free top-k prefix is `ceil(top_k / ranks)`,
 with dummy Attention ranks counted, and it unrolls by four. An AFD prefix of
 `ceil(top_k / ffn_ranks)` spills at unroll 4, so it shipped with unroll 2. The
-audit applied unroll 2 to Masked's generic combine: Masked alone gained up to
+audit applied unroll 2 to FastAFD M2N's combine: FastAFD M2N alone gained up to
 20% (H4096), and the AFD prefix over upstream's was mixed (better at H2048
 512–2,048 tokens, worse at H4096 8–128). The change is removed.
 
 ### R2. Few-token split combine (generic)
 
 Spreading a few tokens' hidden chunks across idle combine warps cut FFN combine
-latency, but the same split applied to Masked gained up to 32% (H4096, 32
+latency, but the same split applied to FastAFD M2N gained up to 32% (H4096, 32
 tokens): upstream's one-warp-per-token loop is slow for both. Removed.
 
 Audit, H4096 random, µs ([record](validation-generic-audit.json)):
 
 | Arm | T=1 | 32 | 128 | 2,048 |
 |---|---:|---:|---:|---:|
-| Masked | 38.2 | 55.1 | 68.9 | 391.8 |
-| Masked + unroll 2 | 34.8 | 46.5 | 55.2 | 341.0 |
-| Masked + split | 31.1 | 37.4 | 56.1 | 387.1 |
-| Masked + unroll 2 + split | 28.8 | 32.5 | 46.5 | 341.4 |
-| Role path with R1 + R2 | 20.5 | 24.5 | 44.6 | 332.6 |
+| FastAFD M2N | 38.2 | 55.1 | 68.9 | 391.8 |
+| FastAFD M2N + unroll 2 | 34.8 | 46.5 | 55.2 | 341.0 |
+| FastAFD M2N + split | 31.1 | 37.4 | 56.1 | 387.1 |
+| FastAFD M2N + unroll 2 + split | 28.8 | 32.5 | 46.5 | 341.4 |
+| afdEP-comm with R1 + R2 | 20.5 | 24.5 | 44.6 | 332.6 |
 | Same, upstream prefix | 20.1 | 23.6 | 40.0 | 333.8 |
 
 ### R3. Transport grid per bucket (generic)
 
 A full-device transport grid for buckets of at least 512 tokens was 10–16 points
-faster than the 24/132 default, but the same knob speeds up Masked equally: it is
+faster than the 24/132 default, but the same knob speeds up FastAFD M2N equally: it is
 a generic DeepEP launch setting, not an AFD property, so afdEP-comm does not ship it.
 The screens remain in [the record](validation-grid.json). Sections 4–7 below
 were measured while that policy was active: their paired changes compare arms

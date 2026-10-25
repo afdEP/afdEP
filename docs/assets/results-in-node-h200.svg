@@ -675,7 +675,7 @@ L 804.277854 106.056056
    <text style="font-weight: 600; font-size: 13px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="9.936" y="18.39" transform="rotate(-0 9.936 18.39)">One NVLink domain, 8 × H200</text>
   </g>
   <g id="text_51">
-   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="9.936" y="37.365" transform="rotate(-0 9.936 37.365)">afdEP-comm against Masked DeepEP; BF16, hidden 2048, top-8 of 128 experts</text>
+   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="9.936" y="37.365" transform="rotate(-0 9.936 37.365)">afdEP-comm against FastAFD's DeepEP M2N; BF16, hidden 2048, top-8 of 128 experts</text>
   </g>
   <g id="legend_1">
    <g id="line2d_85">
@@ -726,7 +726,7 @@ z
     </g>
    </g>
    <g id="text_53">
-    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="122.535562" y="59.49" transform="rotate(-0 122.535562 59.49)">Masked DeepEP</text>
+    <text style="font-size: 9px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="122.535562" y="59.49" transform="rotate(-0 122.535562 59.49)">FastAFD's DeepEP M2N</text>
    </g>
   </g>
  </g>
