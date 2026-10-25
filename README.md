@@ -51,9 +51,9 @@ Across NVLink domains joined by NCCL GPU-Initiated Networking (GIN):
   [§11](docs/design.md#11-staging-outside-remotely-written-inboxes-fix);
 - domains that hold both roles (FFN GPUs sharing a node with Attention GPUs) run
   DeepEP's union hybrid and match Masked within 1.4%; the
-  [cross-node proposal](#cross-node-proposal-opt-in-under-review) adds a directional path for them.
+  [cross-node additions](#cross-node-additions-opt-in) add a directional path for them.
 
-Opt-in and off by default: the [cross-node proposal](#cross-node-proposal-opt-in-under-review) ([§17](docs/design.md#17-sparse-directional-hybrid-opt-in-across-nvlink-domains), [§18](docs/design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain)) and count-first dispatch [§16](docs/design.md#16-count-first-dispatch-with-a-streaming-ffn-expansion-opt-in-one-nvlink-domain). Every
+Opt-in and off by default: the [cross-node additions](#cross-node-additions-opt-in) ([§17](docs/design.md#17-sparse-directional-hybrid-opt-in-across-nvlink-domains), [§18](docs/design.md#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain)) and count-first dispatch [§16](docs/design.md#16-count-first-dispatch-with-a-streaming-ffn-expansion-opt-in-one-nvlink-domain). Every
 change, its control and its evidence: [docs/design.md](docs/design.md).
 
 ## Results
@@ -199,7 +199,7 @@ H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, ca
 
 </details>
 
-## Cross-node proposal (opt-in, under review)
+## Cross-node additions (opt-in)
 
 Communication only, like the results above: one dispatch plus combine round trip under
 CUDA graphs, maximum over Attention ranks; no serving results.
@@ -273,7 +273,7 @@ matched BF16 within run-to-run noise (95.07% against 95.30% and 95.07%), while p
 are not measured yet ([docs/design.md §19](docs/design.md#19-fp8-combine-replies-opt-in-across-nvlink-domains),
 [record](docs/validation-fp8-combine.json)).
 
-<details><summary>Cross-node proposal numbers</summary>
+<details><summary>Cross-node numbers</summary>
 
 H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; afdEP (switches off) on 958652a3, the proposal on the tree each dataset's digests name (64 experts at 23:1).
 
@@ -453,7 +453,7 @@ and [five domains](docs/validation-five-domain.json),
 and larger multi-domain worlds require validation. `allow_hybrid_mode` keeps DeepEP's
 meaning; it does not enable an unvalidated topology.
 
-The cross-node proposal is opt-in and validated more narrowly. The sparse switches
+The cross-node additions are opt-in and validated more narrowly. The sparse switches
 passed the GPU suite on 24 ranks (12 × 2 and 6 × 4 H200) with FP8 only; with the done
 witness, only on 6 × 4 H200 at capacity 2,048
 ([record](docs/validation-sparse-hybrid.json)). The mixed-role path passed it on
