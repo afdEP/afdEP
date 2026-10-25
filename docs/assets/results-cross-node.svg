@@ -660,7 +660,7 @@ L 539.153926 314.027614
    <text style="font-weight: 600; font-size: 13px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="6.7392" y="18.39" transform="rotate(-0 6.7392 18.39)">Across NVLink domains, H200 over InfiniBand (NCCL GIN)</text>
   </g>
   <g id="text_47">
-   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="6.7392" y="37.365" transform="rotate(-0 6.7392 37.365)">afdEP-comm against Masked DeepEP; FP8, hidden 2048, top-8 of 128 experts</text>
+   <text style="font-size: 9.5px; font-family: 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Avant Garde', sans-serif; text-anchor: start; fill: #52514e" x="6.7392" y="37.365" transform="rotate(-0 6.7392 37.365)">afdEP-comm 1.0.0 (dense directional) against Masked DeepEP; FP8, hidden 2048, top-8 of 128 experts</text>
   </g>
   <g id="legend_1">
    <g id="line2d_75">

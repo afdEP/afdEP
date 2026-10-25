@@ -212,9 +212,10 @@ public:
     }
 
     // afdEP sparse directional hybrid (afdep_suites.hpp): (stagger bound, sparse dispatch, sparse
-    // combine) as this rank resolves them, which must agree on every rank. Only the directional
-    // hybrid reads them, so any other topology (one NVLink domain, mixed-role domains) reports
-    // them off and never rejects ranks that set them differently.
+    // combine) as this rank resolves them, which must agree on every rank: they are on unless an
+    // AFDEP_SHARED_* ablation control set on one role only turns them off there. Only the
+    // directional hybrid reads them, so any other topology (one NVLink domain, mixed-role
+    // domains) reports them off and never rejects ranks that set such controls differently.
     // The mixed-role hybrid (afdep_roles.hpp) is reported the same way: its F, wire-visible.
     // The fifth and sixth elements are the latched FP8 combine replies setting and its minimum bucket
     // (directional hybrid only).

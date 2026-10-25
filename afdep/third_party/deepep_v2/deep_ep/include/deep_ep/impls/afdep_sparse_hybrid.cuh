@@ -1,10 +1,10 @@
 // Copyright (c) 2026 afdEP contributors. SPDX-License-Identifier: MIT
-// afdEP sparse directional hybrid (opt-in): staggered source channels (AFDEP_HYBRID_STAGGER=1),
-// per-source token counts (AFDEP_HYBRID_SPARSE_DISPATCH=1) that let FFN forwarders retire the
-// channels a source never uses, so sources send finish tails only on channels they used, and
-// combine signals only on channels that carried a reply (AFDEP_HYBRID_SPARSE_COMBINE=1). Only the
-// generated copies use it (tests/role_kernels.py). Every rank must use the same settings: the FFN
-// recomputes each source's channels from its token count and the stagger.
+// afdEP sparse directional hybrid, the directional hybrid's protocol across NVLink domains:
+// staggered source channels, per-source token counts that let FFN forwarders retire the channels
+// a source never uses, so sources send finish tails only on channels they used, and combine
+// signals only on channels that carried a reply. Only the generated copies use it
+// (tests/role_kernels.py). Every rank must resolve it alike: the FFN recomputes each source's
+// channels from its token count and the stagger.
 #pragma once
 
 #include <deep_ep/common/compiled.cuh>

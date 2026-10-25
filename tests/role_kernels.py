@@ -406,13 +406,14 @@ EPILOGUE_ROW_SPAN = (
 
 
 # Sparse directional hybrid (afdep_sparse_hybrid.cuh), Attention send:
-# - kAfdStaggerMaxTokens (AFDEP_HYBRID_STAGGER=1): a source of at most that many tokens
+# - kAfdStaggerMaxTokens (the stagger; the host passes INT_MAX, or 0 when an ablation
+#   control turns it off): a source of at most that many tokens
 #   puts token i on channel (i + s * C / S) mod C instead of i mod C, so at small
 #   batches the sources' first tokens ride different channels (and SMs and QPs)
 #   instead of every source's token 0 queueing on FFN forward warp 0. A channel still
 #   carries at most ceil(T / C) tokens of a source; tails, the copy epilogue and combine
 #   are keyed by (source, channel) or by source token.
-# - kAfdSparseDispatch (AFDEP_HYBRID_SPARSE_DISPATCH=1): SM 0 publishes the source's
+# - kAfdSparseDispatch (sparse dispatch): SM 0 publishes the source's
 #   token count to each FFN domain's rail peer at entry (QP 0, with the counts), and a
 #   channel that carried no token sends no finish tail; the FFN copy below retires those
 #   lanes from the count instead of waiting for C finish atomics per source.
@@ -492,7 +493,7 @@ SOURCE_HYBRID_DISPATCH_EDITS = (
     ),
 )
 
-# - kAfdSparseCombine (AFDEP_HYBRID_SPARSE_COMBINE=1): each channel also records, in a
+# - kAfdSparseCombine (sparse combine): each channel also records, in a
 #   local word, the FFN domains it put a token for. The FFN combine (copy below) replies
 #   on a channel only to the sources whose tokens it received there, so it signals only
 #   those (source, channel) pairs, plus channel 0 to every source as a done witness:

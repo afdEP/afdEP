@@ -81,11 +81,13 @@ smallest device's SM count; choose/tune explicitly for a workload. Both hybrid
 settings are validated in one NVLink domain and across NVLink domains joined by GIN.
 Across domains, role specialization runs the directional hybrid when every domain
 holds one role, and the union hybrid otherwise ([design](design.md), sections 6 and 7).
-Two opt-in protocols change this across domains: the sparse switches
-(`AFDEP_HYBRID_STAGGER`, `AFDEP_HYBRID_SPARSE_DISPATCH`, `AFDEP_HYBRID_SPARSE_COMBINE`,
-section 17) and the mixed-role path (`AFDEP_MIXED_HYBRID`, section 18). Set them alike on
-every rank before constructing the `Buffer` and keep them; construction gathers every
-rank's resolved values once and rejects a mismatch.
+The directional hybrid always signals only the channels that carry tokens (the sparse
+directional hybrid, section 17 and [sparse-hybrid.md](sparse-hybrid.md)); there is
+nothing to set. The opt-in mixed-role path (`AFDEP_MIXED_HYBRID`, section 18) changes
+the protocol when FFN ranks share a domain with Attention ranks. Set it, and any
+`AFDEP_SHARED_*` ablation control, alike on every rank before constructing the `Buffer`
+and keep them; construction gathers every rank's resolved values once and rejects a
+mismatch.
 
 `AFDEP_HYBRID_FP8_COMBINE=1` (section 19; validated on H200; GSM8K accuracy unchanged, no per-layer or next-token KL check yet) sends the
 directional hybrid's combine replies across NVLink domains as FP8: set it alike before
