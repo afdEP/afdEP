@@ -19,7 +19,8 @@ module.exports = {
   title: 'afdEP-comm',
   tagline: 'Expert-parallel communication for Attention-FFN Disaggregation',
   url: 'https://afdep.github.io',
-  baseUrl: '/afdEP-comm/',
+  // PR previews build under pr-preview/pr-N/ (.github/workflows/docs.yml).
+  baseUrl: process.env.BASE_URL || '/afdEP-comm/',
   organizationName: 'afdEP',
   projectName: 'afdEP-comm',
   trailingSlash: false,
