@@ -105,9 +105,16 @@ def test_role_suites_leave_shared_kernels_untouched():
         include / "impls/combine_reduce_epilogue.cuh",
         *sorted((include / "common").glob("*")),
     ]
+    # The one documented upstream fix in common/ (LOCAL_CHANGES.json): the GIN barrier's
+    # system-scope fence, which every kernel with direct (non-hybrid) peers needs.
+    fixed = "deep_ep/include/deep_ep/common/comm.cuh"
     for path in upstream:
         name = path.relative_to(VENDOR_ROOT).as_posix()
-        assert digest(path) == provenance["file_sha256"][name], name
+        if name != fixed:
+            assert digest(path) == provenance["file_sha256"][name], name
+    comm = (VENDOR_ROOT / fixed).read_text()
+    marker = "// ### PATCH START: order NVLink stores before GIN barrier signals"
+    assert comm.count(marker) == 1 and comm.count("// ### PATCH END:") == 1
 
 
 def test_role_suite_shapes_are_host_launch_overrides():
