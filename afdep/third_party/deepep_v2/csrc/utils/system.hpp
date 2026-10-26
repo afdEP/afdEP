@@ -7,18 +7,51 @@
 #include <random>
 #include <string>
 #include <memory>
+#include <unordered_map>
 #include <unistd.h>
 
 #include <deep_ep/common/exception.cuh>
 
 #include "format.hpp"
 
+extern char** environ;
+
 namespace deep_ep {
+
+// afdEP: an ElasticBuffer latches the AFDEP_* controls at construction. While one of its
+// calls runs on this thread, get_env reads that snapshot instead of the process environment,
+// so Buffers opened under different controls keep their own launch shapes.
+using EnvSnapshot = std::unordered_map<std::string, std::string>;
+inline thread_local const EnvSnapshot* latched_env = nullptr;
+static constexpr char kLatchedEnvPrefix[] = "AFDEP_";
+
+static EnvSnapshot snapshot_latched_env() {
+    EnvSnapshot snapshot;
+    for (char** entry = environ; *entry != nullptr; ++ entry) {
+        const std::string item(*entry);
+        const auto separator = item.find('=');
+        if (item.rfind(kLatchedEnvPrefix, 0) == 0 and separator != std::string::npos)
+            snapshot.emplace(item.substr(0, separator), item.substr(separator + 1));
+    }
+    return snapshot;
+}
+
+struct LatchedEnvScope {
+    const EnvSnapshot* previous;
+    explicit LatchedEnvScope(const EnvSnapshot& snapshot): previous(latched_env) { latched_env = &snapshot; }
+    ~LatchedEnvScope() { latched_env = previous; }
+};
 
 // ReSharper disable once CppNotAllPathsReturnValue
 template <typename dtype_t>
 static dtype_t get_env(const std::string& name, const dtype_t& default_value = dtype_t()) {
-    const auto c_str = std::getenv(name.c_str());
+    const char* c_str = nullptr;
+    if (latched_env != nullptr and name.rfind(kLatchedEnvPrefix, 0) == 0) {
+        const auto it = latched_env->find(name);
+        c_str = it == latched_env->end() ? nullptr : it->second.c_str();
+    } else {
+        c_str = std::getenv(name.c_str());
+    }
     if (c_str == nullptr)
         return default_value;
 

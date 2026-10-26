@@ -50,6 +50,11 @@ class ElasticBuffer {
     // Zero preserves the original symmetric DeepEP allocation/epilogues.
     int afd_ffn_ranks;
 
+    // afdEP launch-shape controls (AFDEP_*) latched at construction; every call that reads them
+    // runs under a LatchedEnvScope, so a later change to the process environment, or another
+    // Buffer opened under other controls, never changes this Buffer's launch shapes or layout.
+    EnvSnapshot afd_env = snapshot_latched_env();
+
     // afdEP count-first (afdep_suites.hpp), latched at construction: the minimum bucket (0: off)
     // and the raw screen arm ("source": sources only, against the payload-first FFN receive).
     int afd_cf_min_bucket = 0;
@@ -113,6 +118,7 @@ public:
         allow_multiple_reduction(allow_multiple_reduction),
         prefer_overlap_with_compute(prefer_overlap_with_compute),
         afd_ffn_ranks(afd_ffn_ranks) {
+        const LatchedEnvScope env_scope(afd_env);
         EP_HOST_ASSERT(afd_ffn_ranks >= 0 and afd_ffn_ranks < num_ranks);
 
         // Init NCCL runtime
@@ -220,6 +226,7 @@ public:
     // The fifth and sixth elements are the latched FP8 combine replies setting and its minimum bucket
     // (directional hybrid only).
     std::tuple<int, bool, bool, int, bool, int> get_afd_sparse_hybrid_config() const {
+        const LatchedEnvScope env_scope(afd_env);
         if (afd_ffn_ranks > 0) {
             const int mixed = afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
                                                  nccl_context->num_scaleup_ranks);
@@ -783,6 +790,7 @@ public:
              const bool& allocate_on_comm_stream,
              const bool& do_handle_copy, const bool& do_cpu_sync, const bool& do_expand,
              const bool& use_tma_aligned_col_major_sf) const {
+        const LatchedEnvScope env_scope(afd_env);
         // Check SM count
         EP_HOST_ASSERT(num_sms > 0);
 
@@ -1368,6 +1376,7 @@ public:
             const bool& allocate_on_comm_stream,
             const bool& use_expanded_layout,
             const bool& afd_collect_view) const {
+        const LatchedEnvScope env_scope(afd_env);
         // Check SM count
         EP_HOST_ASSERT(num_sms > 0);
 

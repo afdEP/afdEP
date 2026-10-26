@@ -4,7 +4,7 @@
   "modified_files": {
     "csrc/elastic/buffer.hpp": {
       "upstream_sha256": "b2080118bb3e192018d42625eefba5c517690af5a0b8f6858c0842168f79da13",
-      "sha256": "ad464e7f82f2649ccb5582f2589cc137e6586e6ba7272b199673b7bc450dda5f"
+      "sha256": "c5212b50c2d2701b7229b6f7022bc0d03cf654c187c8f25a39619060a32a8b1f"
     },
     "csrc/kernels/elastic/combine.hpp": {
       "upstream_sha256": "edb25ab70b64517786302a952c223f8389b3d7fce0f2d82a9706ddd83598b5e6",
@@ -17,6 +17,10 @@
     "csrc/python_api.cpp": {
       "upstream_sha256": "64b6041b75c1027c9f7f16b236e1fb037f0838f5338020804035e8e39d5710ba",
       "sha256": "fd3f14ee9316ea7d05615738ed2ac18e3687b9c27a44dc773c510c3fe2dfe0bf"
+    },
+    "csrc/utils/system.hpp": {
+      "upstream_sha256": "01c914be7f36c5ddfa1b37fb81cf46405c5a5e56595d63b66b9a473369d1cf44",
+      "sha256": "a827e1bae83cc35ee6207bf9b998c4ca31f187a95e7797c364f4ba3984d8df87"
     },
     "deep_ep/include/deep_ep/impls/combine.cuh": {
       "upstream_sha256": "6a0f1f3f978978a35f9616178825f8c29881aafc3a04d8c2ba68b50a4a283c9a",
