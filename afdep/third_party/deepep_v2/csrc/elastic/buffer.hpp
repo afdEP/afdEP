@@ -705,9 +705,10 @@ public:
             num_max_tokens_per_rank).get_num_bytes();
     }
 
-    // afdEP FFN role of a rank: the global prefix [0, F), or the per-domain prefix (afdep_roles.hpp).
+    // afdEP FFN role of a rank: the global prefix [0, F), or the per-domain prefix (afdep_roles.hpp) of
+    // every physical NVLink domain, which hybrid off folds into one logical domain.
     bool afd_is_ffn(const int& rank) const {
-        return afd_ffn_ranks_per_domain > 0 ? rank % nccl_context->num_scaleup_ranks < afd_ffn_ranks_per_domain :
+        return afd_ffn_ranks_per_domain > 0 ? rank % nccl_context->num_nvl_ranks < afd_ffn_ranks_per_domain :
             rank < afd_ffn_ranks;
     }
 
@@ -839,18 +840,20 @@ public:
             not deterministic;
         // Direct dispatch over GIN (hybrid off across NVLink domains): only the in-kernel route
         // checks apply so far; the barrier, count and exit protocol stays union.
+        // A per-domain FFN prefix keeps its route check, which also translates the routes.
         const bool afd_direct_gin_routes = afd_role_aware and nccl_context->num_scaleout_ranks == 1 and
-            not nccl_context->is_scaleup_nvlink and not deterministic and afdep_hybrid_routes_in_kernel();
+            not nccl_context->is_scaleup_nvlink and not deterministic and afdep_hybrid_routes_in_kernel() and
+            afd_ffn_ranks_per_domain == 0;
         if (afd_role_aware) {
             // Only expanded inference dispatch is currently exposed by afdEP.
             // Roles are immutable constructor geometry, never token-count guesses.
             EP_HOST_ASSERT(not cached_mode and do_expand);
             EP_HOST_ASSERT(afd_source or num_tokens == 0);
-            // Per-domain FFN prefix: f FFN ranks in each of the (hybrid) domains, and the handle
+            // Per-domain FFN prefix: f FFN ranks in each of the physical NVLink domains, and the handle
             // copy that carries the logical IDs to combine.
             EP_HOST_ASSERT(afd_ffn_ranks_per_domain == 0 or
-                           (nccl_context->num_scaleout_ranks * afd_ffn_ranks_per_domain == afd_ffn_ranks and
-                            nccl_context->num_scaleout_ranks > 1 and do_handle_copy));
+                           (nccl_context->num_rdma_ranks * afd_ffn_ranks_per_domain == afd_ffn_ranks and
+                            nccl_context->num_rdma_ranks > 1 and do_handle_copy));
         }
         EP_HOST_ASSERT(x.is_cuda() and x.is_contiguous());
         EP_HOST_ASSERT((x.size(1) * x.element_size()) % sizeof(int4) == 0);
@@ -924,7 +927,7 @@ public:
             launch_afdep_domain_routes(topk_idx.data_ptr<topk_idx_t>(),
                                        afd_logical_topk_idx->data_ptr<topk_idx_t>(), num_tokens,
                                        afd_ffn_ranks * num_local_experts, num_topk, afd_ffn_ranks_per_domain,
-                                       nccl_context->num_scaleup_ranks, num_local_experts, num_sms, comm_stream);
+                                       nccl_context->num_nvl_ranks, num_local_experts, num_sms, comm_stream);
         } else if (afd_source and not afd_direct_nvlink and not afd_hybrid_routes_in_kernel and not afd_direct_gin_routes) {
             launch_afdep_route_guard(topk_idx.data_ptr<topk_idx_t>(), num_tokens,
                                     afd_ffn_ranks * num_local_experts, num_topk,

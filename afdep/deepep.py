@@ -313,8 +313,6 @@ class ElasticBuffer:
             domains = per_domain_layout(
                 self.world_size, ffn_ranks or 0, ffn_ranks_per_domain
             )
-            if domains > 1 and not allow_hybrid_mode:
-                raise ValueError("FFN ranks in several NVLink domains need hybrid mode")
             self._domain_size = self.world_size // domains
             if (
                 type(rdma_traffic_class) is not int

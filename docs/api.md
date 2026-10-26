@@ -13,7 +13,7 @@ the first f ranks of every NVLink domain (U ranks each), so every node can hold 
 FFN index j is rank `(j // f) * U + j % f` (`Config.ffn_rank`) and still owns real experts
 `[j * E, (j + 1) * E)`. `Buffer.role_rank` is the rank's FFN or Attention index
 (`Config.role_rank`). The physical domains must match: F / f domains of W·f / F ranks,
-with hybrid mode on. Every rank uses identical configuration, exchange order,
+with hybrid mode on or off (direct RDMA). Every rank uses identical configuration, exchange order,
 `bucket`, and `read_host_counts` policy. Only one unmatched dispatch per Buffer
 is allowed. IDs must be unique per token, in `[0, num_experts)`, or `-1` to skip.
 Use `buffer.topk_idx_dtype`; invalid real-role routes assert on the GPU, including

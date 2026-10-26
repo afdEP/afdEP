@@ -198,8 +198,16 @@ def test_per_domain_prefix_checks_the_physical_domains(runtime, monkeypatch):
     with pytest.raises(ValueError, match="needs 1 NVLink domains of 4 ranks"):
         elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=2)
     runtime.module.ElasticBuffer.assert_not_called()
-    with pytest.raises(RuntimeError, match="need hybrid mode"):
-        elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=1, allow_hybrid_mode=False)
+    # Hybrid off (direct RDMA) folds the domains into one logical domain; roles stay
+    # physical.
+    runtime.module.get_physical_domain_size.return_value = (2, 2)
+    runtime.module.ElasticBuffer.reset_mock()
+    direct = elastic(
+        runtime, ffn_ranks=2, ffn_ranks_per_domain=1, allow_hybrid_mode=False
+    )
+    assert runtime.module.ElasticBuffer.call_args.args[-2:] == (2, 1)
+    assert [direct._is_ffn(r) for r in range(4)] == [True, False, True, False]
+    direct.close()
     with pytest.raises(RuntimeError, match="requires ffn_ranks"):
         elastic(runtime, ffn_ranks_per_domain=1)
 
