@@ -217,6 +217,18 @@ public:
         return {afd_cf_min_bucket, afd_cf_arm};
     }
 
+    // afdEP wire-visible controls (afdep_roles.hpp), as latched at construction: (entry barriers kept,
+    // union notify, all-rank exit, grid-sync exit, union buffers, union hybrid, mixed hybrid). Each changes
+    // barriers, the count exchange, the registered layout or the hybrid protocol, so it must agree on
+    // every rank. The other AFDEP_* controls are launch shapes or rank-local screen knobs; the count-first
+    // and sparse hybrid parts they resolve are checked through the two getters around this one.
+    std::tuple<bool, bool, bool, bool, bool, bool, bool> get_afd_protocol_config() const {
+        const LatchedEnvScope env_scope(afd_env);
+        return {not afdep_skip_entry_barriers(), not afdep_directional_notify(), not afdep_directed_exit(),
+                not afdep_per_cta_exit(),        not afdep_role_buffers(),
+                deep_ep::get_env<int>("AFDEP_UNION_HYBRID", 0) != 0, deep_ep::get_env<int>("AFDEP_MIXED_HYBRID", 0) != 0};
+    }
+
     // afdEP sparse directional hybrid (afdep_suites.hpp): (stagger bound, sparse dispatch, sparse
     // combine) as this rank resolves them, which must agree on every rank: they are on unless an
     // AFDEP_SHARED_* ablation control set on one role only turns them off there. Only the
@@ -1617,6 +1629,7 @@ static void register_apis(pybind11::module_& m) {
         .def("get_physical_domain_size", &ElasticBuffer::get_physical_domain_size)
         .def("get_logical_domain_size", &ElasticBuffer::get_logical_domain_size)
         .def("get_afd_count_first_config", &ElasticBuffer::get_afd_count_first_config)
+        .def("get_afd_protocol_config", &ElasticBuffer::get_afd_protocol_config)
         .def("get_afd_sparse_hybrid_config", &ElasticBuffer::get_afd_sparse_hybrid_config)
         .def("barrier", &ElasticBuffer::barrier)
         .def("engram_write", &ElasticBuffer::engram_write)
