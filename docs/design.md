@@ -1441,9 +1441,10 @@ fresh-process screens):
   shape and an isolated tree before the role suites at every size except 128 tokens (+1.2–1.3%, two
   repeats at 3–4%) and 2,048 (+0.1%).
 
-No mechanism was found. An in-process A/B is not possible with this DeepEP build
-(two Buffers in one process fault with an illegal address, also without the role suites, and two
-graphs captured on one Buffer corrupt each other), and single-process traces vary
+No mechanism was found. An in-process A/B was not possible then: the native controls were read
+from the process environment on every launch, so a Buffer opened before the harness switched them
+ran with the other arm's controls against its own registered layout (issue #5). Buffers now latch
+their `AFDEP_*` controls when opened ([API](api.md)), and single-process traces vary
 more between processes than the effect. So the one-NVLink-domain suites keep the shared
 launch shapes. What the FFN receive did hold, the copy epilogue, is section 15
 ([record](validation-role-suites.json)).

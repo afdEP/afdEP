@@ -64,8 +64,18 @@ stream using DeepEP events. Use caller stream dependencies before passing data
 produced on another stream. Outputs/receipts and user inputs must remain alive
 until dependent GPU work completes. A completed Python pair allows the next
 pair to be enqueued; device-side protocol and stream ordering protect reuse.
-Independent Buffers do not share ordering. `close()` synchronizes outstanding
-work and frees registered storage; destroy graphs before closing the Buffer.
+`close()` synchronizes outstanding work and frees registered storage; destroy
+graphs before closing the Buffer.
+
+A process may hold several Buffers, for example one per micro-batch. Every rank
+must enqueue their exchanges in the same order: by default all Buffers in a
+process share one DeepEP communication stream
+(`AFD_DEEPEP_PER_BUFFER_COMM_STREAM=1` gives each its own). Each Buffer latches
+the `AFDEP_*` controls set when it is opened and keeps them for its lifetime, so
+Buffers opened under different controls (an in-process A/B) keep their own launch
+shapes and registered layout, and later environment changes only affect Buffers
+opened afterwards. `tests/gpu/two_buffers.py` checks both cases, eager and in
+graphs.
 
 ## Transport and tuning
 
