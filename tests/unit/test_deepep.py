@@ -81,7 +81,7 @@ def runtime(monkeypatch):
 
     def dispatch(*args):
         constructor = module.ElasticBuffer.call_args.args
-        rows = 0 if len(constructor) == 14 and group.rank() >= constructor[-1] else 4
+        rows = 0 if len(constructor) >= 14 and group.rank() >= constructor[13] else 4
         scale = (
             Tensor((rows, 2), "fp32", contiguous=False) if args[1] is not None else None
         )
@@ -154,6 +154,67 @@ def test_real_and_logical_expert_counts():
         config(num_experts=15)
 
 
+def test_per_domain_ffn_prefix_numbers_roles_and_experts():
+    # Two NVLink domains of 5 ranks, local rank 0 of each is FFN: FFN ranks {0, 5}.
+    value = config(ffn_ranks=2, attention_ranks=8, ffn_ranks_per_domain=1)
+    assert [r for r in range(10) if value.is_ffn(r)] == [0, 5]
+    assert [value.role_rank(r) for r in range(10)] == [0, 0, 1, 2, 3, 1, 4, 5, 6, 7]
+    assert [value.ffn_rank(j) for j in range(2)] == [0, 5]
+    # Real expert e of FFN index j lands in DeepEP's block of rank ffn_rank(j).
+    assert value.experts_per_rank == 8
+    assert [value.logical_ids(e) for e in (-1, 0, 7, 8, 15)] == [-1, 0, 7, 40, 47]
+    for e in range(value.num_experts):
+        index = e // value.experts_per_rank
+        assert value.logical_ids(e) // value.experts_per_rank == value.ffn_rank(index)
+    # The global prefix, also when one domain holds every FFN rank.
+    for prefix in (config(), config(ffn_ranks_per_domain=2)):
+        assert [prefix.is_ffn(r) for r in range(4)] == [True, True, False, False]
+        assert [prefix.role_rank(r) for r in range(4)] == [0, 1, 0, 1]
+        assert [prefix.logical_ids(e) for e in (-1, 0, 15)] == [-1, 0, 15]
+    for f, message in ((3, "split ffn_ranks"), (True, "nonnegative")):
+        with pytest.raises(ValueError, match=message):
+            config(ffn_ranks=2, attention_ranks=8, ffn_ranks_per_domain=f)
+
+
+def test_per_domain_prefix_checks_the_physical_domains(runtime, monkeypatch):
+    monkeypatch.delenv("EP_DISABLE_GIN", raising=False)
+    runtime.module.get_physical_domain_size.return_value = (2, 2)
+    buffer = elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=1)
+    assert runtime.module.ElasticBuffer.call_args.args[-2:] == (2, 1)
+    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-2:] == (2, 1)
+    assert [buffer._is_ffn(r) for r in range(4)] == [True, False, True, False]
+    buffer.close()
+    # One domain holding every FFN rank is the global prefix: the 14-argument ctor.
+    runtime.module.get_physical_domain_size.return_value = (1, 4)
+    buffer = elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=2)
+    assert len(runtime.module.ElasticBuffer.call_args.args) == 14
+    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-1] == 0
+    buffer.close()
+    runtime.module.ElasticBuffer.reset_mock()
+    with pytest.raises(ValueError, match="needs 2 NVLink domains of 2 ranks"):
+        elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=1)
+    runtime.module.ElasticBuffer.assert_not_called()
+    with pytest.raises(RuntimeError, match="need hybrid mode"):
+        elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=1, allow_hybrid_mode=False)
+    with pytest.raises(RuntimeError, match="requires ffn_ranks"):
+        elastic(runtime, ffn_ranks_per_domain=1)
+
+
+def test_per_domain_buffer_roles(runtime, monkeypatch):
+    monkeypatch.delenv("EP_DISABLE_GIN", raising=False)
+    runtime.module.get_physical_domain_size.return_value = (2, 2)
+    value = config(ffn_ranks_per_domain=1)
+    buffer = deepep.DeepEPBuffer(group=runtime.group, config=value)
+    # Rank 2 is local rank 0 of the second domain: FFN index 1.
+    assert (buffer.role, buffer.role_rank) == ("ffn", 1)
+    assert runtime.module.ElasticBuffer.call_args.args[-2:] == (2, 1)
+    buffer.close()
+    runtime.group.rank = lambda: 1
+    buffer = deepep.DeepEPBuffer(group=runtime.group, config=value)
+    assert (buffer.role, buffer.role_rank) == ("attention", 0)
+    buffer.close()
+
+
 def test_receive_bounds_count_attention_sources_only():
     afdep = config(capacity_tokens_per_rank=2048)
     # FastAFD's symmetric group counts every rank as a source.
@@ -168,12 +229,12 @@ def test_ffn_ranks_select_the_afd_transport_and_keep_the_upstream_ctor(runtime):
     upstream = elastic(runtime)
     assert len(runtime.module.ElasticBuffer.call_args.args) == 13
     # Symmetric sizing without ffn_ranks (the baseline); role-sized inboxes with it.
-    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-1] == 0
+    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-2:] == (0, 0)
     upstream.close()
     roles = elastic(runtime, ffn_ranks=2)
     assert len(runtime.module.ElasticBuffer.call_args.args) == 14
     assert runtime.module.ElasticBuffer.call_args.args[-1] == 2
-    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-1] == 2
+    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-2:] == (2, 0)
     roles.close()
 
 
@@ -297,7 +358,7 @@ def test_ffn_worker_rejects_source_payload(runtime):
 def test_fastafd_baseline_runs_upstream_deepep_with_full_source_bounds(runtime):
     buffer = FastAFDBuffer(group=runtime.group, config=FastAFDConfig(**vars(config())))
     assert len(runtime.module.ElasticBuffer.call_args.args) == 13
-    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-1] == 0
+    assert runtime.module.calculate_elastic_buffer_size.call_args.args[-2:] == (0, 0)
     assert buffer._zero_output.shape == (buffer.config.receive_rows(16), 256)
     buffer.close()
 
