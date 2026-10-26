@@ -368,6 +368,12 @@ H200, with one and two FFN domains, BF16 and FP8, the 1.1.0 tree included
 validated more narrowly: the mixed-role path passed the suite on 6 × 4 H200 with F = 1 to 3
 ([record](docs/validation-mixed-hybrid.json)).
 
+FFN ranks on every node (`ffn_ranks_per_domain`, [design](docs/design.md) section 20) passed
+the suite on 2 × 4 and 3 × 4 H200 with one and two FFN GPUs per node, BF16 and FP8, and on
+FastAFD's DeepEP M2N in the same layouts ([record](docs/validation-per-domain.json)). These
+layouts run the union hybrid, at FastAFD M2N's speed; nodes with different GPU counts are not
+supported.
+
 ## Acknowledgments
 
 afdEP-comm's communication kernels are DeepEP's. [DeepEP](https://github.com/deepseek-ai/DeepEP),

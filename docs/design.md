@@ -1159,6 +1159,65 @@ ratio concentrates reply bytes on the FFN NICs. It is also the one place the lib
 quantizes (AGENTS.md keeps quantization policy with the caller): opt-in, lossy and off by
 default.
 
+### 20. Per-domain FFN prefix (FFN ranks on every node)
+
+AFD basis: a serving deployment often scales by identical nodes, each running Attention
+and FFN GPUs (4A1F on a 5-GPU domain, 6A2F on an 8-GPU node). FFN ranks are ranks [0, F)
+and DeepEP numbers ranks node by node (`nccl.cu:118-119`), so every FFN rank lands on the
+first node(s) and these layouts could not run (#18).
+
+With `ffn_ranks_per_domain=f`, local ranks [0, f) of each of the D = F / f NVLink
+domains are FFN: FFN index j is rank (j / f)·U + j % f and still owns real experts
+[j·E, (j + 1)·E). Callers keep real IDs. The source's route check
+(`afdep_domain_routes.cuh`, which replaces the route guard there) validates them as the
+guard does and writes DeepEP's logical IDs, e + ⌊e / (f·E)⌋·(U − f)·E, which dispatch reads
+and copies for combine. Python requires the physical domains to be D × (W / D) with
+hybrid mode on, before the native constructor.
+
+Every domain then holds both roles, which neither directional protocol covers (section 7
+needs one role per domain, section 18 one FFN-holding domain). These layouts run the
+union hybrid with per-rank roles: both selectors return 0 for f > 0, so the sparse parts
+and FP8 combine replies stay off, and shared device sources are unchanged.
+
+Correctness on `ece614e6`: the GPU suite passes on 2 × 4 H200 with f = 1 and 2 (BF16 and
+FP8, capacities 8 and 64, hidden 256 and 2048) and on 3 × 4 with f = 1 and 2, every
+check exact; FastAFD's DeepEP M2N passes in the same layouts. Duplicate, out-of-range,
+negative and wide routes assert in the route check. The global-prefix layouts (one domain,
+FFN domain first, union and mixed-role with F < U, FP8 combine) pass unchanged
+([record](validation-per-domain.json)).
+
+Results (comm-only, [record](validation-per-domain-screens.json)): kermit 4-GPU domains,
+FP8, hidden 4096, top-8, capacity 512, CUDA graphs, two fresh processes per arm, max over
+Attention ranks. Per-node FFN runs at FastAFD M2N's speed in the same layout (FastAFD is
+0.4–1.7% faster: afdEP-comm's route check is a kernel, and the baseline's IDs were mapped
+outside timing). Against today's layouts at the same rank counts it is slower up to 128
+tokens and faster only at 512, where spreading the FFN's ingress over every node pays.
+Change against per-node FFN (negative: the other layout is faster):
+
+| Layout | T=1 | 8 | 32 | 128 | 512 |
+|---|---:|---:|---:|---:|---:|
+| 2 × 4, F = 2: per-node FFN (f = 1), µs | 120.6 | 145.2 | 155.1 | 180.8 | 388.5 |
+| FFN on node 0, union | −2.6% | −2.7% | −1.8% | −1.9% | +4.2% |
+| FFN on node 0, mixed-role (opt-in) | −20.5% | −19.1% | −19.2% | −13.9% | −5.3% |
+| 2 × 4, F = 4: per-node FFN (f = 2), µs | 103.0 | 116.4 | 121.7 | 147.1 | 294.0 |
+| FFN node + Attention node, directional | −27.0% | −26.1% | −22.8% | −18.4% | −8.0% |
+| 3 × 4, F = 3: per-node FFN (f = 1), µs | 148.1 | 162.8 | 173.8 | 219.1 | 493.8 |
+| FFN on node 0, union | −3.9% | +0.1% | −1.0% | −2.2% | +5.4% |
+| FFN on node 0, mixed-role (opt-in) | −23.0% | −18.1% | −15.6% | −12.0% | +1.6% |
+
+So the layout runs, but the union protocol costs what the directional protocols removed:
+12–27% up to 128 tokens.
+
+Every rail now holds one role. Rails u < f join only FFN GPUs: no source sits on them, so
+all they carry across domains is protocol words (zero counts, finish tails, combine
+signals and their rail barrier, which spans rail peers only). Rails u ≥ f join only
+Attention GPUs, and each is both a source and its rail's forwarder for the other domains,
+so domain ingress uses U − f NICs. Two steps remain. First, FFN rails can skip all of that
+on their own. Second, a directional protocol on Attention rails needs its own
+ordering argument: dispatch tails and combine signals share words that a dual-role GPU
+would receive in both phases, and sources now stage dispatch in domains that hold FFN
+ranks. Both need deferred-put fault injection, as section 18 does.
+
 ## 3:1 Attention:FFN: where the time goes (analysis)
 
 Three Attention ranks per FFN rank make one FFN serve three sources. One NVLink

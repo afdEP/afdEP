@@ -8,7 +8,12 @@ current CUDA device first, and keeps the group alive until close.
 ## Roles and tensors
 
 FFN ranks come first; each owns `num_experts / ffn_ranks` consecutive real experts.
-Attention ranks follow. Every rank uses identical configuration, exchange order,
+Attention ranks follow. With `Config(ffn_ranks_per_domain=f)` the FFN ranks are instead
+the first f ranks of every NVLink domain (U ranks each), so every node can hold FFN ranks:
+FFN index j is rank `(j // f) * U + j % f` (`Config.ffn_rank`) and still owns real experts
+`[j * E, (j + 1) * E)`. `Buffer.role_rank` is the rank's FFN or Attention index
+(`Config.role_rank`). The physical domains must match: F / f domains of W·f / F ranks,
+with hybrid mode on. Every rank uses identical configuration, exchange order,
 `bucket`, and `read_host_counts` policy. Only one unmatched dispatch per Buffer
 is allowed. IDs must be unique per token, in `[0, num_experts)`, or `-1` to skip.
 Use `buffer.topk_idx_dtype`; invalid real-role routes assert on the GPU, including
@@ -72,7 +77,9 @@ work and frees registered storage; destroy graphs before closing the Buffer.
 afdEP-comm keeps DeepEP's uniform logical expert numbering (Attention ranks own empty
 expert blocks, never legal routing targets) and its collective participation. The
 low-level connector interface is `afdep.deepep.ElasticBuffer`: pass `ffn_ranks=M` for
-afdEP-comm's transport, as `Buffer` does from `Config`. Without `ffn_ranks` it runs DeepEP
+afdEP-comm's transport, as `Buffer` does from `Config`; add `ffn_ranks_per_domain=f` for a
+per-domain FFN prefix, whose dispatch takes real expert IDs and maps them to the logical
+numbering itself (the FFN blocks are no longer `[0, F·E)`). Without `ffn_ranks` it runs DeepEP
 V2 as upstream ships it, over a symmetric group; the benchmarks use that for the
 baseline, FastAFD's DeepEP M2N ([benchmarks/fastafd.py](../benchmarks/fastafd.py)).
 
@@ -82,6 +89,8 @@ smallest device's SM count; choose/tune explicitly for a workload. Both hybrid
 settings are validated in one NVLink domain and across NVLink domains joined by GIN.
 Across domains, role specialization runs the directional hybrid when every domain
 holds one role, and the union hybrid otherwise ([design](design.md), sections 6 and 7).
+A per-domain FFN prefix puts both roles in every domain, so it runs the union hybrid with
+per-rank roles (section 20).
 The directional hybrid always signals only the channels that carry tokens (the sparse
 directional hybrid, section 17 and [sparse-hybrid.md](sparse-hybrid.md)); there is
 nothing to set. The opt-in mixed-role path (`AFDEP_MIXED_HYBRID`, section 18) changes
