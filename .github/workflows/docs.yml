@@ -1,0 +1,57 @@
+name: docs
+
+# Pages serves the gh-pages branch: main at the root, each same-repo PR under
+# pr-preview/pr-N/ (linked in a PR comment, removed when the PR closes).
+on:
+  push:
+    branches: [main]
+    paths: [docs/**, website/**, .github/workflows/docs.yml]
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+    paths: [docs/**, website/**, .github/workflows/docs.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        if: github.event.action != 'closed'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Build
+        if: github.event.action != 'closed'
+        working-directory: website
+        env:
+          BASE_URL: ${{ github.event_name == 'pull_request' && format('/afdEP-comm/pr-preview/pr-{0}/', github.event.number) || '/afdEP-comm/' }}
+        run: |
+          npm ci
+          npm run build
+          touch build/.nojekyll
+      - name: Preview
+        # Fork PRs get a read-only token, so they build without a preview.
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: website/build
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+      - name: Deploy
+        if: github.event_name != 'pull_request'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: website/build
+          branch: gh-pages
+          clean-exclude: pr-preview/
+          force: false
