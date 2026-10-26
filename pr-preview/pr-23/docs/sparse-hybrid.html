@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-sparse-hybrid" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.10.2">
+<title data-rh="true">Sparse directional hybrid | afdEP-comm</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://afdep.github.io/afdEP-comm/pr-preview/pr-23/docs/sparse-hybrid"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Sparse directional hybrid | afdEP-comm"><meta data-rh="true" name="description" content="From 1.1.0, when every NVLink domain holds one role, afdEP-comm&#x27;s directional protocol"><meta data-rh="true" property="og:description" content="From 1.1.0, when every NVLink domain holds one role, afdEP-comm&#x27;s directional protocol"><link data-rh="true" rel="canonical" href="https://afdep.github.io/afdEP-comm/pr-preview/pr-23/docs/sparse-hybrid"><link data-rh="true" rel="alternate" href="https://afdep.github.io/afdEP-comm/pr-preview/pr-23/docs/sparse-hybrid" hreflang="en"><link data-rh="true" rel="alternate" href="https://afdep.github.io/afdEP-comm/pr-preview/pr-23/docs/sparse-hybrid" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Sparse directional hybrid","item":"https://afdep.github.io/afdEP-comm/pr-preview/pr-23/docs/sparse-hybrid"}]}</script><link rel="stylesheet" href="/afdEP-comm/pr-preview/pr-23/assets/css/styles.6dee7785.css">
+<script src="/afdEP-comm/pr-preview/pr-23/assets/js/runtime~main.b7447d95.js" defer="defer"></script>
+<script src="/afdEP-comm/pr-preview/pr-23/assets/js/main.e81ac951.js" defer="defer"></script>
+</head>
+<body>
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><link rel="preload" as="image" href="/afdEP-comm/pr-preview/pr-23/afdep-logo.png"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/afdEP-comm/pr-preview/pr-23/"><div class="navbar__logo"><img src="/afdEP-comm/pr-preview/pr-23/afdep-logo.png" alt="afdEP-comm" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/afdEP-comm/pr-preview/pr-23/afdep-logo.png" alt="afdEP-comm" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div></a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/afdEP-comm/pr-preview/pr-23/docs/api">Docs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/afdEP/afdEP-comm" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/afdEP-comm/pr-preview/pr-23/docs/api"><span class="linkLabel_WmDU">API contract</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/afdEP-comm/pr-preview/pr-23/docs/design"><span class="linkLabel_WmDU">afdEP-comm: DeepEP V2 specialized for AFD roles</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" href="/afdEP-comm/pr-preview/pr-23/docs/sparse-hybrid"><span class="linkLabel_WmDU">Sparse directional hybrid</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/afdEP-comm/pr-preview/pr-23/docs/validation"><span class="linkLabel_WmDU">V0 validation</span></a></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/afdEP-comm/pr-preview/pr-23/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Sparse directional hybrid</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Sparse directional hybrid</h1></header>
+<p>From 1.1.0, when every NVLink domain holds one role, afdEP-comm&#x27;s directional protocol
+signals only the channels that carry tokens. It is part of the protocol, not an option:
+there is nothing to set, and it runs wherever the directional hybrid runs. This page
+shows what it adds; the design and the correctness argument are in
+<a class="" href="/afdEP-comm/pr-preview/pr-23/docs/design#17-sparse-directional-hybrid-default-across-nvlink-domains">design.md §17</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-cost-it-removes">The cost it removes<a href="#the-cost-it-removes" class="hash-link" aria-label="Direct link to The cost it removes" title="Direct link to The cost it removes" translate="no">​</a></h2>
+<p>Across NVLink domains, DeepEP&#x27;s hybrid transport splits every exchange into C channels
+(192 with 24 SMs), and each channel completes with a signal whether it carried tokens
+or not. In AFD the traffic flows one way, so these signals converge on the few FFN NICs:</p>
+<ul>
+<li class="">in dispatch, each of S Attention domains sends a finish tail on all C channels, S·C
+RDMA atomics into each FFN NIC (2,112 at 11:1);</li>
+<li class="">in combine, the FFN signals every Attention domain on every channel, another S·C out of
+the same NIC;</li>
+<li class="">token i of every source rides channel i mod C, so at small batches every source&#x27;s
+first tokens queue on the same FFN forward warp.</li>
+</ul>
+<p>At decode batch sizes this synchronization, not the data, sets the round trip: with the
+dense protocol of 1.0.0, one token per Attention GPU at 11:1 takes 231 µs, and 128 tokens
+take only twice that.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-it-does">What it does<a href="#what-it-does" class="hash-link" aria-label="Direct link to What it does" title="Direct link to What it does" translate="no">​</a></h2>
+<ul>
+<li class=""><strong>Stagger.</strong> Source s starts its tokens at channel s·C/S, so the sources&#x27; first tokens
+land on different FFN forward warps, SMs and queue pairs. A channel still carries at
+most ceil(T/C) tokens of a source.</li>
+<li class=""><strong>Sparse dispatch.</strong> Each source first sends its token count, one word per FFN rail
+peer. Channels that carried nothing send no finish tail, and FFN forwarders retire them
+from the count. An FFN NIC takes S·min(T, C) finish atomics plus S count words instead
+of S·C.</li>
+<li class=""><strong>Sparse combine.</strong> The FFN signals a source only on the channels where it replied to
+that source, plus channel 0 to every source. Channel 0 is a done witness, sent only
+after every forward warp has finished reading the exchange, so no source can start the
+next exchange and overwrite a buffer still in use, even a source that sent nothing.</li>
+</ul>
+<p>The three parts change the wire protocol together: construction checks that every rank
+resolved them alike and rejects a mismatch instead of hanging.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="where-it-runs">Where it runs<a href="#where-it-runs" class="hash-link" aria-label="Direct link to Where it runs" title="Direct link to Where it runs" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Topology</th><th>Protocol</th></tr></thead><tbody><tr><td>Several NVLink domains, each holding one role (directional hybrid)</td><td>Sparse, always</td></tr><tr><td>One NVLink domain</td><td>Unchanged: the sparse kernels and launch branches require two or more NVLink domains</td></tr><tr><td>FFN GPUs sharing a domain with Attention GPUs</td><td>Union hybrid, or the opt-in mixed-role protocol (<a class="" href="/afdEP-comm/pr-preview/pr-23/docs/design#18-mixed-role-directional-hybrid-opt-in-ffn-ranks-sharing-an-nvlink-domain">§18</a>); sparse does not apply yet</td></tr><tr><td>The baseline, FastAFD&#x27;s DeepEP M2N</td><td>Not affected: it runs DeepEP V2 unspecialized</td></tr></tbody></table>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-it-adds">What it adds<a href="#what-it-adds" class="hash-link" aria-label="Direct link to What it adds" title="Direct link to What it adds" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="round-trip">Round trip<a href="#round-trip" class="hash-link" aria-label="Direct link to Round trip" title="Direct link to Round trip" translate="no">​</a></h3>
+<p>Communication only: one dispatch plus combine round trip under CUDA graphs, maximum over
+Attention ranks, 2 fresh processes per arm, paired against the dense protocol of 1.0.0
+(native tree <code>958652a3</code>, which differs from the 1.0.0 release tree <code>131efc37</code> only in
+comments). Top-8 of 128 experts, capacity 2,048, 24 SMs, H200 over InfiniBand (NCCL GIN).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Layout, payload, tree</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">32</th><th style="text-align:right">128</th><th style="text-align:right">256</th><th style="text-align:right">512</th></tr></thead><tbody><tr><td>11:1, 12 single-role domains (12 × 2 H200), FP8, hidden 2048, <code>200944ce</code></td><td style="text-align:right">231.5 → 73.8 µs, <strong>−68.1%</strong></td><td style="text-align:right">259.5 → 86.2, <strong>−66.8%</strong></td><td style="text-align:right">285.0 → 140.5, <strong>−50.7%</strong></td><td style="text-align:right">461.0 → 428.1, −7.1%</td><td style="text-align:right">712.4 → 691.2, −3.0%</td><td style="text-align:right">1,220.1 → 1,221.1, +0.1%</td></tr><tr><td>Two FFN domains, 4F:20A (12 × 2 H200), FP8, hidden 2048, <code>200944ce</code></td><td style="text-align:right">207.9 → 68.5, <strong>−67.1%</strong></td><td style="text-align:right">221.0 → 79.0, <strong>−64.3%</strong></td><td style="text-align:right">240.0 → 127.2, <strong>−47.0%</strong></td><td style="text-align:right">403.5 → 368.8, −8.6%</td><td style="text-align:right">615.1 → 604.6, −1.7%</td><td style="text-align:right">–</td></tr><tr><td>Three Attention domains, 2F:6A (4 × 2 H200), FP8, hidden 2048, <code>200944ce</code></td><td style="text-align:right">99.7 → 65.9, <strong>−33.9%</strong></td><td style="text-align:right">115.7 → 74.4, <strong>−35.7%</strong></td><td style="text-align:right">121.2 → 85.5, <strong>−29.5%</strong></td><td style="text-align:right">166.8 → 156.8, −6.0%</td><td style="text-align:right">244.4 → 235.6, −3.6%</td><td style="text-align:right">–</td></tr><tr><td>5:1, 4F:20A (6 × 4 H200), FP8, hidden 2048, <code>7b8ed8b5</code> (done witness)</td><td style="text-align:right">138.0 → 70.7, <strong>−48.8%</strong></td><td style="text-align:right">155.5 → 82.3, <strong>−47.1%</strong></td><td style="text-align:right">164.6 → 97.7, <strong>−40.7%</strong></td><td style="text-align:right">235.2 → 226.8, −3.6%</td><td style="text-align:right">–</td><td style="text-align:right">604.3 → 603.8, −0.1%</td></tr><tr><td>5:1, 4F:20A (6 × 4 H200), BF16, hidden 4096, <code>34fa5eac</code> (done witness)</td><td style="text-align:right">163.5 → 79.5, <strong>−51.4%</strong></td><td style="text-align:right">208.5 → 97.6, <strong>−53.2%</strong></td><td style="text-align:right">234.7 → 141.4, <strong>−39.8%</strong></td><td style="text-align:right">410.1 → 400.3, −2.4%</td><td style="text-align:right">696.7 → 692.4, −0.6%</td><td style="text-align:right">–</td></tr><tr><td>5:1, 4F:20A (6 × 4 H200), BF16, hidden 4096, <code>21298d5b</code> (1.1.0, no switch set) against <code>8e63d39f</code></td><td style="text-align:right">163.1 → 79.1, <strong>−51.5%</strong></td><td style="text-align:right">206.8 → 97.3, <strong>−53.0%</strong></td><td style="text-align:right">231.8 → 136.6, <strong>−41.1%</strong></td><td style="text-align:right">408.2 → 396.6, −2.8%</td><td style="text-align:right">694.1 → 689.5, −0.7%</td><td style="text-align:right">1,278.3 → 1,289.6, +0.9%</td></tr><tr><td>5:1, 4F:20A (6 × 4 H200), FP8, hidden 2048, <code>21298d5b</code> (1.1.0, no switch set) against <code>8e63d39f</code></td><td style="text-align:right">138.8 → 70.3, <strong>−49.3%</strong></td><td style="text-align:right">155.0 → 83.1, <strong>−46.4%</strong></td><td style="text-align:right">164.6 → 97.9, <strong>−40.6%</strong></td><td style="text-align:right">236.9 → 224.9, −5.1%</td><td style="text-align:right">–</td><td style="text-align:right">607.5 → 605.5, −0.3%</td></tr></tbody></table>
+<p>The gain grows with the number of Attention domains, because each one adds C signals to
+the FFN NICs: −34% at one token with three, −49% with five and −68% with eleven. It holds
+with two FFN domains, and it fades once the data dominates, from about 128 tokens per
+Attention GPU. Against FastAFD&#x27;s DeepEP M2N, one token at 11:1 takes 73.8 µs instead of
+339.4 µs (−78%, against an earlier unpaired baseline run), and at 5:1 with hidden 4096,
+79.1 µs instead of 205.5 µs on the 1.1.0 tree (−62%, paired in the same screen).</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/results-xn-sparse-dark.svg">
+  <img decoding="async" loading="lazy" alt="Sparse directional hybrid against the dense 1.0.0 protocol and FastAFD&#x27;s DeepEP M2N at 11:1 over 12 domains" src="assets/results-xn-sparse.svg" class="img_ev3q">
+</picture>
+<p>The parts compound. At 11:1 and one token, the stagger alone gains 12% and sparse
+dispatch alone 34%; together 43%, and sparse combine, worth 2% alone, takes the
+three to 68%. Once the stagger spreads the replies over many channels, the outbound
+combine signals become the critical path, and sparse combine removes them (our reading of
+the timings, not yet traced). Every part&#x27;s screen is in the
+<a href="#numbers" class="">numbers below</a>.</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/results-xn-scaling-dark.svg">
+  <img decoding="async" loading="lazy" alt="Sparse directional hybrid at other layouts" src="assets/results-xn-scaling.svg" class="img_ev3q">
+</picture>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="serving">Serving<a href="#serving" class="hash-link" aria-label="Direct link to Serving" title="Direct link to Serving" translate="no">​</a></h3>
+<p>Qwen3-235B-A22B-FP8 under vLLM with the AFD plugin, 20 Attention GPUs and 4 FFN GPUs on
+six 4 × H200 pods joined by InfiniBand, 4,096 input and 2,048 output tokens, one wave per
+load (one run each, no repeats). The dense arm ran 1.0.0, the sparse arm the cross-node
+tree <code>34fa5eac</code> with all three parts:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Requests per Attention GPU</th><th style="text-align:right">4</th><th style="text-align:right">16</th><th style="text-align:right">32</th><th style="text-align:right">64</th></tr></thead><tbody><tr><td>Median TPOT, dense, ms</td><td style="text-align:right">43.5</td><td style="text-align:right">51.9</td><td style="text-align:right">58.9</td><td style="text-align:right">72.8</td></tr><tr><td>Median TPOT, sparse, ms</td><td style="text-align:right">32.5</td><td style="text-align:right">39.8</td><td style="text-align:right">47.6</td><td style="text-align:right">65.1</td></tr><tr><td>TPOT change</td><td style="text-align:right"><strong>−25.4%</strong></td><td style="text-align:right"><strong>−23.3%</strong></td><td style="text-align:right"><strong>−19.1%</strong></td><td style="text-align:right"><strong>−10.5%</strong></td></tr><tr><td>Decode tokens/s change</td><td style="text-align:right">+34.0%</td><td style="text-align:right">+30.5%</td><td style="text-align:right">+23.6%</td><td style="text-align:right">+11.6%</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-it-costs">What it costs<a href="#what-it-costs" class="hash-link" aria-label="Direct link to What it costs" title="Direct link to What it costs" translate="no">​</a></h3>
+<ul>
+<li class=""><strong>The done witness.</strong> Waiting for every forward warp before channel 0 signals costs
+5 µs (+6.6%) at 8 tokens at 5:1 against the earlier, unsafe witness, and is within
+±1.2% elsewhere; the round trip there is still 47% below the dense protocol.</li>
+<li class=""><strong>Large batches gain little.</strong> From 128 tokens per Attention GPU the gain falls to 2–9%,
+and at 256 and 512 tokens to 0–4%. One cell measured slower than dense: +0.9% at 512
+tokens with BF16 and hidden 4096 on the 1.1.0 tree, in both repeats; with FP8 at
+hidden 2048 the same tree measured −0.3% at 512.</li>
+<li class=""><strong>Per exchange:</strong> one count word per source to each FFN rail peer, and the FFN dispatch
+waits for and clears every count at exit.</li>
+<li class=""><strong>Code:</strong> four generated kernel copies (<code>afdep_source_hybrid_dispatch.cuh</code>,
+<code>afdep_ffn_sparse_hybrid_dispatch.cuh</code>, <code>afdep_ffn_sparse_hybrid_combine.cuh</code>,
+<code>afdep_sparse_hybrid_collect.cuh</code>) and one header of protocol words. A protocol bug
+would show as a hang or wrong values rather than a slowdown, which is why the
+correctness tests below include faults and a negative control.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="validation">Validation<a href="#validation" class="hash-link" aria-label="Direct link to Validation" title="Direct link to Validation" translate="no">​</a></h2>
+<p>The GPU suite runs 14 to 16 eager cases, 28 graph replays and 728 checked graph exchanges
+per run, including empty, inactive and all-skipped sources, skewed routes, delayed
+replies and dispatches, changing graph inputs and bucket cycles. It passed with the
+sparse protocol on:</p>
+<ul>
+<li class=""><code>0c22f278</code> and <code>200944ce</code>, 24 ranks over 12 × 2 H200: FP8 at capacities 8 and 64, with
+one and two FFN domains;</li>
+<li class=""><code>2d22e5e9</code>, 6 × 4 H200 (4 FFN + 20 Attention ranks), FP8, capacity 8;</li>
+<li class=""><code>7b8ed8b5</code>, the first tree with the done witness, 6 × 4 H200, FP8, capacity 2,048, with
+and without forward warps delayed by about 200 µs;</li>
+<li class=""><code>34fa5eac</code>, the shipped cross-node tree, 6 × 4 H200: FP8 and BF16, 4 FFN + 20 Attention
+and 8 FFN + 16 Attention ranks, capacities 8 and 64, every run passing on all six pods;</li>
+<li class=""><code>21298d5b</code>, the 1.1.0 tree with no switch set, 6 × 4 H200: FP8 and BF16, 4 FFN + 20
+Attention and 8 FFN + 16 Attention ranks at capacities 8 and 64, and 4 + 20 at capacity
+2,048 with 24 SMs, every run passing on all six pods (832 checked graph exchanges per
+rank at capacity 8). Both ablation controls set on every rank pass too:
+<code>AFDEP_SHARED_HYBRID_FORWARD=1</code> (stagger and sparse combine without sparse dispatch) and
+<code>AFDEP_SHARED_HYBRID_COLLECT=1</code> (stagger and sparse dispatch without sparse combine).</li>
+</ul>
+<p>As a negative control, a collect that waits only for channel 0 (<code>f92c479c</code>) fails with
+value mismatches. A shape control set on one role only (for example an FFN-only
+<code>AFDEP_SHARED_HYBRID_FORWARD=1</code>) is rejected with the agreement error on every rank,
+on the 1.1.0 tree as before (all six pods report it, none hangs).</p>
+<p>Not suite-validated: 8-GPU NVLink domains (measured in section 19&#x27;s transport screens, not
+suite-run) and worlds larger than 24 ranks. Record:
+<a href="/afdEP-comm/pr-preview/pr-23/assets/files/validation-sparse-hybrid-7da9f427c78be107ebc1100980a9b9f8.json" target="_blank" class="">validation-sparse-hybrid.json</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="comparing-with-the-dense-protocol">Comparing with the dense protocol<a href="#comparing-with-the-dense-protocol" class="hash-link" aria-label="Direct link to Comparing with the dense protocol" title="Direct link to Comparing with the dense protocol" translate="no">​</a></h2>
+<p>There is no switch to turn it off. To measure against the dense protocol, run 1.0.0 as
+its own arm, as the screens above did: <code>benchmarks/screen.py</code> takes a <code>_tree</code> per arm and
+checks each arm&#x27;s native digest. The <code>AFDEP_SHARED_HYBRID_*</code> and
+<code>AFDEP_SHARED_ROLE_KERNELS</code> ablation controls also turn parts of it off, but they change
+the kernel shapes as well, so they are not a clean comparison. Set them on every rank,
+or construction rejects the mismatch.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="why-it-is-an-afd-change">Why it is an AFD change<a href="#why-it-is-an-afd-change" class="hash-link" aria-label="Direct link to Why it is an AFD change" title="Direct link to Why it is an AFD change" translate="no">​</a></h2>
+<p>afdEP-comm ships only changes that depend on the AFD roles. This one exists only in the
+single-role directional protocol, and its correctness depends on each phase flowing one
+way: Attention domains receive only combine signals, and FFN domains receive only
+dispatch traffic. The S:1 ratio of Attention to FFN domains is what concentrates the
+signals on the FFN NICs. Signalling only used channels might also help DeepEP&#x27;s own union
+hybrid at small batches; that is neither implemented nor measured here.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="numbers">Numbers<a href="#numbers" class="hash-link" aria-label="Direct link to Numbers" title="Direct link to Numbers" translate="no">​</a></h2>
+<p>H200 joined by InfiniBand (NCCL GIN), FP8, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks; the dense directional protocol on <code>958652a3</code> (1.0.0), the sparse parts on the tree each table names. Each part was measured with the opt-in switches it had before 1.1.0. Records: <a href="/afdEP-comm/pr-preview/pr-23/assets/files/validation-sparse-hybrid-7da9f427c78be107ebc1100980a9b9f8.json" target="_blank" class="">validation-sparse-hybrid.json</a> and, for the plotted series, <a href="/afdEP-comm/pr-preview/pr-23/assets/files/benchmarks-16e79a2a64e1983d82a6e3483c04312d.json" target="_blank" class="">benchmarks.json</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>All three parts (200944ce, before the done witness), 11:1 over 12 domains</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">16</th><th style="text-align:right">32</th><th style="text-align:right">64</th><th style="text-align:right">128</th><th style="text-align:right">256</th><th style="text-align:right">512</th></tr></thead><tbody><tr><td>Dense directional (1.0.0), µs</td><td style="text-align:right">231.5</td><td style="text-align:right">259.5</td><td style="text-align:right">266.3</td><td style="text-align:right">285.0</td><td style="text-align:right">320.9</td><td style="text-align:right">461.0</td><td style="text-align:right">712.4</td><td style="text-align:right">1,220.1</td></tr><tr><td>Sparse directional, µs</td><td style="text-align:right">73.8</td><td style="text-align:right">86.2</td><td style="text-align:right">100.4</td><td style="text-align:right">140.5</td><td style="text-align:right">235.1</td><td style="text-align:right">428.1</td><td style="text-align:right">691.2</td><td style="text-align:right">1,221.1</td></tr><tr><td>Sparse directional vs dense</td><td style="text-align:right">−68.1%</td><td style="text-align:right">−66.8%</td><td style="text-align:right">−62.3%</td><td style="text-align:right">−50.7%</td><td style="text-align:right">−26.7%</td><td style="text-align:right">−7.1%</td><td style="text-align:right">−3.0%</td><td style="text-align:right">+0.1%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Stagger and sparse dispatch, 11:1</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">16</th><th style="text-align:right">32</th><th style="text-align:right">64</th><th style="text-align:right">128</th></tr></thead><tbody><tr><td>Dense directional (1.0.0), µs</td><td style="text-align:right">231.3</td><td style="text-align:right">259.9</td><td style="text-align:right">266.8</td><td style="text-align:right">285.2</td><td style="text-align:right">321.4</td><td style="text-align:right">460.7</td></tr><tr><td>Stagger only, µs</td><td style="text-align:right">202.7</td><td style="text-align:right">215.0</td><td style="text-align:right">225.9</td><td style="text-align:right">260.8</td><td style="text-align:right">323.5</td><td style="text-align:right">470.8</td></tr><tr><td>Sparse dispatch only, µs</td><td style="text-align:right">153.1</td><td style="text-align:right">183.8</td><td style="text-align:right">194.7</td><td style="text-align:right">221.5</td><td style="text-align:right">277.6</td><td style="text-align:right">441.0</td></tr><tr><td>Stagger + sparse dispatch, µs</td><td style="text-align:right">131.0</td><td style="text-align:right">144.3</td><td style="text-align:right">154.2</td><td style="text-align:right">197.9</td><td style="text-align:right">280.8</td><td style="text-align:right">452.3</td></tr><tr><td>Stagger only vs dense</td><td style="text-align:right">−12.4%</td><td style="text-align:right">−17.3%</td><td style="text-align:right">−15.3%</td><td style="text-align:right">−8.5%</td><td style="text-align:right">+0.7%</td><td style="text-align:right">+2.2%</td></tr><tr><td>Sparse dispatch only vs dense</td><td style="text-align:right">−33.8%</td><td style="text-align:right">−29.3%</td><td style="text-align:right">−27.0%</td><td style="text-align:right">−22.3%</td><td style="text-align:right">−13.6%</td><td style="text-align:right">−4.3%</td></tr><tr><td>Stagger + sparse dispatch vs dense</td><td style="text-align:right">−43.4%</td><td style="text-align:right">−44.5%</td><td style="text-align:right">−42.2%</td><td style="text-align:right">−30.6%</td><td style="text-align:right">−12.6%</td><td style="text-align:right">−1.8%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Sparse combine, 11:1</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">16</th><th style="text-align:right">32</th><th style="text-align:right">64</th><th style="text-align:right">128</th></tr></thead><tbody><tr><td>Dense directional (1.0.0), µs</td><td style="text-align:right">231.7</td><td style="text-align:right">260.0</td><td style="text-align:right">266.2</td><td style="text-align:right">285.1</td><td style="text-align:right">321.1</td><td style="text-align:right">460.9</td></tr><tr><td>Sparse combine only, µs</td><td style="text-align:right">226.0</td><td style="text-align:right">255.7</td><td style="text-align:right">264.8</td><td style="text-align:right">284.5</td><td style="text-align:right">320.4</td><td style="text-align:right">460.3</td></tr><tr><td>Sparse dispatch + combine, µs</td><td style="text-align:right">151.5</td><td style="text-align:right">180.8</td><td style="text-align:right">194.0</td><td style="text-align:right">221.1</td><td style="text-align:right">276.5</td><td style="text-align:right">440.9</td></tr><tr><td>Sparse directional, µs</td><td style="text-align:right">74.3</td><td style="text-align:right">86.3</td><td style="text-align:right">100.4</td><td style="text-align:right">140.8</td><td style="text-align:right">235.5</td><td style="text-align:right">428.0</td></tr><tr><td>Sparse combine only vs dense</td><td style="text-align:right">−2.4%</td><td style="text-align:right">−1.6%</td><td style="text-align:right">−0.5%</td><td style="text-align:right">−0.2%</td><td style="text-align:right">−0.2%</td><td style="text-align:right">−0.1%</td></tr><tr><td>Sparse dispatch + combine vs dense</td><td style="text-align:right">−34.6%</td><td style="text-align:right">−30.5%</td><td style="text-align:right">−27.1%</td><td style="text-align:right">−22.4%</td><td style="text-align:right">−13.9%</td><td style="text-align:right">−4.3%</td></tr><tr><td>Sparse directional vs dense</td><td style="text-align:right">−67.9%</td><td style="text-align:right">−66.8%</td><td style="text-align:right">−62.3%</td><td style="text-align:right">−50.6%</td><td style="text-align:right">−26.6%</td><td style="text-align:right">−7.1%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Stagger at every size against a bound of 48 tokens (a former option), 11:1</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">16</th><th style="text-align:right">32</th><th style="text-align:right">48</th><th style="text-align:right">64</th><th style="text-align:right">128</th></tr></thead><tbody><tr><td>Dense directional (1.0.0), µs</td><td style="text-align:right">231.6</td><td style="text-align:right">260.2</td><td style="text-align:right">266.3</td><td style="text-align:right">285.0</td><td style="text-align:right">300.1</td><td style="text-align:right">321.5</td><td style="text-align:right">460.7</td></tr><tr><td>Sparse dispatch + combine, µs</td><td style="text-align:right">148.3</td><td style="text-align:right">179.8</td><td style="text-align:right">193.4</td><td style="text-align:right">221.2</td><td style="text-align:right">247.7</td><td style="text-align:right">277.3</td><td style="text-align:right">441.0</td></tr><tr><td>+ stagger up to 48 tokens, µs</td><td style="text-align:right">74.2</td><td style="text-align:right">86.2</td><td style="text-align:right">100.2</td><td style="text-align:right">140.6</td><td style="text-align:right">188.8</td><td style="text-align:right">277.5</td><td style="text-align:right">440.8</td></tr><tr><td>+ stagger at every size, µs</td><td style="text-align:right">74.0</td><td style="text-align:right">86.3</td><td style="text-align:right">100.4</td><td style="text-align:right">140.6</td><td style="text-align:right">188.5</td><td style="text-align:right">236.1</td><td style="text-align:right">428.6</td></tr><tr><td>Sparse dispatch + combine vs dense</td><td style="text-align:right">−36.0%</td><td style="text-align:right">−30.9%</td><td style="text-align:right">−27.4%</td><td style="text-align:right">−22.4%</td><td style="text-align:right">−17.5%</td><td style="text-align:right">−13.7%</td><td style="text-align:right">−4.3%</td></tr><tr><td>+ stagger up to 48 tokens vs dense</td><td style="text-align:right">−68.0%</td><td style="text-align:right">−66.9%</td><td style="text-align:right">−62.4%</td><td style="text-align:right">−50.7%</td><td style="text-align:right">−37.1%</td><td style="text-align:right">−13.7%</td><td style="text-align:right">−4.3%</td></tr><tr><td>+ stagger at every size vs dense</td><td style="text-align:right">−68.0%</td><td style="text-align:right">−66.8%</td><td style="text-align:right">−62.3%</td><td style="text-align:right">−50.7%</td><td style="text-align:right">−37.2%</td><td style="text-align:right">−26.6%</td><td style="text-align:right">−7.0%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Two FFN domains, 4F:20A (12 × 2 H200)</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">16</th><th style="text-align:right">32</th><th style="text-align:right">64</th><th style="text-align:right">128</th><th style="text-align:right">256</th></tr></thead><tbody><tr><td>Dense directional (1.0.0), µs</td><td style="text-align:right">207.9</td><td style="text-align:right">221.0</td><td style="text-align:right">224.4</td><td style="text-align:right">240.0</td><td style="text-align:right">288.7</td><td style="text-align:right">403.5</td><td style="text-align:right">615.1</td></tr><tr><td>Sparse directional, µs</td><td style="text-align:right">68.5</td><td style="text-align:right">79.0</td><td style="text-align:right">90.9</td><td style="text-align:right">127.2</td><td style="text-align:right">209.0</td><td style="text-align:right">368.8</td><td style="text-align:right">604.6</td></tr><tr><td>Sparse directional vs dense</td><td style="text-align:right">−67.1%</td><td style="text-align:right">−64.3%</td><td style="text-align:right">−59.5%</td><td style="text-align:right">−47.0%</td><td style="text-align:right">−27.6%</td><td style="text-align:right">−8.6%</td><td style="text-align:right">−1.7%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Three Attention domains, 2F:6A (4 × 2 H200)</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">16</th><th style="text-align:right">32</th><th style="text-align:right">64</th><th style="text-align:right">128</th><th style="text-align:right">256</th></tr></thead><tbody><tr><td>Dense directional (1.0.0), µs</td><td style="text-align:right">99.7</td><td style="text-align:right">115.7</td><td style="text-align:right">118.8</td><td style="text-align:right">121.2</td><td style="text-align:right">132.1</td><td style="text-align:right">166.8</td><td style="text-align:right">244.4</td></tr><tr><td>Sparse directional, µs</td><td style="text-align:right">65.9</td><td style="text-align:right">74.4</td><td style="text-align:right">77.0</td><td style="text-align:right">85.5</td><td style="text-align:right">103.2</td><td style="text-align:right">156.8</td><td style="text-align:right">235.6</td></tr><tr><td>Sparse directional vs dense</td><td style="text-align:right">−33.9%</td><td style="text-align:right">−35.7%</td><td style="text-align:right">−35.2%</td><td style="text-align:right">−29.5%</td><td style="text-align:right">−21.9%</td><td style="text-align:right">−6.0%</td><td style="text-align:right">−3.6%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>5:1, 6 single-role domains (6 × 4 H200)</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">32</th><th style="text-align:right">128</th><th style="text-align:right">512</th></tr></thead><tbody><tr><td>Dense directional (1.0.0), µs</td><td style="text-align:right">137.8</td><td style="text-align:right">155.3</td><td style="text-align:right">165.0</td><td style="text-align:right">235.1</td><td style="text-align:right">604.8</td></tr><tr><td>Sparse directional, µs</td><td style="text-align:right">70.5</td><td style="text-align:right">76.8</td><td style="text-align:right">97.7</td><td style="text-align:right">229.4</td><td style="text-align:right">604.8</td></tr><tr><td>FastAFD&#x27;s DeepEP M2N, µs</td><td style="text-align:right">185.4</td><td style="text-align:right">193.6</td><td style="text-align:right">210.7</td><td style="text-align:right">277.9</td><td style="text-align:right">636.0</td></tr><tr><td>Sparse directional vs dense</td><td style="text-align:right">−48.8%</td><td style="text-align:right">−50.5%</td><td style="text-align:right">−40.8%</td><td style="text-align:right">−2.4%</td><td style="text-align:right">−0.0%</td></tr><tr><td>FastAFD&#x27;s DeepEP M2N vs dense</td><td style="text-align:right">+34.5%</td><td style="text-align:right">+24.7%</td><td style="text-align:right">+27.7%</td><td style="text-align:right">+18.2%</td><td style="text-align:right">+5.2%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Done witness cost, 5:1 (6 × 4 H200)</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">32</th><th style="text-align:right">128</th><th style="text-align:right">512</th></tr></thead><tbody><tr><td>Dense directional (1.0.0), µs</td><td style="text-align:right">138.0</td><td style="text-align:right">155.5</td><td style="text-align:right">164.6</td><td style="text-align:right">235.2</td><td style="text-align:right">604.3</td></tr><tr><td>Sparse, earlier witness on channel 0 only (unsafe), µs</td><td style="text-align:right">70.8</td><td style="text-align:right">77.3</td><td style="text-align:right">97.6</td><td style="text-align:right">229.5</td><td style="text-align:right">605.0</td></tr><tr><td>Sparse, done witness after every forward warp, µs</td><td style="text-align:right">70.7</td><td style="text-align:right">82.3</td><td style="text-align:right">97.7</td><td style="text-align:right">226.8</td><td style="text-align:right">603.8</td></tr><tr><td>Sparse, earlier witness on channel 0 only (unsafe) vs dense</td><td style="text-align:right">−48.7%</td><td style="text-align:right">−50.3%</td><td style="text-align:right">−40.7%</td><td style="text-align:right">−2.4%</td><td style="text-align:right">+0.1%</td></tr><tr><td>Sparse, done witness after every forward warp vs dense</td><td style="text-align:right">−48.8%</td><td style="text-align:right">−47.1%</td><td style="text-align:right">−40.7%</td><td style="text-align:right">−3.6%</td><td style="text-align:right">−0.1%</td></tr></tbody></table>
+<p>In one NVLink domain, tree <code>200944ce</code> matches 1.0.0 (<code>958652a3</code>, labelled dense below) with the sparse parts off and on; the later
+done witness runs only with two or more NVLink domains. one NVLink domain of 8 × H200 (one pod), BF16, hidden 2048, top-8 of 128 experts, capacity 2,048, 24 SMs; 2 fresh processes per arm, max over Attention ranks.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>6A:2F</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">32</th><th style="text-align:right">128</th><th style="text-align:right">512</th><th style="text-align:right">2,048</th></tr></thead><tbody><tr><td>afdEP-comm 1.0.0, µs</td><td style="text-align:right">24.3</td><td style="text-align:right">29.3</td><td style="text-align:right">35.5</td><td style="text-align:right">53.2</td><td style="text-align:right">152.0</td><td style="text-align:right">502.0</td></tr><tr><td>Tree 200944ce, sparse parts off, µs</td><td style="text-align:right">24.2</td><td style="text-align:right">29.3</td><td style="text-align:right">35.3</td><td style="text-align:right">53.2</td><td style="text-align:right">151.9</td><td style="text-align:right">501.6</td></tr><tr><td>Tree 200944ce, sparse parts on, µs</td><td style="text-align:right">24.6</td><td style="text-align:right">28.9</td><td style="text-align:right">35.5</td><td style="text-align:right">53.2</td><td style="text-align:right">152.2</td><td style="text-align:right">501.8</td></tr><tr><td>Tree 200944ce, sparse parts off vs 1.0.0</td><td style="text-align:right">−0.6%</td><td style="text-align:right">+0.2%</td><td style="text-align:right">−0.6%</td><td style="text-align:right">+0.0%</td><td style="text-align:right">−0.0%</td><td style="text-align:right">−0.1%</td></tr><tr><td>Tree 200944ce, sparse parts on vs 1.0.0</td><td style="text-align:right">+1.0%</td><td style="text-align:right">−1.2%</td><td style="text-align:right">+0.2%</td><td style="text-align:right">+0.1%</td><td style="text-align:right">+0.2%</td><td style="text-align:right">−0.0%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>7A:1F</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">32</th><th style="text-align:right">128</th><th style="text-align:right">512</th><th style="text-align:right">2,048</th></tr></thead><tbody><tr><td>afdEP-comm 1.0.0, µs</td><td style="text-align:right">23.8</td><td style="text-align:right">27.2</td><td style="text-align:right">34.1</td><td style="text-align:right">70.3</td><td style="text-align:right">202.0</td><td style="text-align:right">736.8</td></tr><tr><td>Tree 200944ce, sparse parts off, µs</td><td style="text-align:right">23.9</td><td style="text-align:right">27.0</td><td style="text-align:right">34.1</td><td style="text-align:right">69.9</td><td style="text-align:right">201.6</td><td style="text-align:right">736.5</td></tr><tr><td>Tree 200944ce, sparse parts on, µs</td><td style="text-align:right">23.9</td><td style="text-align:right">27.1</td><td style="text-align:right">33.8</td><td style="text-align:right">69.5</td><td style="text-align:right">201.9</td><td style="text-align:right">736.7</td></tr><tr><td>Tree 200944ce, sparse parts off vs 1.0.0</td><td style="text-align:right">+0.3%</td><td style="text-align:right">−0.8%</td><td style="text-align:right">−0.0%</td><td style="text-align:right">−0.6%</td><td style="text-align:right">−0.2%</td><td style="text-align:right">−0.0%</td></tr><tr><td>Tree 200944ce, sparse parts on vs 1.0.0</td><td style="text-align:right">+0.5%</td><td style="text-align:right">−0.4%</td><td style="text-align:right">−1.2%</td><td style="text-align:right">−1.0%</td><td style="text-align:right">−0.0%</td><td style="text-align:right">−0.0%</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>4A:4F</th><th style="text-align:right">T=1</th><th style="text-align:right">8</th><th style="text-align:right">32</th><th style="text-align:right">128</th><th style="text-align:right">512</th><th style="text-align:right">2,048</th></tr></thead><tbody><tr><td>afdEP-comm 1.0.0, µs</td><td style="text-align:right">24.3</td><td style="text-align:right">26.6</td><td style="text-align:right">27.8</td><td style="text-align:right">39.6</td><td style="text-align:right">96.0</td><td style="text-align:right">296.3</td></tr><tr><td>Tree 200944ce, sparse parts off, µs</td><td style="text-align:right">24.3</td><td style="text-align:right">26.5</td><td style="text-align:right">27.8</td><td style="text-align:right">39.9</td><td style="text-align:right">96.0</td><td style="text-align:right">296.5</td></tr><tr><td>Tree 200944ce, sparse parts on, µs</td><td style="text-align:right">24.2</td><td style="text-align:right">26.5</td><td style="text-align:right">27.8</td><td style="text-align:right">39.9</td><td style="text-align:right">96.1</td><td style="text-align:right">296.9</td></tr><tr><td>Tree 200944ce, sparse parts off vs 1.0.0</td><td style="text-align:right">+0.0%</td><td style="text-align:right">−0.2%</td><td style="text-align:right">+0.3%</td><td style="text-align:right">+0.8%</td><td style="text-align:right">+0.0%</td><td style="text-align:right">+0.1%</td></tr><tr><td>Tree 200944ce, sparse parts on vs 1.0.0</td><td style="text-align:right">−0.6%</td><td style="text-align:right">−0.1%</td><td style="text-align:right">+0.3%</td><td style="text-align:right">+0.9%</td><td style="text-align:right">+0.2%</td><td style="text-align:right">+0.2%</td></tr></tbody></table></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/afdEP-comm/pr-preview/pr-23/docs/design"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">afdEP-comm: DeepEP V2 specialized for AFD roles</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/afdEP-comm/pr-preview/pr-23/docs/validation"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">V0 validation</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#the-cost-it-removes" class="table-of-contents__link toc-highlight">The cost it removes</a></li><li><a href="#what-it-does" class="table-of-contents__link toc-highlight">What it does</a></li><li><a href="#where-it-runs" class="table-of-contents__link toc-highlight">Where it runs</a></li><li><a href="#what-it-adds" class="table-of-contents__link toc-highlight">What it adds</a><ul><li><a href="#round-trip" class="table-of-contents__link toc-highlight">Round trip</a></li><li><a href="#serving" class="table-of-contents__link toc-highlight">Serving</a></li><li><a href="#what-it-costs" class="table-of-contents__link toc-highlight">What it costs</a></li></ul></li><li><a href="#validation" class="table-of-contents__link toc-highlight">Validation</a></li><li><a href="#comparing-with-the-dense-protocol" class="table-of-contents__link toc-highlight">Comparing with the dense protocol</a></li><li><a href="#why-it-is-an-afd-change" class="table-of-contents__link toc-highlight">Why it is an AFD change</a></li><li><a href="#numbers" class="table-of-contents__link toc-highlight">Numbers</a></li></ul></div></div></div></div></main></div></div></div></div>
+</body>
+</html>
