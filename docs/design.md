@@ -1024,6 +1024,19 @@ Ruff clean. Not yet run: fault injection for the reply-slice and staging orderin
 and a two-buffer interleave.
 ([record](validation-mixed-hybrid.json))
 
+**Fix: domain-0 combine staging with one pure-Attention domain.** The mixed combine moved
+every rank's reply inbox but kept the shared staging condition, which stages domain-0 replies
+in the reserved slice only with two or more pure-Attention domains. With exactly one (two
+domains), an A0 GPU's next dispatch writes its own tokens into its self-lane inbox right after
+domain 0's scale-up barrier, over the default staging, while its NIC may still be reading reply
+rows queued for the pure-Attention domain (about 4 MB at a 512-token bucket in BF16). The
+shipped tree mismatched in 4 of 4 GPU-suite runs on 2 × 4 H200 at F = 1 and 2, BF16, capacity
+512 (0.1–3.1% of the pure-Attention ranks' values); FP8 dispatch at hidden 4096 does not reach the
+staging. Domain 0 now stages in the slice whatever the number of pure-Attention domains; the
+slice was already reserved, so memory and latency are unchanged. On the fixed tree the same four
+runs pass, as do F = 1 to 3 on 2 × 4 and 3 × 4, BF16 and FP8, capacities 8 to 512
+([record](validation-mixed-staging-fix.json)).
+
 Not yet: the section-17 sparse protocol on the mixed path (it would need per-lane
 count retirement for the self lane, and a DONE witness), more than one
 FFN-holding domain, 8-GPU nodes, and a serving run. DBO contract: A0 GPUs join domain 0's

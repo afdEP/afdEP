@@ -774,12 +774,22 @@ MIXED_HYBRID_DISPATCH_EDITS = (
 # own, written locally by their forward warps) in their reduce epilogue, and the default
 # reply inbox can overlap the dispatch inbox a pure-Attention source writes for the next
 # exchange, so every rank keeps its reply inbox in a slice reserved just before the
-# combine staging slice at the window end (calculate_buffer_size).
+# combine staging slice at the window end (calculate_buffer_size). Domain 0 also stages
+# its replies in that staging slice with any number of pure-Attention domains: a
+# domain-0 Attention GPU's next dispatch writes its own tokens into its self-lane inbox
+# right after domain 0's scale-up barrier, over the default staging, which its NIC may
+# still be reading for a pure-Attention domain (one such domain included).
 MIXED_HYBRID_COMBINE_EDITS = (
     (
         "#pragma once\n",
         "#pragma once  // afdEP: generated from hybrid_combine.cuh by "
         "tests/role_kernels.py; do not edit\n",
+    ),
+    (
+        "    if (kAfdDirectional and kNumScaleoutRanks - kAfdFfnScaleoutRanks >= 2 and "
+        "afd_ffn_domain) {\n",
+        "    if (kAfdDirectional and afd_ffn_domain) {  // afdEP mixed: with any "
+        "number of pure-Attention domains\n",
     ),
     (
         "          int kAfdFfnScaleoutRanks = 0,\n",

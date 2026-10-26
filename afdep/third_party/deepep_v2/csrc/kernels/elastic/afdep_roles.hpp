@@ -79,9 +79,11 @@ static int afdep_directional_hybrid(const int afd_ffn_ranks, const int num_scale
 //   region (0,u) still reads afterwards is A0's reply inbox (its reduce epilogue), which
 //   therefore moves, on every rank, into a slice reserved before the combine staging
 //   slice at the window end, past both layouts (calculate_buffer_size).
-// - Forwarders stage AP replies in the section-11 staging slice with two or more AP
-//   domains; A0 never stages dispatch tokens (all are local) and nothing is written into
-//   an AP window except its reply slice and signal words.
+// - Forwarders stage AP replies in the section-11 staging slice with any number of AP
+//   domains: an A0 GPU's next dispatch writes its own tokens into its self-lane inbox right
+//   after domain 0's scale-up barrier, over the default staging its NIC may still be reading
+//   (one AP domain included). A0 never stages dispatch tokens (all are local) and nothing is
+//   written into an AP window except its reply slice and signal words.
 // Returns F, or 0 (union, or the directional protocol when F % U == 0).
 static int afdep_mixed_hybrid(const int afd_ffn_ranks, const int num_scaleout_ranks,
                               const int num_scaleup_ranks) {

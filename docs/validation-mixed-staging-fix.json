@@ -1,0 +1,199 @@
+{
+ "validation": "Mixed-role hybrid (AFDEP_MIXED_HYBRID=1): domain-0 combine staging in the reserved slice with any number of pure-Attention domains",
+ "cluster": "kermit, 4-GPU pods afdep-v21-fg1..fg2 and fe1..fe3 (one per node, one NVLink domain of 4 x H200 each), InfiniBand, GIN",
+ "args": "tests.gpu.deepep --top-k 8 --hybrid on, AFDEP_MIXED_HYBRID=1 (the msf-dir case: directional, no env); tags encode F, payload, capacity, hidden; num-sms 24 for capacity 64 and 512",
+ "shipped_tree": {
+  "native_source_sha256_prefix": "21298d5b",
+  "commit": "dd444f9 (main)",
+  "runs": [
+   {
+    "tag": "ms-main-f2-bf16-c512-h4k-r1",
+    "ok": false,
+    "mismatched": [
+     {
+      "rank": 7,
+      "elements": 62226,
+      "of": 2097152
+     },
+     {
+      "rank": 6,
+      "elements": 65467,
+      "of": 2097152
+     }
+    ]
+   },
+   {
+    "tag": "ms-main-f1-bf16-c512-h2k-r1",
+    "ok": false,
+    "mismatched": [
+     {
+      "rank": 6,
+      "elements": 2603,
+      "of": 1048576
+     },
+     {
+      "rank": 5,
+      "elements": 16803,
+      "of": 1048576
+     }
+    ]
+   },
+   {
+    "tag": "ms-main-f2-bf16-c512-h4k-r2",
+    "ok": false,
+    "mismatched": [
+     {
+      "rank": 6,
+      "elements": 64640,
+      "of": 2097152
+     },
+     {
+      "rank": 7,
+      "elements": 56828,
+      "of": 2097152
+     }
+    ]
+   },
+   {
+    "tag": "ms-main-f1-bf16-c512-h2k-r2",
+    "ok": false,
+    "mismatched": [
+     {
+      "rank": 6,
+      "elements": 1568,
+      "of": 1048576
+     },
+     {
+      "rank": 5,
+      "elements": 8491,
+      "of": 1048576
+     }
+    ]
+   }
+  ]
+ },
+ "fixed_tree": {
+  "native_source_sha256_prefix": "fa4901ee",
+  "runs": [
+   {
+    "tag": "msf-f2-bf16-c512-h4k-r1",
+    "ok": true,
+    "ffn_ranks": [
+     0,
+     1
+    ],
+    "checked_graph_exchanges_per_rank": 936,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf3-f2-bf16-c512-h4k",
+    "ok": true,
+    "ffn_ranks": [
+     0,
+     1
+    ],
+    "checked_graph_exchanges_per_rank": 936,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf3-f2-bf16-c64-h2k",
+    "ok": true,
+    "ffn_ranks": [
+     0,
+     1
+    ],
+    "checked_graph_exchanges_per_rank": 936,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf-f1-bf16-c512-h2k-r1",
+    "ok": true,
+    "ffn_ranks": [
+     0
+    ],
+    "checked_graph_exchanges_per_rank": 936,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf-f2-bf16-c512-h4k-r2",
+    "ok": true,
+    "ffn_ranks": [
+     0,
+     1
+    ],
+    "checked_graph_exchanges_per_rank": 936,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf-f1-bf16-c512-h2k-r2",
+    "ok": true,
+    "ffn_ranks": [
+     0
+    ],
+    "checked_graph_exchanges_per_rank": 936,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf3-f1-fp8-c64-h2k",
+    "ok": true,
+    "ffn_ranks": [
+     0
+    ],
+    "checked_graph_exchanges_per_rank": 832,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf-f3-bf16-c64-h2k",
+    "ok": true,
+    "ffn_ranks": [
+     0,
+     1,
+     2
+    ],
+    "checked_graph_exchanges_per_rank": 936,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf-dir-f4-fp8-c8",
+    "ok": true,
+    "ffn_ranks": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "checked_graph_exchanges_per_rank": 832,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf-f2-fp8-c512-h4k",
+    "ok": true,
+    "ffn_ranks": [
+     0,
+     1
+    ],
+    "checked_graph_exchanges_per_rank": 832,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf-f2-fp8-c8",
+    "ok": true,
+    "ffn_ranks": [
+     0,
+     1
+    ],
+    "checked_graph_exchanges_per_rank": 832,
+    "native_source_sha256_prefix": "fa4901ee"
+   },
+   {
+    "tag": "msf-f1-bf16-c8",
+    "ok": true,
+    "ffn_ranks": [
+     0
+    ],
+    "checked_graph_exchanges_per_rank": 936,
+    "native_source_sha256_prefix": "fa4901ee"
+   }
+  ]
+ }
+}

@@ -107,7 +107,7 @@ afdep_mixed_hybrid_combine_impl(nv_bfloat16* x,
     // Attention domain every signal follows that channel's puts, so only two or more Attention
     // domains need it. The staging then lives in a slice reserved past every dispatch region
     // (sized in calculate_buffer_size).
-    if (kAfdDirectional and kNumScaleoutRanks - kAfdFfnScaleoutRanks >= 2 and afd_ffn_domain) {
+    if (kAfdDirectional and afd_ffn_domain) {  // afdEP mixed: with any number of pure-Attention domains
         EP_DEVICE_ASSERT(afd_scaleout_send_base != nullptr);
         scaleout_send_buffer = layout::BufferLayout<false>(
             token_layout, kAllowMultipleReduction ? 1 : kNumTopk, kNumChannels * (kNumScaleoutRanks * kNumMaxTokensPerChannel),
