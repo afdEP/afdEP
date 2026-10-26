@@ -47,6 +47,38 @@ static bool afdep_directed_exit() {
 // one FFN-holding domain), so these layouts run the union hybrid with per-rank roles: both
 // selectors return 0. Sources still validate their real routes, and translate them to DeepEP's
 // logical experts (afdep_domain_routes.cuh) for dispatch and combine.
+// Silent FFN rails (per-domain FFN prefix): every rail u < f joins FFN GPUs only, none of them a
+// source, so no cross-domain write ever happens on it (no counts, payload, tails, replies or
+// signals) and the rail halves of its barriers order nothing; DeepEP's rail barrier spans rail
+// peers only (ncclTeamTagRail). FFN GPUs then run afdep_domain_hybrid_{dispatch,combine}.cuh, which
+// skip every scale-out action and keep their NVLink work (scale-up counts, list ends, partials) and
+// all three scale-up barriers; Attention rails keep the union protocol unchanged. One protection
+// goes: the FFN GPUs' combine-entry rail barrier held their partials until every domain's dispatch
+// had completed, so an Attention forwarder's NIC had finished reading its dispatch staging, which
+// dispatch kernels end without flushing. Holders now write the forwarder's combine scale-up inbox
+// [0, L * D * b * Bc) right after their scale-up barrier, while that staging, at U * D * b * Bd
+// (hybrid_dispatch.cuh), may still be read; L is the regions holders write (f in the rank layout,
+// top-k otherwise). The two are disjoint when L * Bc <= U * Bd, which 2L <= U guarantees for every
+// payload (a combine row is at most two dispatch rows), so the gate requires it per call and the
+// call runs the union kernels otherwise. Every FFN GPU of a rail decides alike from identical
+// arguments, and the protocols differ only on FFN rails, so switching per call is safe.
+// AFDEP_UNION_HYBRID=1 keeps the union protocol as a measurement control.
+static int afdep_domain_hybrid(const int afd_ffn_ranks, const int num_scaleout_ranks, const int num_scaleup_ranks,
+                               const int afd_ffn_ranks_per_domain) {
+    return afd_ffn_ranks_per_domain > 0 and num_scaleout_ranks > 1 and
+        afd_ffn_ranks == num_scaleout_ranks * afd_ffn_ranks_per_domain and
+        2 * afd_ffn_ranks_per_domain <= num_scaleup_ranks and deep_ep::get_env<int>("AFDEP_UNION_HYBRID", 0) == 0;
+}
+
+// The per-call gate above: the combine scale-up regions FFN GPUs write fit below the dispatch staging.
+static bool afdep_domain_silent_rails(const int afd_ffn_ranks, const int num_scaleout_ranks,
+                                      const int num_scaleup_ranks, const int afd_ffn_ranks_per_domain,
+                                      const int num_topk, const bool allow_multiple_reduction) {
+    const int regions = allow_multiple_reduction and num_scaleup_ranks <= num_topk ? afd_ffn_ranks_per_domain : num_topk;
+    return afdep_domain_hybrid(afd_ffn_ranks, num_scaleout_ranks, num_scaleup_ranks, afd_ffn_ranks_per_domain) > 0 and
+        2 * regions <= num_scaleup_ranks;
+}
+
 // Directional hybrid protocol: when every scale-out (NVLink) domain holds a single
 // role, dispatch traffic (counts, payloads, finish tails) flows Attention -> FFN
 // and combine traffic (payloads, finish signals) FFN -> Attention only; FFN

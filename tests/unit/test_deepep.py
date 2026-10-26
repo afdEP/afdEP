@@ -76,7 +76,7 @@ def runtime(monkeypatch):
     native = Mock()
     native.get_logical_domain_size.return_value = (1, 4)
     native.get_afd_count_first_config.return_value = (0, "full")
-    native.get_afd_sparse_hybrid_config.return_value = (0, False, False, 0, False, 0)
+    native.get_afd_sparse_hybrid_config.return_value = (0, False, False, 0, False, 0, 0)
     native.combine.return_value = (Tensor((2, 256)), None, None)
 
     def dispatch(*args):
@@ -262,14 +262,22 @@ def disagree_on_hybrid_configuration(runtime, other):
 
     def split(values, value, group):
         gather(values, value, group)
-        if value == (0, False, False, 0, False, 0):
+        if value == (0, False, False, 0, False, 0, 0):
             values[1] = other
 
     runtime.dist.all_gather_object = split
 
 
+def test_per_domain_protocol_must_agree(runtime):
+    # AFDEP_UNION_HYBRID=1 on one rank only: silent FFN rails there, union elsewhere.
+    disagree_on_hybrid_configuration(runtime, (0, False, False, 0, False, 0, 1))
+    with pytest.raises(ValueError, match="same hybrid configuration"):
+        elastic(runtime, ffn_ranks=2)
+    runtime.native.destroy.assert_called_once()
+
+
 def test_sparse_hybrid_configuration_must_agree(runtime):
-    disagree_on_hybrid_configuration(runtime, (0, False, False, 2, False, 0))
+    disagree_on_hybrid_configuration(runtime, (0, False, False, 2, False, 0, 0))
     with pytest.raises(ValueError, match="same hybrid configuration"):
         elastic(runtime, ffn_ranks=2)
     runtime.native.destroy.assert_called_once()
@@ -294,6 +302,7 @@ def test_fp8_combine_is_reported_when_every_rank_latched_it(runtime):
         0,
         True,
         64,
+        0,
     )
     transport = elastic(runtime, ffn_ranks=2)
     assert transport.fp8_combine is True and transport.fp8_combine_min_bucket == 64
@@ -309,13 +318,14 @@ def test_fp8_combine_min_bucket_must_agree(runtime):
         0,
         True,
         0,
+        0,
     )
     gather = runtime.dist.all_gather_object
 
     def split(values, value, group):
         gather(values, value, group)
-        if value == (0, False, False, 0, True, 0):
-            values[1] = (0, False, False, 0, True, 64)
+        if value == (0, False, False, 0, True, 0, 0):
+            values[1] = (0, False, False, 0, True, 64, 0)
 
     runtime.dist.all_gather_object = split
     with pytest.raises(ValueError, match="same hybrid configuration"):

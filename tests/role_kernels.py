@@ -21,6 +21,10 @@ the FFN hybrid combine and its sparse copy with FP8 reply rows, combine_reduce
 (combine_utils.cuh) storing its BF16 result as FP8, and the Attention reduce
 epilogue (combine_reduce_epilogue.cuh) dequantizing them.
 
+The per-domain FFN prefix (afdep_roles.hpp, afdep_domain_hybrid) adds two: the
+hybrid dispatch and combine whose FFN GPUs, local ranks [0, f) of every NVLink
+domain, skip every scale-out action, because their rails join FFN GPUs only.
+
 tests/unit/test_deepep_build.py re-derives every copy and requires byte
 equality, so a fix to a shared kernel fails the test until the copies are
 regenerated: python -m tests.role_kernels
@@ -45,6 +49,8 @@ FFN_SPARSE_HYBRID_COMBINE = "afdep_ffn_sparse_hybrid_combine.cuh"
 SPARSE_HYBRID_COLLECT = "afdep_sparse_hybrid_collect.cuh"
 MIXED_HYBRID_DISPATCH = "afdep_mixed_hybrid_dispatch.cuh"
 MIXED_HYBRID_COMBINE = "afdep_mixed_hybrid_combine.cuh"
+DOMAIN_HYBRID_DISPATCH = "afdep_domain_hybrid_dispatch.cuh"
+DOMAIN_HYBRID_COMBINE = "afdep_domain_hybrid_combine.cuh"
 FFN_FP8_HYBRID_COMBINE = "afdep_ffn_fp8_hybrid_combine.cuh"
 FFN_SPARSE_FP8_HYBRID_COMBINE = "afdep_ffn_sparse_fp8_hybrid_combine.cuh"
 FP8_COMBINE_REDUCE = "afdep_fp8_combine_reduce.cuh"
@@ -976,6 +982,110 @@ FP8_COMBINE_EPILOGUE_EDITS = (
 )
 
 
+# Per-domain FFN prefix (afdep_roles.hpp): FFN GPUs are local ranks [0, f) of every
+# NVLink domain, so each of their rails joins FFN GPUs only, none of them a source.
+# They send and wait for no counts, tails or signals across domains and run no rail
+# barrier half; their NVLink work (scale-up counts, list ends, partials, all three
+# scale-up barriers) is the union kernel's.
+DOMAIN_TEMPLATE_NOTE = (
+    "          // afdEP per-domain FFN prefix (afdep_roles.hpp): FFN GPUs are local"
+    " ranks [0, f).\n"
+    "          int kAfdFfnRanksPerDomain = 0,\n"
+)
+DOMAIN_HOLDER = (
+    "    // afdEP per-domain: an FFN GPU's rail joins FFN GPUs only, so it skips every"
+    " scale-out action.\n"
+    "    EP_STATIC_ASSERT(not kAfdDirectional and 0 < kAfdFfnRanksPerDomain and "
+    "kAfdFfnRanksPerDomain < kNumScaleupRanks,\n"
+    '                     "per-domain: the union template with an FFN prefix in every'
+    ' domain");\n'
+    "    const bool afd_holder = scaleup_rank_idx < kAfdFfnRanksPerDomain;\n"
+)
+DOMAIN_HYBRID_DISPATCH_EDITS = (
+    (
+        "#pragma once\n",
+        "#pragma once  // afdEP: generated from hybrid_dispatch.cuh by "
+        "tests/role_kernels.py; do not edit\n",
+    ),
+    (
+        "          bool kAfdSkipAttentionEntrySync = false,\n",
+        "          bool kAfdSkipAttentionEntrySync = false,\n" + DOMAIN_TEMPLATE_NOTE,
+    ),
+    ("hybrid_dispatch_impl(\n", "afdep_domain_hybrid_dispatch_impl(\n"),
+    (
+        "    const bool afd_ffn_domain = scaleout_rank_idx < kAfdFfnScaleoutRanks;\n",
+        "    const bool afd_ffn_domain = scaleout_rank_idx < kAfdFfnScaleoutRanks;\n"
+        + DOMAIN_HOLDER
+        + "    EP_DEVICE_ASSERT(afd_holder and num_tokens == 0);\n",
+    ),
+    (
+        "sm_idx, thread_idx, not kAfdDirectional,\n",
+        "sm_idx, thread_idx, not afd_holder,\n",
+    ),
+    (
+        "                (not kAfdDirectional or (not afd_ffn_domain and thread_idx < "
+        "kAfdFfnScaleoutRanks))) {\n",
+        "                not afd_holder) {  // afdEP per-domain: FFN rails carry no"
+        " counts\n",
+    ),
+    (
+        "                for (int j = kAfdFfnScaleoutRanks; j < kNumScaleoutRanks; ++"
+        " j) {\n",
+        "                for (int j = afd_holder ? kNumScaleoutRanks : "
+        "kAfdFfnScaleoutRanks; j < kNumScaleoutRanks; ++ j) {\n",
+    ),
+    (
+        "    } else if (warp_idx < kNumNotifyWarps + kNumScaleoutWarps and "
+        "(kAfdDirectional and afd_ffn_domain)) {\n",
+        "    } else if (warp_idx < kNumNotifyWarps + kNumScaleoutWarps and"
+        " afd_holder) {\n",
+    ),
+    (
+        "        int stored_finish_flag = lane_idx >= kNumScaleoutRanks or "
+        "lane_idx < kAfdFfnScaleoutRanks;\n",
+        "        int stored_finish_flag = lane_idx >= kNumScaleoutRanks or "
+        "afd_holder;\n",
+    ),
+    (
+        "                if (lane_idx < kNumScaleoutRanks and lane_idx >= "
+        "kAfdFfnScaleoutRanks) {\n",
+        "                if (lane_idx < kNumScaleoutRanks and not afd_holder) {\n",
+    ),
+)
+DOMAIN_HYBRID_COMBINE_EDITS = (
+    (
+        "#pragma once\n",
+        "#pragma once  // afdEP: generated from hybrid_combine.cuh by "
+        "tests/role_kernels.py; do not edit\n",
+    ),
+    (
+        "          int kAfdFfnScaleoutRanks = 0,\n",
+        "          int kAfdFfnScaleoutRanks = 0,\n" + DOMAIN_TEMPLATE_NOTE,
+    ),
+    ("hybrid_combine_impl(", "afdep_domain_hybrid_combine_impl("),
+    (
+        "    const bool afd_ffn_domain = scaleout_rank_idx < kAfdFfnScaleoutRanks;\n",
+        "    const bool afd_ffn_domain = scaleout_rank_idx < kAfdFfnScaleoutRanks;\n"
+        + DOMAIN_HOLDER
+        + "    EP_DEVICE_ASSERT(afd_holder);\n",
+    ),
+    (
+        "sm_idx, thread_idx, not kAfdDirectional,\n",
+        "sm_idx, thread_idx, not afd_holder,\n",
+    ),
+    (
+        "        const bool afd_signal = not kAfdDirectional or (afd_ffn_domain and "
+        "lane_idx >= kAfdFfnScaleoutRanks);\n"
+        "        const bool afd_wait = not kAfdDirectional or (not afd_ffn_domain and "
+        "lane_idx < kAfdFfnScaleoutRanks);\n",
+        "        // afdEP per-domain: FFN rails carry no replies, so no signals either"
+        " way.\n"
+        "        const bool afd_signal = not afd_holder;\n"
+        "        const bool afd_wait = not afd_holder;\n",
+    ),
+)
+
+
 def apply_edits(shared: str, edits) -> str:
     """Apply each edit exactly once."""
     for old, new in edits:
@@ -1045,6 +1155,16 @@ def mixed_hybrid_combine(shared: str) -> str:
     return apply_edits(shared, MIXED_HYBRID_COMBINE_EDITS)
 
 
+def domain_hybrid_dispatch(shared: str) -> str:
+    """The hybrid dispatch whose FFN GPUs skip every scale-out action (per domain)."""
+    return apply_edits(shared, DOMAIN_HYBRID_DISPATCH_EDITS)
+
+
+def domain_hybrid_combine(shared: str) -> str:
+    """The hybrid combine whose FFN GPUs skip every scale-out action (per domain)."""
+    return apply_edits(shared, DOMAIN_HYBRID_COMBINE_EDITS)
+
+
 def ffn_fp8_hybrid_combine(shared: str) -> str:
     """The hybrid combine whose forwarders send FP8 reply rows across NVLink domains."""
     return apply_edits(shared, FFN_FP8_HYBRID_COMBINE_EDITS)
@@ -1101,6 +1221,8 @@ if __name__ == "__main__":
     (IMPLS / FFN_SPARSE_HYBRID_COMBINE).write_text(ffn_sparse_hybrid_combine(combine))
     (IMPLS / MIXED_HYBRID_DISPATCH).write_text(mixed_hybrid_dispatch(hybrid))
     (IMPLS / MIXED_HYBRID_COMBINE).write_text(mixed_hybrid_combine(combine))
+    (IMPLS / DOMAIN_HYBRID_DISPATCH).write_text(domain_hybrid_dispatch(hybrid))
+    (IMPLS / DOMAIN_HYBRID_COMBINE).write_text(domain_hybrid_combine(combine))
     (IMPLS / FFN_FP8_HYBRID_COMBINE).write_text(ffn_fp8_hybrid_combine(combine))
     (IMPLS / FFN_SPARSE_FP8_HYBRID_COMBINE).write_text(
         ffn_sparse_fp8_hybrid_combine(combine)

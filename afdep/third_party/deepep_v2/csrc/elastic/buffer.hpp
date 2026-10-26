@@ -229,19 +229,24 @@ public:
     // The mixed-role hybrid (afdep_roles.hpp) is reported the same way: its F, wire-visible.
     // The fifth and sixth elements are the latched FP8 combine replies setting and its minimum bucket
     // (directional hybrid only).
-    std::tuple<int, bool, bool, int, bool, int> get_afd_sparse_hybrid_config() const {
+    // The seventh is the per-domain FFN prefix's protocol (afdep_domain_hybrid: 1, silent FFN rails; 0, union).
+    std::tuple<int, bool, bool, int, bool, int, int> get_afd_sparse_hybrid_config() const {
+        if (afd_ffn_ranks > 0 and afd_ffn_ranks_per_domain > 0)
+            return {0, false, false, 0, false, 0,
+                    afdep_domain_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
+                                        nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain)};
         if (afd_ffn_ranks > 0) {
             const int mixed = afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
                                                  nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain);
             if (mixed > 0)
-                return {0, false, false, mixed, false, 0};
+                return {0, false, false, mixed, false, 0, 0};
         }
         if (afd_ffn_ranks <= 0 or afdep_directional_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
                                                            nccl_context->num_scaleup_ranks,
                                                            afd_ffn_ranks_per_domain) == 0)
-            return {0, false, false, 0, false, 0};
+            return {0, false, false, 0, false, 0, 0};
         return {afdep_hybrid_stagger_max_tokens(), afdep_hybrid_sparse_dispatch(), afdep_hybrid_sparse_combine(), 0,
-                afd_fp8_combine, afd_fp8_min_bucket};
+                afd_fp8_combine, afd_fp8_min_bucket, 0};
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
@@ -907,6 +912,11 @@ public:
             afdep_directional_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
                                      nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain) : 0;
         const bool afd_hybrid_routes_in_kernel = afd_ffn_scaleout_ranks > 0 and afdep_hybrid_routes_in_kernel();
+        // afdEP silent FFN rails (afdep_roles.hpp): FFN GPUs of a per-domain prefix skip every scale-out action.
+        const int afd_domain_ffn_ranks = afd_role_aware and not afd_source and not deterministic and
+            afdep_domain_silent_rails(afd_ffn_ranks, nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks,
+                                      afd_ffn_ranks_per_domain, num_topk, allow_multiple_reduction) ?
+            afd_ffn_ranks_per_domain : 0;
         // Per-domain FFN prefix: dispatch reads (and copies for combine) the logical IDs.
         auto afd_logical_topk_idx = std::optional<torch::Tensor>();
         if (afd_source and afd_ffn_ranks_per_domain > 0) {
@@ -1190,7 +1200,7 @@ public:
                             get_combine_token_layout(hidden, sizeof(nv_bfloat16), num_topk).get_num_bytes<false>() : 0,
                         afd_dispatch_shape,
                         afdep_count_first_ungated_tokens(), afdep_count_first_thread_count(),
-                        afd_mixed_ffn_ranks);
+                        afd_mixed_ffn_ranks, afd_domain_ffn_ranks);
 
         // Received token counters
         int num_recv_tokens = 0, num_expanded_tokens = 0;
@@ -1572,7 +1582,11 @@ public:
             afd_scaleout_send_base,
             afd_combine_shape,
             afd_mixed_ffn_ranks,
-            afd_fp8_replies);
+            afd_fp8_replies,
+            afd_worker and not deterministic and
+                afdep_domain_silent_rails(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
+                                          nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain, num_topk,
+                                          allow_multiple_reduction) ? afd_ffn_ranks_per_domain : 0);
 
         // Allocate output tensors
         // afdEP single-FFN collect view: with one FFN rank in one NVLink domain (rank layout), each
