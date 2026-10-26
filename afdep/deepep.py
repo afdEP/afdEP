@@ -394,11 +394,12 @@ class ElasticBuffer:
                 raise ValueError(
                     "Multiple NVLink domains require GIN; EP_DISABLE_GIN=1 is set"
                 )
-            # One domain is the global prefix, which the native buffer runs as such.
+            # The layout must be the physical one. One domain is the global prefix,
+            # which the native buffer runs as such.
             native_per_domain = (
                 ffn_ranks_per_domain if self._domain_size < self.world_size else 0
             )
-            if native_per_domain and self.physical_domain != (
+            if ffn_ranks_per_domain and self.physical_domain != (
                 self.world_size // self._domain_size,
                 self._domain_size,
             ):

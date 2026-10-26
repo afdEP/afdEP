@@ -841,6 +841,11 @@ public:
             // Roles are immutable constructor geometry, never token-count guesses.
             EP_HOST_ASSERT(not cached_mode and do_expand);
             EP_HOST_ASSERT(afd_source or num_tokens == 0);
+            // Per-domain FFN prefix: f FFN ranks in each of the (hybrid) domains, and the handle
+            // copy that carries the logical IDs to combine.
+            EP_HOST_ASSERT(afd_ffn_ranks_per_domain == 0 or
+                           (nccl_context->num_scaleout_ranks * afd_ffn_ranks_per_domain == afd_ffn_ranks and
+                            nccl_context->num_scaleout_ranks > 1 and do_handle_copy));
         }
         EP_HOST_ASSERT(x.is_cuda() and x.is_contiguous());
         EP_HOST_ASSERT((x.size(1) * x.element_size()) % sizeof(int4) == 0);

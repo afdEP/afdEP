@@ -23,7 +23,7 @@ import torch.distributed as dist
 
 from afdep._build import source_digest
 
-from .fastafd import BASELINE_KEY, make
+from .fastafd import BASELINE_KEY, FastAFDBuffer, make
 from .screen import DEFAULT_ARMS
 
 METRIC = "per block: max Attention-rank CUDA-event us per exchange"
@@ -69,6 +69,13 @@ class Arm:
 
     def prepare(self, n, x, ids, weights, scale, graph):
         buffer, expert = self.buffer, None
+        routes, mapped = ids.to(buffer.topk_idx_dtype), {}
+        if isinstance(buffer, FastAFDBuffer) and self.config.ffn_ranks_per_domain:
+            # The baseline's real-to-logical mapping, once per cell outside timing
+            # (afdEP-comm maps inside its route check).
+            routes, mapped = self.config.logical_ids(routes), {"logical": True}
+        # A captured graph reads these IDs on every replay: keep them alive with it.
+        self.routes = routes
 
         def step():
             nonlocal expert
@@ -82,9 +89,7 @@ class Arm:
                     )
                 buffer.worker_reply(expert, received.receipt)
             else:
-                buffer.source_dispatch(
-                    x, ids.to(buffer.topk_idx_dtype), weights, scale, bucket=n
-                )
+                buffer.source_dispatch(x, routes, weights, scale, bucket=n, **mapped)
                 self.result = buffer.source_collect(view=COLLECT_VIEW)
 
         for _ in range(2):
@@ -105,7 +110,7 @@ class Arm:
             )
 
     def release(self):
-        self.exchange = self.graph = self.result = None
+        self.exchange = self.graph = self.result = self.routes = None
 
 
 def timed(exchange, iterations):
@@ -180,6 +185,13 @@ def main():
     if len(args.arms) > 1:
         os.environ[PER_BUFFER_COMM_STREAM_ENV] = "1"
     arms = [Arm(name, overrides, common) for name, overrides in args.arms.items()]
+    # Roles, sources and the Attention-rank metric come from arm 0, so arms share one
+    # layout; screen other layouts (ffn_ranks, ffn_ranks_per_domain) in separate runs.
+    layouts = [None] * world
+    roles = {(arm.buffer.role, arm.buffer.role_rank) for arm in arms}
+    dist.all_gather_object(layouts, len(roles) == 1)
+    if not all(layouts):
+        raise ValueError("every arm must give each rank the same role")
     names = [arm.name for arm in arms]
     attention = arms[0].buffer.role == "attention"
     # Each source's routes are seeded by its Attention index (0 on FFN ranks).

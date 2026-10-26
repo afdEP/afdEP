@@ -193,6 +193,10 @@ def test_per_domain_prefix_checks_the_physical_domains(runtime, monkeypatch):
     runtime.module.ElasticBuffer.reset_mock()
     with pytest.raises(ValueError, match="needs 2 NVLink domains of 2 ranks"):
         elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=1)
+    # f == F asks for every FFN rank in one domain, which two domains contradict.
+    runtime.module.get_physical_domain_size.return_value = (2, 2)
+    with pytest.raises(ValueError, match="needs 1 NVLink domains of 4 ranks"):
+        elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=2)
     runtime.module.ElasticBuffer.assert_not_called()
     with pytest.raises(RuntimeError, match="need hybrid mode"):
         elastic(runtime, ffn_ranks=2, ffn_ranks_per_domain=1, allow_hybrid_mode=False)

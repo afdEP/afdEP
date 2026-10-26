@@ -60,10 +60,13 @@ class FastAFDBuffer(Buffer):
         # As a member of the symmetric group, a source combines a full receive bound.
         return self.config.receive_rows(self.config.capacity_tokens_per_rank)
 
-    def source_dispatch(self, x, ids, weights, x_scale=None, **kwargs) -> None:
+    def source_dispatch(
+        self, x, ids, weights, x_scale=None, *, logical=False, **kwargs
+    ) -> None:
         # Upstream DeepEP routes logical experts. A per-domain FFN prefix puts FFN
-        # blocks off [0, num_experts), so the baseline maps real IDs as a caller would.
-        if self.config.ffn_ranks_per_domain:
+        # blocks off [0, num_experts), so the baseline maps real IDs as a caller
+        # would, unless the caller passes logical IDs (``Config.logical_ids``).
+        if self.config.ffn_ranks_per_domain and not logical:
             ids = self.config.logical_ids(ids)
         super().source_dispatch(x, ids, weights, x_scale, **kwargs)
 
