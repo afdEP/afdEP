@@ -30,6 +30,16 @@ MIN_COMM_SMS = 4
 DEFAULT_COMM_SM_FRACTION = 24 / 132
 HYBRID_DEFAULT_QPS = 129
 DIRECT_DEFAULT_QPS = 17
+# Wire-visible AFDEP_* controls in get_afd_protocol_config order; ranks must agree.
+PROTOCOL_CONTROLS = (
+    "AFDEP_KEEP_ENTRY_BARRIERS",
+    "AFDEP_UNION_NOTIFY",
+    "AFDEP_ALL_RANK_EXIT",
+    "AFDEP_GRID_SYNC_EXIT",
+    "AFDEP_UNION_BUFFERS",
+    "AFDEP_UNION_HYBRID",
+    "AFDEP_MIXED_HYBRID",
+)
 INT32_MAX = (1 << 31) - 1
 
 
@@ -380,6 +390,18 @@ class ElasticBuffer:
         if count_first[0][1] not in ("full", "source"):
             self.close()
             raise ValueError("AFDEP_COUNT_FIRST_ARM must be full or source")
+        # The wire-visible AFDEP_* controls (barriers, count exchange, registered
+        # layout, hybrid protocol) as the native buffer latched them. Ranks that
+        # disagree would hang or corrupt the exchange, so all reject them together.
+        protocol = self._gather(tuple(self._runtime.get_afd_protocol_config()))
+        differ = [
+            name
+            for index, name in enumerate(PROTOCOL_CONTROLS)
+            if any(value[index] != protocol[0][index] for value in protocol)
+        ]
+        if differ:
+            self.close()
+            raise ValueError(f"Every DeepEP rank must set the same {', '.join(differ)}")
         # So do the sparse directional hybrid parts, as each rank resolves them
         # (role-local shape controls can turn them off on one role only), the
         # mixed-role F and the FP8 combine replies the native buffer latched.

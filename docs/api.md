@@ -77,6 +77,13 @@ shapes and registered layout, and later environment changes only affect Buffers
 opened afterwards. `tests/gpu/two_buffers.py` checks both cases, eager and in
 graphs.
 
+The `AFDEP_*` variables are measurement controls, read once when a Buffer is
+opened. The ones that change barriers, the count exchange, the registered layout
+or the hybrid protocol (`afdep.deepep.PROTOCOL_CONTROLS`, plus the count-first and
+hybrid settings they resolve) are gathered then, and ranks that disagree all raise
+`ValueError` instead of hanging (`tests/gpu/protocol_agreement.py`). The rest are
+rank-local launch shapes and may differ by role.
+
 ## Transport and tuning
 
 afdEP-comm keeps DeepEP's uniform logical expert numbering (Attention ranks own empty
