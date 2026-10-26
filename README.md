@@ -371,7 +371,8 @@ validated more narrowly: the mixed-role path passed the suite on 6 × 4 H200 wit
 FFN ranks on every node (`ffn_ranks_per_domain`, [design](docs/design.md) section 20) passed
 the suite on 2 × 4 and 3 × 4 H200 with one and two FFN GPUs per node, BF16 and FP8, and on
 FastAFD's DeepEP M2N in the same layouts ([record](docs/validation-per-domain.json)). These
-layouts run the union hybrid, at FastAFD M2N's speed; nodes with different GPU counts are not
+layouts run the union hybrid with silent FFN rails, or with hybrid off one RDMA hop per token
+([direct record](docs/validation-direct-per-domain.json)); nodes with different GPU counts are not
 supported.
 
 ## Acknowledgments

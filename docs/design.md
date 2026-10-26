@@ -1218,6 +1218,38 @@ ordering argument: dispatch tails and combine signals share words that a dual-ro
 would receive in both phases, and sources now stage dispatch in domains that hold FFN
 ranks. Both need deferred-put fault injection, as section 18 does.
 
+Since then: FFN GPUs skip all of that (silent FFN rails, `afdep_domain_hybrid_*`; per call when
+the combine scale-up regions they write fit below a forwarder's unflushed dispatch staging, 2L ≤ U;
+[record](validation-silent-ffn-rails.json)), and the layout also runs with hybrid off, where each
+Attention GPU reaches each FFN GPU in one RDMA hop ([record](validation-direct-per-domain.json)).
+That needed a fix to DeepEP itself: its direct kernels write NVLink-reachable peers with TMA stores,
+then pass a GIN barrier that flushes RDMA and signals through the NIC, so a same-node receiver could
+read stale rows whenever a node holds senders and receivers (FastAFD M2N too; 100% of a same-node
+source's values on 2 × 4 with the FFN on node 0). The GIN barrier now fences at system scope first:
+8 of 8 runs passed with it, 8 of 8 failed without it or with only a proxy fence. It costs about
+2.5 µs at 1–8 tokens on the direct path and nothing on hybrid paths.
+
+Decode screen, round trip against per-node FFN on the direct path ([record](validation-direct-per-domain-screens.json);
+same shapes as above, 4-GPU domains; negative: the other layout is faster):
+
+| Layout | T=1 | 8 | 32 | 128 | 512 |
+|---|---:|---:|---:|---:|---:|
+| 2 × 4, F = 2: per-node FFN (f = 1), direct, µs | 95.9 | 113.2 | 125.9 | 201.4 | 529.3 |
+| per-node FFN, hybrid (silent FFN rails) | +7.1% | +11.0% | +9.4% | −18.8% | −30.0% |
+| FFN on node 0, mixed-role (opt-in) | −8.2% | −3.9% | −5.6% | −26.7% | −31.7% |
+| 3 × 4, F = 3: per-node FFN (f = 1), direct, µs | 106.9 | 117.1 | 139.1 | 288.9 | 901.8 |
+| per-node FFN, hybrid (silent FFN rails) | +23.4% | +23.4% | +11.4% | −29.7% | −47.2% |
+| FFN on node 0, mixed-role (opt-in) | +2.7% | +10.2% | +0.6% | −35.1% | −44.8% |
+| 2 × 4, F = 4: per-node FFN (f = 2), direct, µs | 99.7 | 104.2 | 113.6 | 156.7 | 355.5 |
+| per-node FFN, hybrid (silent FFN rails) | −13.0% | −5.9% | −8.1% | −16.7% | −21.6% |
+| FFN node + Attention node, directional | −31.5% | −23.2% | −23.0% | −27.8% | −25.9% |
+
+With one FFN GPU per node the single hop wins up to 32 tokens, and on three nodes it beats every
+FFN-first layout there. From 128 tokens hybrid wins: in direct mode every remote token for a node's
+FFN GPU enters through that GPU's NIC, while hybrid spreads the same bytes over the node's Attention
+NICs and NVLink. With two FFN GPUs per node hybrid wins at every size. The direct path still runs
+DeepEP's union protocol (FastAFD M2N is within 1.3%); sections 1–3 over RDMA are next.
+
 ## 3:1 Attention:FFN: where the time goes (analysis)
 
 Three Attention ranks per FFN rank make one FFN serve three sources. One NVLink
