@@ -33,9 +33,34 @@ DIRECT_DEFAULT_QPS = 17
 INT32_MAX = (1 << 31) - 1
 
 
+def per_domain_layout(
+    world_size: int, ffn_ranks: int, ffn_ranks_per_domain: int
+) -> int:
+    """NVLink domains of a per-domain FFN prefix; 1 for the global prefix [0, F).
+
+    With ffn_ranks_per_domain f > 0, each of the D = ffn_ranks / f domains holds
+    world_size / D ranks, of which local ranks [0, f) are FFN: FFN index j is rank
+    (j // f) * (world_size / D) + j % f. DeepEP numbers ranks domain by domain.
+    """
+    f = ffn_ranks_per_domain
+    if type(f) is not int or f < 0:
+        raise ValueError("ffn_ranks_per_domain must be a nonnegative integer")
+    if f == 0:
+        return 1
+    if ffn_ranks % f or world_size % (ffn_ranks // f):
+        raise ValueError(
+            "ffn_ranks_per_domain must split ffn_ranks into domains of the group"
+        )
+    return ffn_ranks // f
+
+
 @dataclass(frozen=True)
 class Config:
-    """Real expert ownership and fixed allocation capacity, FFN ranks first."""
+    """Real expert ownership and fixed allocation capacity, FFN ranks first.
+
+    FFN ranks are ranks [0, ffn_ranks), or with ``ffn_ranks_per_domain`` f the first
+    f ranks of each of the ffn_ranks / f NVLink domains (see ``per_domain_layout``).
+    """
 
     capacity_tokens_per_rank: int
     hidden_size: int
@@ -51,6 +76,7 @@ class Config:
     rdma_traffic_class: int = 0
     cpu_timeout_s: int = 120
     gpu_timeout_s: int = 120
+    ffn_ranks_per_domain: int = 0
 
     def __post_init__(self) -> None:
         for name in (
@@ -82,6 +108,7 @@ class Config:
             raise ValueError("hidden_size must be a multiple of 256")
         if self.num_experts % self.ffn_ranks:
             raise ValueError("num_experts must divide evenly across FFN ranks")
+        per_domain_layout(self.world_size, self.ffn_ranks, self.ffn_ranks_per_domain)
         if self.top_k > min(MAX_TOP_K, self.num_experts):
             raise ValueError("top_k must be <=32 and <=num_experts")
         if self.payload not in {"bf16", "fp8"}:
@@ -109,6 +136,38 @@ class Config:
     def logical_experts(self) -> int:
         """DeepEP's uniform expert blocks, including unused Attention slots."""
         return self.world_size * self.experts_per_rank
+
+    def is_ffn(self, rank: int) -> bool:
+        domain_size, local_ffn = self._layout
+        return rank % domain_size < local_ffn
+
+    def role_rank(self, rank: int) -> int:
+        """FFN index (owner of real experts [index*E, (index+1)*E)) or source index."""
+        domain_size, local_ffn = self._layout
+        domain, local = divmod(rank, domain_size)
+        if local < local_ffn:
+            return domain * local_ffn + local
+        return domain * (domain_size - local_ffn) + local - local_ffn
+
+    def ffn_rank(self, index: int) -> int:
+        """The rank of FFN index ``index``."""
+        domain_size, local_ffn = self._layout
+        return index // local_ffn * domain_size + index % local_ffn
+
+    def logical_ids(self, ids: torch.Tensor) -> torch.Tensor:
+        """DeepEP's logical expert IDs for real ones (-1 stays -1)."""
+        domain_size, local_ffn = self._layout
+        domain_experts = local_ffn * self.experts_per_rank
+        attention_experts = (domain_size - local_ffn) * self.experts_per_rank
+        # Operators only, so this also maps plain ints: -1 gets no offset.
+        return ids + (ids >= 0) * (ids // domain_experts) * attention_experts
+
+    @property
+    def _layout(self) -> tuple[int, int]:
+        domains = per_domain_layout(
+            self.world_size, self.ffn_ranks, self.ffn_ranks_per_domain
+        )
+        return self.world_size // domains, self.ffn_ranks // domains
 
     def receive_rows(self, bucket: int) -> int:
         """FFN receive rows for one bucket: only Attention ranks send."""
@@ -165,9 +224,11 @@ class ElasticBuffer:
     EP_DISABLE_GIN=1 is an application choice for a single NVLink domain.
 
     With ``ffn_ranks`` it is afdEP-comm's AFD transport: FFN ranks [0, ffn_ranks)
-    receive and reply, the others send. Without it, it is DeepEP V2 as upstream
-    ships it, a symmetric group, which is how FastAFD's DeepEP M2N runs AFD (the
-    baseline in benchmarks/fastafd.py).
+    receive and reply, the others send. With ``ffn_ranks_per_domain`` f too, the FFN
+    ranks are the first f of every NVLink domain (``per_domain_layout``) and dispatch
+    takes real expert IDs [0, ffn_ranks * experts per rank), which it translates.
+    Without ``ffn_ranks``, it is DeepEP V2 as upstream ships it, a symmetric group,
+    which is how FastAFD's DeepEP M2N runs AFD (the baseline in benchmarks/fastafd.py).
     """
 
     def __init__(
@@ -186,6 +247,7 @@ class ElasticBuffer:
         num_sms: int = 0,
         num_qps: int = 0,
         ffn_ranks: int | None = None,
+        ffn_ranks_per_domain: int = 0,
     ) -> None:
         # Intentional optional imports: configuration/package inspection stays CPU-only.
         import torch
@@ -197,6 +259,7 @@ class ElasticBuffer:
         self.num_experts, self.hidden_size, self.top_k = num_experts, hidden_size, top_k
         self.allow_hybrid_mode, self._fp8 = allow_hybrid_mode, use_fp8_dispatch
         self.ffn_ranks, afd = ffn_ranks, ffn_ranks is not None
+        self.ffn_ranks_per_domain, self._domain_size = ffn_ranks_per_domain, 0
         self._owner, self._pending, self._closed = object(), None, False
         settings = {
             "capacity": capacity_tokens_per_rank,
@@ -211,6 +274,7 @@ class ElasticBuffer:
             "num_sms": num_sms,
             "num_qps": num_qps,
             "ffn_ranks": ffn_ranks,
+            "ffn_ranks_per_domain": ffn_ranks_per_domain,
         }
         error, module, device_sms = None, None, 0
         try:
@@ -244,6 +308,12 @@ class ElasticBuffer:
                 type(ffn_ranks) is not int or not 0 < ffn_ranks < self.world_size
             ):
                 raise ValueError("ffn_ranks must leave positive FFN and source ranks")
+            if ffn_ranks_per_domain and not afd:
+                raise ValueError("ffn_ranks_per_domain requires ffn_ranks")
+            domains = per_domain_layout(
+                self.world_size, ffn_ranks or 0, ffn_ranks_per_domain
+            )
+            self._domain_size = self.world_size // domains
             if (
                 type(rdma_traffic_class) is not int
                 or not 0 <= rdma_traffic_class <= 255
@@ -322,6 +392,21 @@ class ElasticBuffer:
                 raise ValueError(
                     "Multiple NVLink domains require GIN; EP_DISABLE_GIN=1 is set"
                 )
+            # The layout must be the physical one. One domain is the global prefix,
+            # which the native buffer runs as such.
+            native_per_domain = (
+                ffn_ranks_per_domain if self._domain_size < self.world_size else 0
+            )
+            if ffn_ranks_per_domain and self.physical_domain != (
+                self.world_size // self._domain_size,
+                self._domain_size,
+            ):
+                domains = self.world_size // self._domain_size
+                raise ValueError(
+                    f"ffn_ranks_per_domain needs {domains} NVLink domains of "
+                    f"{self._domain_size} ranks, found {self.physical_domain[0]} "
+                    f"of {self.physical_domain[1]}"
+                )
             self.num_buffer_bytes = int(
                 module.calculate_elastic_buffer_size(
                     self._nccl_comm,
@@ -334,6 +419,7 @@ class ElasticBuffer:
                     # Role-sized inboxes: only sources write FFN dispatch regions
                     # and only FFN ranks write Attention combine regions.
                     ffn_ranks if afd else 0,
+                    native_per_domain,
                 )
             )
             native_args = (
@@ -351,9 +437,10 @@ class ElasticBuffer:
                 gpu_timeout_s,
                 True,
             )
-            self._runtime = module.ElasticBuffer(
-                *native_args, *([ffn_ranks] if afd else [])
-            )
+            afd_args = [ffn_ranks] if afd else []
+            if native_per_domain:
+                afd_args.append(native_per_domain)
+            self._runtime = module.ElasticBuffer(*native_args, *afd_args)
         except Exception:
             module.destroy_nccl_comm(self._nccl_comm)
             self._closed = True
@@ -388,13 +475,19 @@ class ElasticBuffer:
             self.close()
             raise ValueError(
                 "Every DeepEP rank must use the same hybrid configuration "
-                "(AFDEP_HYBRID_FP8_COMBINE*, AFDEP_MIXED_HYBRID and "
-                "AFDEP_SHARED_* controls)"
+                "(AFDEP_HYBRID_FP8_COMBINE*, AFDEP_MIXED_HYBRID, AFDEP_UNION_HYBRID "
+                "and AFDEP_SHARED_* controls)"
             )
         # Lossy FP8 combine replies across NVLink domains (AFDEP_HYBRID_FP8_COMBINE=1),
         # for buckets of at least fp8_combine_min_bucket tokens.
         self.fp8_combine = bool(sparse[0][4])
         self.fp8_combine_min_bucket = int(sparse[0][5])
+
+    def _is_ffn(self, rank: int) -> bool:
+        if self.ffn_ranks is None:
+            return False
+        local_ffn = self.ffn_ranks * self._domain_size // self.world_size
+        return rank % self._domain_size < local_ffn
 
     def _gather(self, value) -> list:
         values = [None] * self._group.size()
@@ -445,7 +538,7 @@ class ElasticBuffer:
             )
         if x.shape[0] > bucket:
             raise ValueError("source input exceeds its bucket")
-        if self.ffn_ranks is not None and self.rank < self.ffn_ranks and x.shape[0]:
+        if self._is_ffn(self.rank) and x.shape[0]:
             raise ValueError("FFN ranks cannot originate tokens")
         num_sms = self._num_sms()
         result = self._runtime.dispatch(
@@ -567,7 +660,7 @@ class ElasticBuffer:
 
 
 class Buffer:
-    """AFD roles over ElasticBuffer, FFN ranks first, one in-flight exchange.
+    """AFD roles over ElasticBuffer (FFN ranks per ``Config``), one in-flight exchange.
 
     Route only real experts [0,num_experts), with -1 for unused choices and no
     duplicate expert per token. Pass prequantized FP8 plus FP32 block128 scales,
@@ -593,11 +686,9 @@ class Buffer:
             raise ValueError("group size does not match the configured AFD topology")
         self.rank = group.rank()
         self.role: Literal["ffn", "attention"] = (
-            "ffn" if self.rank < config.ffn_ranks else "attention"
+            "ffn" if config.is_ffn(self.rank) else "attention"
         )
-        self.role_rank = (
-            self.rank if self.role == "ffn" else self.rank - config.ffn_ranks
-        )
+        self.role_rank = config.role_rank(self.rank)
         self.transport = self._open_transport(group)
         self.physical_domain = self.transport.physical_domain
         self.logical_domain = self.transport.logical_domain
@@ -629,6 +720,7 @@ class Buffer:
             num_sms=config.num_sms,
             num_qps=config.num_qps,
             ffn_ranks=config.ffn_ranks,
+            ffn_ranks_per_domain=config.ffn_ranks_per_domain,
         )
 
     def _source_output_rows(self) -> int:

@@ -105,9 +105,16 @@ def test_role_suites_leave_shared_kernels_untouched():
         include / "impls/combine_reduce_epilogue.cuh",
         *sorted((include / "common").glob("*")),
     ]
+    # The one documented upstream fix in common/ (LOCAL_CHANGES.json): the GIN barrier's
+    # system-scope fence, which every kernel with direct (non-hybrid) peers needs.
+    fixed = "deep_ep/include/deep_ep/common/comm.cuh"
     for path in upstream:
         name = path.relative_to(VENDOR_ROOT).as_posix()
-        assert digest(path) == provenance["file_sha256"][name], name
+        if name != fixed:
+            assert digest(path) == provenance["file_sha256"][name], name
+    comm = (VENDOR_ROOT / fixed).read_text()
+    marker = "// ### PATCH START: order NVLink stores before GIN barrier signals"
+    assert comm.count(marker) == 1 and comm.count("// ### PATCH END:") == 1
 
 
 def test_role_suite_shapes_are_host_launch_overrides():
@@ -145,6 +152,10 @@ def test_ffn_role_kernels_are_the_generated_copies():
     assert mixed_dispatch == rk.mixed_hybrid_dispatch(hybrid)
     mixed_combine = (rk.IMPLS / rk.MIXED_HYBRID_COMBINE).read_text()
     assert mixed_combine == rk.mixed_hybrid_combine(combine)
+    domain_dispatch = (rk.IMPLS / rk.DOMAIN_HYBRID_DISPATCH).read_text()
+    assert domain_dispatch == rk.domain_hybrid_dispatch(hybrid)
+    domain_combine = (rk.IMPLS / rk.DOMAIN_HYBRID_COMBINE).read_text()
+    assert domain_combine == rk.domain_hybrid_combine(combine)
     fp8_combine = (rk.IMPLS / rk.FFN_FP8_HYBRID_COMBINE).read_text()
     assert fp8_combine == rk.ffn_fp8_hybrid_combine(combine)
     sparse_fp8 = (rk.IMPLS / rk.FFN_SPARSE_FP8_HYBRID_COMBINE).read_text()
@@ -203,6 +214,21 @@ def test_sparse_hybrid_kernels_stay_out_of_shared_runtimes():
     fp8 = (rk.FFN_FP8_HYBRID_COMBINE, rk.FP8_COMBINE_EPILOGUE, rk.FP8_COMBINE_REDUCE)
     for name in (*shared, rk.FFN_HYBRID_DISPATCH, mixed, rk.MIXED_HYBRID_COMBINE, *fp8):
         assert header not in (rk.IMPLS / name).read_text(), name
+
+
+def test_silent_ffn_rail_kernels_have_one_runtime_each():
+    """The per-domain copies launch through one runtime each and use no other header."""
+    from tests import role_kernels as rk
+
+    elastic = VENDOR_ROOT / "csrc/kernels/elastic"
+    dispatch = (elastic / "dispatch.hpp").read_text()
+    combine = (elastic / "combine.hpp").read_text()
+    assert dispatch.count(f"#include <deep_ep/impls/{rk.DOMAIN_HYBRID_DISPATCH}>") == 1
+    assert combine.count(f'"{rk.DOMAIN_HYBRID_COMBINE.removesuffix(".cuh")}");') == 1
+    for name in (rk.DOMAIN_HYBRID_DISPATCH, rk.DOMAIN_HYBRID_COMBINE):
+        text = (rk.IMPLS / name).read_text()
+        assert "afdep_sparse_hybrid.cuh" not in text and "afdep_fp8_combine" not in text
+        assert text.count("afd_holder = scaleup_rank_idx < kAfdFfnRanksPerDomain;") == 1
 
 
 def test_fp8_combine_kernels_stay_out_of_shared_runtimes():
@@ -278,11 +304,11 @@ def test_fp8_combine_switch_is_latched_and_agreement_checked():
         "// Timeout\n"
     )
     assert (
-        "std::tuple<int, bool, bool, int, bool, int> get_afd_sparse_hybrid_config()"
-        in (buffer)
+        "std::tuple<int, bool, bool, int, bool, int, int> "
+        "get_afd_sparse_hybrid_config()" in (buffer)
     )
-    assert "return {0, false, false, mixed, false, 0};" in buffer
-    assert "return {0, false, false, 0, false, 0};" in buffer
+    assert "return {0, false, false, mixed, false, 0, 0};" in buffer
+    assert "return {0, false, false, 0, false, 0, 0};" in buffer
     # The minimum bucket is latched with the switch (0 when it is off, so ranks that
     # differ only in an unused minimum still agree), clamped at 0, reported next to it.
     assert (
@@ -300,14 +326,14 @@ def test_fp8_combine_switch_is_latched_and_agreement_checked():
     assert buffer.index("EP_HOST_ASSERT(not afd_fp8_combine or") < buffer.index(
         "const bool afd_fp8_replies"
     )
-    assert "afd_fp8_combine, afd_fp8_min_bucket};" in buffer
+    assert "afd_fp8_combine, afd_fp8_min_bucket, 0};" in buffer
     # combine() passes the latched value, gated by this exchange's bucket, to both
     # launches; the kernels never re-read it.
     assert (
         "const bool afd_fp8_replies = afd_fp8_combine and "
         "num_max_tokens_per_rank >= afd_fp8_min_bucket;"
     ) in buffer
-    assert "afd_mixed_ffn_ranks,\n            afd_fp8_replies);" in buffer
+    assert "afd_mixed_ffn_ranks,\n            afd_fp8_replies,\n" in buffer
     assert "comm_stream, afd_fp8_replies);" in buffer
     combine = (elastic / "combine.hpp").read_text()
     assert "afdep_hybrid_fp8_combine" not in combine

@@ -41,6 +41,44 @@ static bool afdep_directed_exit() {
 // without the sender grid sync; receivers wait for round x sender CTAs (every
 // rank uses the same transport SM count). The last source CTA resets the slot
 // counters. AFDEP_GRID_SYNC_EXIT=1 keeps the grid-synced release as a control.
+// Per-domain FFN prefix (ffn_ranks_per_domain f > 0): every NVLink domain holds f FFN ranks,
+// its local ranks [0, f), and U - f Attention ranks, so FFN index j is rank (j / f) * U + j % f.
+// Every domain then holds both roles, which neither protocol below covers (single-role domains;
+// one FFN-holding domain), so these layouts run the union hybrid with per-rank roles: both
+// selectors return 0. Sources still validate their real routes, and translate them to DeepEP's
+// logical experts (afdep_domain_routes.cuh) for dispatch and combine.
+// Silent FFN rails (per-domain FFN prefix): every rail u < f joins FFN GPUs only, none of them a
+// source, so no cross-domain write ever happens on it (no counts, payload, tails, replies or
+// signals) and the rail halves of its barriers order nothing; DeepEP's rail barrier spans rail
+// peers only (ncclTeamTagRail). FFN GPUs then run afdep_domain_hybrid_{dispatch,combine}.cuh, which
+// skip every scale-out action and keep their NVLink work (scale-up counts, list ends, partials) and
+// all three scale-up barriers; Attention rails keep the union protocol unchanged. One protection
+// goes: the FFN GPUs' combine-entry rail barrier held their partials until every domain's dispatch
+// had completed, so an Attention forwarder's NIC had finished reading its dispatch staging, which
+// dispatch kernels end without flushing. Holders now write the forwarder's combine scale-up inbox
+// [0, L * D * b * Bc) right after their scale-up barrier, while that staging, at U * D * b * Bd
+// (hybrid_dispatch.cuh), may still be read; L is the regions holders write (f in the rank layout,
+// top-k otherwise). The two are disjoint when L * Bc <= U * Bd, which 2L <= U guarantees for every
+// payload (a combine row is at most two dispatch rows), so the gate requires it per call and the
+// call runs the union kernels otherwise. Every FFN GPU of a rail decides alike from identical
+// arguments, and the protocols differ only on FFN rails, so switching per call is safe.
+// AFDEP_UNION_HYBRID=1 keeps the union protocol as a measurement control.
+static int afdep_domain_hybrid(const int afd_ffn_ranks, const int num_scaleout_ranks, const int num_scaleup_ranks,
+                               const int afd_ffn_ranks_per_domain) {
+    return afd_ffn_ranks_per_domain > 0 and num_scaleout_ranks > 1 and
+        afd_ffn_ranks == num_scaleout_ranks * afd_ffn_ranks_per_domain and
+        2 * afd_ffn_ranks_per_domain <= num_scaleup_ranks and deep_ep::get_env<int>("AFDEP_UNION_HYBRID", 0) == 0;
+}
+
+// The per-call gate above: the combine scale-up regions FFN GPUs write fit below the dispatch staging.
+static bool afdep_domain_silent_rails(const int afd_ffn_ranks, const int num_scaleout_ranks,
+                                      const int num_scaleup_ranks, const int afd_ffn_ranks_per_domain,
+                                      const int num_topk, const bool allow_multiple_reduction) {
+    const int regions = allow_multiple_reduction and num_scaleup_ranks <= num_topk ? afd_ffn_ranks_per_domain : num_topk;
+    return afdep_domain_hybrid(afd_ffn_ranks, num_scaleout_ranks, num_scaleup_ranks, afd_ffn_ranks_per_domain) > 0 and
+        2 * regions <= num_scaleup_ranks;
+}
+
 // Directional hybrid protocol: when every scale-out (NVLink) domain holds a single
 // role, dispatch traffic (counts, payloads, finish tails) flows Attention -> FFN
 // and combine traffic (payloads, finish signals) FFN -> Attention only; FFN
@@ -56,9 +94,9 @@ static bool afdep_directed_exit() {
 // Returns the FFN scale-out domain count, or 0 (union protocol).
 // AFDEP_UNION_HYBRID=1 keeps the union protocol as a measurement control.
 static int afdep_directional_hybrid(const int afd_ffn_ranks, const int num_scaleout_ranks,
-                                    const int num_scaleup_ranks) {
-    if (afd_ffn_ranks <= 0 or num_scaleout_ranks <= 1 or afd_ffn_ranks % num_scaleup_ranks != 0 or
-        deep_ep::get_env<int>("AFDEP_UNION_HYBRID", 0) != 0)
+                                    const int num_scaleup_ranks, const int afd_ffn_ranks_per_domain) {
+    if (afd_ffn_ranks <= 0 or afd_ffn_ranks_per_domain > 0 or num_scaleout_ranks <= 1 or
+        afd_ffn_ranks % num_scaleup_ranks != 0 or deep_ep::get_env<int>("AFDEP_UNION_HYBRID", 0) != 0)
         return 0;
     return afd_ffn_ranks / num_scaleup_ranks;
 }
@@ -84,8 +122,9 @@ static int afdep_directional_hybrid(const int afd_ffn_ranks, const int num_scale
 //   an AP window except its reply slice and signal words.
 // Returns F, or 0 (union, or the directional protocol when F % U == 0).
 static int afdep_mixed_hybrid(const int afd_ffn_ranks, const int num_scaleout_ranks,
-                              const int num_scaleup_ranks) {
-    if (afd_ffn_ranks <= 0 or num_scaleout_ranks <= 1 or afd_ffn_ranks >= num_scaleup_ranks or
+                              const int num_scaleup_ranks, const int afd_ffn_ranks_per_domain) {
+    if (afd_ffn_ranks <= 0 or afd_ffn_ranks_per_domain > 0 or num_scaleout_ranks <= 1 or
+        afd_ffn_ranks >= num_scaleup_ranks or
         deep_ep::get_env<int>("AFDEP_UNION_HYBRID", 0) != 0 or deep_ep::get_env<int>("AFDEP_MIXED_HYBRID", 0) == 0)
         return 0;
     return afd_ffn_ranks;
@@ -164,6 +203,46 @@ static void launch_afdep_route_guard(topk_idx_t* ids, const int num_tokens,
     };
     const auto runtime = jit::compiler->build("afdep_route_guard", AfdEPRouteGuardRuntime::generate(args));
     AfdEPRouteGuardRuntime::launch(runtime, args, stream);
+}
+
+class AfdEPDomainRoutesRuntime final : public jit::LaunchRuntime<AfdEPDomainRoutesRuntime> {
+public:
+    struct Args {
+        int real_experts, top_k, ffn_ranks_per_domain, scaleup_ranks, experts_per_rank;
+        const topk_idx_t* ids;
+        topk_idx_t* logical_ids;
+        int num_tokens;
+        jit::LaunchArgs launch_args;
+    };
+    static std::string generate_impl(const Args& args) {
+        return fmt::format(R"(
+#include <deep_ep/impls/afdep_domain_routes.cuh>
+using namespace deep_ep::elastic;
+static void __instantiate_kernel() {{
+    auto ptr = reinterpret_cast<void*>(&afdep_domain_routes_impl<{}, {}, {}, {}, {}>);
+}}
+)", args.real_experts, args.top_k, args.ffn_ranks_per_domain, args.scaleup_ranks, args.experts_per_rank);
+    }
+    static void launch_impl(const jit::KernelHandle& kernel, const jit::LaunchConfigHandle& config, Args args) {
+        EP_CUDA_UNIFIED_CHECK(jit::launch_kernel(kernel, config, args.ids, args.logical_ids, args.num_tokens));
+    }
+};
+
+// The route guard for a per-domain FFN prefix: validates real routes and writes their logical IDs.
+static void launch_afdep_domain_routes(const topk_idx_t* ids, topk_idx_t* logical_ids, const int num_tokens,
+                                       const int real_experts, const int top_k,
+                                       const int ffn_ranks_per_domain, const int scaleup_ranks,
+                                       const int experts_per_rank,
+                                       const int num_sms, const at::cuda::CUDAStream& stream) {
+    if (num_tokens == 0)
+        return;
+    const AfdEPDomainRoutesRuntime::Args args = {
+        real_experts, top_k, ffn_ranks_per_domain, scaleup_ranks, experts_per_rank,
+        ids, logical_ids, num_tokens,
+        jit::LaunchArgs(std::min(num_sms, (num_tokens + 7) / 8), 256)
+    };
+    const auto runtime = jit::compiler->build("afdep_domain_routes", AfdEPDomainRoutesRuntime::generate(args));
+    AfdEPDomainRoutesRuntime::launch(runtime, args, stream);
 }
 
 class AfdEPCompletionRuntime final : public jit::LaunchRuntime<AfdEPCompletionRuntime> {

@@ -23,7 +23,7 @@ import torch.distributed as dist
 
 from afdep._build import source_digest
 
-from .fastafd import BASELINE_KEY, make
+from .fastafd import BASELINE_KEY, FastAFDBuffer, make
 from .screen import DEFAULT_ARMS
 
 METRIC = "per block: max Attention-rank CUDA-event us per exchange"
@@ -34,9 +34,8 @@ PER_BUFFER_COMM_STREAM_ENV = "AFD_DEEPEP_PER_BUFFER_COMM_STREAM"
 COLLECT_VIEW = os.environ.get("AFDEP_BENCH_COLLECT_VIEW", "0") == "1"
 
 
-def routes(args, rank, n):
+def routes(args, source, n):
     """Deterministic strided/skew patterns or seeded random top-k routes."""
-    source = max(rank - args.ffn_ranks, 0)
     local_experts = args.experts // args.ffn_ranks
     route_experts = local_experts if args.routing == "skew" else args.experts
     stride = 5 if math.gcd(5, route_experts) == 1 else 1
@@ -70,6 +69,13 @@ class Arm:
 
     def prepare(self, n, x, ids, weights, scale, graph):
         buffer, expert = self.buffer, None
+        routes, mapped = ids.to(buffer.topk_idx_dtype), {}
+        if isinstance(buffer, FastAFDBuffer) and self.config.ffn_ranks_per_domain:
+            # The baseline's real-to-logical mapping, once per cell outside timing
+            # (afdEP-comm maps inside its route check).
+            routes, mapped = self.config.logical_ids(routes), {"logical": True}
+        # A captured graph reads these IDs on every replay: keep them alive with it.
+        self.routes = routes
 
         def step():
             nonlocal expert
@@ -83,9 +89,7 @@ class Arm:
                     )
                 buffer.worker_reply(expert, received.receipt)
             else:
-                buffer.source_dispatch(
-                    x, ids.to(buffer.topk_idx_dtype), weights, scale, bucket=n
-                )
+                buffer.source_dispatch(x, routes, weights, scale, bucket=n, **mapped)
                 self.result = buffer.source_collect(view=COLLECT_VIEW)
 
         for _ in range(2):
@@ -106,7 +110,7 @@ class Arm:
             )
 
     def release(self):
-        self.exchange = self.graph = self.result = None
+        self.exchange = self.graph = self.result = self.routes = None
 
 
 def timed(exchange, iterations):
@@ -125,6 +129,12 @@ def main():
     parser.add_argument("--payload", choices=["bf16", "fp8"], default="bf16")
     parser.add_argument("--ffn-ranks", type=int, default=2)
     parser.add_argument("--attention-ranks", type=int, default=2)
+    parser.add_argument(
+        "--ffn-ranks-per-domain",
+        type=int,
+        default=0,
+        help="FFN ranks are the first N of every NVLink domain (0: ranks [0, F))",
+    )
     parser.add_argument("--hidden", type=int, default=2048)
     parser.add_argument("--experts", type=int, default=128)
     parser.add_argument("--top-k", type=int, default=8)
@@ -167,6 +177,7 @@ def main():
         "top_k": args.top_k,
         "ffn_ranks": args.ffn_ranks,
         "attention_ranks": args.attention_ranks,
+        "ffn_ranks_per_domain": args.ffn_ranks_per_domain,
         "payload": args.payload,
         "allow_hybrid_mode": args.hybrid == "on",
         "num_sms": args.num_sms,
@@ -174,13 +185,22 @@ def main():
     if len(args.arms) > 1:
         os.environ[PER_BUFFER_COMM_STREAM_ENV] = "1"
     arms = [Arm(name, overrides, common) for name, overrides in args.arms.items()]
+    # Roles, sources and the Attention-rank metric come from arm 0, so arms share one
+    # layout; screen other layouts (ffn_ranks, ffn_ranks_per_domain) in separate runs.
+    layouts = [None] * world
+    roles = {(arm.buffer.role, arm.buffer.role_rank) for arm in arms}
+    dist.all_gather_object(layouts, len(roles) == 1)
+    if not all(layouts):
+        raise ValueError("every arm must give each rank the same role")
     names = [arm.name for arm in arms]
     attention = arms[0].buffer.role == "attention"
+    # Each source's routes are seeded by its Attention index (0 on FFN ranks).
+    source = arms[0].buffer.role_rank if attention else 0
     dtype = torch.bfloat16 if args.payload == "bf16" else torch.float8_e4m3fn
     cells = []
     for n in args.tokens:
         x = torch.ones((n, args.hidden), dtype=dtype, device="cuda")
-        ids = routes(args, rank, n)
+        ids = routes(args, source, n)
         weights = torch.full((n, args.top_k), 1 / args.top_k, device="cuda")
         scale = (
             torch.ones((n, args.hidden // 128), device="cuda")

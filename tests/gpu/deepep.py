@@ -19,6 +19,7 @@ import torch.distributed as dist
 
 from afdep import Buffer, Config
 from afdep._build import source_digest
+from afdep.deepep import per_domain_layout
 from benchmarks.fastafd import BASELINE, FastAFDBuffer, make
 
 DEFAULT_HIDDEN = 256
@@ -212,6 +213,7 @@ def reply_partials(x, ids, weights, config: Config, scaleup_ranks: int | None):
     Each FFN rank sums its experts' BF16 rows into one BF16 partial; with hybrid
     (multi-domain) transport each FFN domain's forwarder sums its ranks' partials
     into one BF16 partial. Every stage is an exact FP32 sum rounded once to BF16.
+    ``scaleup_ranks`` is the FFN indices per FFN domain (consecutive indices).
     """
     contribution = (weights * (ids + 1).float()).masked_fill(ids < 0, 0)
     rows_bf16 = (x.float()[:, None, :] * contribution[:, :, None]).bfloat16().float()
@@ -303,7 +305,9 @@ def verify(
     if buffer.role == "attention":
         x, ids, weights = inputs(case, buffer.role_rank, rows, config)
         scaleout, scaleup = buffer.logical_domain
-        scaleup_ranks = scaleup if scaleout > 1 else None
+        # FFN indices per FFN domain: U for the global prefix, f for a per-domain one.
+        per_domain = config.ffn_ranks_per_domain or scaleup
+        scaleup_ranks = per_domain if scaleout > 1 else None
         x = sign * x.float()
         expected = combined_reference(x, ids, weights, config, scaleup_ranks, fp8)
         torch.testing.assert_close(value, expected, rtol=0, atol=0)
@@ -508,6 +512,12 @@ def main() -> None:
     parser.add_argument("--ffn-ranks", type=int, default=DEFAULT_FFN_RANKS)
     parser.add_argument("--experts-per-ffn", type=int, default=EXPERTS_PER_FFN)
     parser.add_argument(
+        "--ffn-ranks-per-domain",
+        type=int,
+        default=0,
+        help="FFN ranks are the first N of every NVLink domain (0: ranks [0, F))",
+    )
+    parser.add_argument(
         "--invalid-route", choices=("dummy", "duplicate", "negative", "wide")
     )
     parser.add_argument(
@@ -538,6 +548,9 @@ def main() -> None:
     world = dist.get_world_size()
     if not 0 < args.ffn_ranks < world:
         parser.error("ffn-ranks must leave at least one Attention rank")
+    domains = per_domain_layout(world, args.ffn_ranks, args.ffn_ranks_per_domain)
+    domain_size = world // domains
+    is_ffn = dist.get_rank() % domain_size < args.ffn_ranks // domains
     for setting in args.role_env:
         role, _, assignment = setting.partition(":")
         key, _, value = assignment.partition("=")
@@ -545,8 +558,8 @@ def main() -> None:
             parser.error("role-env must be ROLE:KEY=VALUE with ROLE ffn or attention")
         if not key.startswith(ROLE_LOCAL_ENV_PREFIX) and key not in ROLE_LOCAL_ENV:
             parser.error(f"{key} changes the protocol or buffer size on every rank")
-        # FFN ranks are [0, ffn_ranks); transport controls are read on every call.
-        if (dist.get_rank() < args.ffn_ranks) == (role == "ffn"):
+        # Transport controls are read on every call.
+        if is_ffn == (role == "ffn"):
             os.environ[key] = value
     buffer = make(
         dist.group.WORLD,
@@ -557,6 +570,7 @@ def main() -> None:
         top_k=args.top_k,
         ffn_ranks=args.ffn_ranks,
         attention_ranks=world - args.ffn_ranks,
+        ffn_ranks_per_domain=args.ffn_ranks_per_domain,
         payload=args.payload,
         num_sms=args.num_sms,
         num_qps=args.num_qps,

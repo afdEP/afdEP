@@ -142,6 +142,15 @@ __forceinline__ __device__ void gin_barrier_wo_local_sync(
 
     // Flush all QPs by all SMs (only needed for release semantics)
     if constexpr (kFlushStores) {
+        // ### PATCH START: order NVLink stores before GIN barrier signals
+        // Direct (non-hybrid) kernels write NVLink-reachable peers with TMA stores and others with RDMA, and
+        // this barrier then signals through the NIC. Flushing QPs covers RDMA only: without a system-scope
+        // fence a peer can see the signal before this GPU's NVLink stores and read stale rows (every value
+        // a same-node GPU wrote, whenever a node holds senders and receivers). The callers already waited
+        // for their bulk stores; each thread orders them before the signal its CTA's barrier leads to.
+        asm volatile("fence.proxy.async.global;" ::: "memory");
+        ptx::fence_acq_rel_sys();
+        // ### PATCH END: order NVLink stores before GIN barrier signals
         for (int i = global_warp_idx; i < num_qps; i += kNumSMs * kNumWarps) {
             ncclGin(nccl_dev_comm, i, NCCL_GIN_RESOURCE_SHARING_CTA).flush(ncclCoopWarp());
         }

@@ -123,6 +123,8 @@ public:
         bool afd_sparse_combine;
         // afdEP mixed-role hybrid only (afdep_mixed_hybrid_dispatch.cuh): F, or 0
         int afd_mixed_ffn_ranks;
+        // afdEP silent FFN rails only (afdep_domain_hybrid_dispatch.cuh, FFN GPUs): f, or 0
+        int afd_domain_ffn_ranks;
 
         // Parameters
         void* x; sf_pack_t* sf; topk_idx_t* topk_idx; float* topk_weights;
@@ -323,6 +325,32 @@ static void __instantiate_kernel() {{
     }
 };
 
+// afdEP silent FFN rails (afdep_roles.hpp): the union argument list and shape, with f appended, through
+// a generated copy of hybrid_dispatch.cuh that FFN GPUs of a per-domain FFN prefix run.
+class AfdepDomainHybridDispatchRuntime final : public jit::LaunchRuntime<AfdepDomainHybridDispatchRuntime> {
+public:
+    using Args = DispatchRuntime::Args;
+
+    static std::string generate_impl(const Args& args) {
+        EP_HOST_ASSERT(args.afd_ffn_scaleout_ranks == 0 and args.afd_mixed_ffn_ranks == 0 and args.afd_domain_ffn_ranks > 0);
+        auto shared = DispatchRuntime::get_hybrid_template_args(args);
+        shared.pop_back();
+        return fmt::format(R"(
+#include <deep_ep/impls/afdep_domain_hybrid_dispatch.cuh>
+
+using namespace deep_ep::elastic;
+
+static void __instantiate_kernel() {{
+    auto ptr = reinterpret_cast<void*>(&afdep_domain_hybrid_dispatch_impl{}, 0, false, false, {}>);
+}}
+)", shared, args.afd_domain_ffn_ranks);
+    }
+
+    static void launch_impl(const jit::KernelHandle& kernel, const jit::LaunchConfigHandle& config, Args args) {
+        DispatchRuntime::launch_impl(kernel, config, args);
+    }
+};
+
 // afdEP FFN directional hybrid dispatch whose forwarders retire unused channels by source
 // token count (afdep_suites.hpp): the FFN copy's shape.
 class AfdepFfnSparseHybridDispatchRuntime final : public jit::LaunchRuntime<AfdepFfnSparseHybridDispatchRuntime> {
@@ -478,7 +506,8 @@ static void launch_dispatch(void* x, void* sf,
                             const AfdLaunchShape afd_shape = AfdLaunchShape::kShared,
                             const int afd_ungated_tokens = 0,
                             const bool afd_thread_count = true,
-                            const int afd_mixed_ffn_ranks = 0) {
+                            const int afd_mixed_ffn_ranks = 0,
+                            const int afd_domain_ffn_ranks = 0) {
     // Cached mode does not support expert token counting
     if (cached_mode)
         EP_HOST_ASSERT(cumulative_local_expert_recv_stats == nullptr);
@@ -548,6 +577,7 @@ static void launch_dispatch(void* x, void* sf,
         .afd_ungated_tokens = afd_ungated_tokens,
         .afd_thread_count = afd_thread_count,
         .afd_mixed_ffn_ranks = num_scaleout_ranks > 1 and afd_ffn_scaleout_ranks == 1 ? afd_mixed_ffn_ranks : 0,
+        .afd_domain_ffn_ranks = num_scaleout_ranks > 1 and afd_ffn_scaleout_ranks == 0 ? afd_domain_ffn_ranks : 0,
         .x = x, .sf = static_cast<sf_pack_t*>(sf), .topk_idx = topk_idx, .topk_weights = topk_weights,
         .copied_topk_idx = copied_topk_idx,
         .cumulative_local_expert_recv_stats = cumulative_local_expert_recv_stats,
@@ -596,6 +626,15 @@ static void launch_dispatch(void* x, void* sf,
         const auto role_code = AfdepMixedHybridDispatchRuntime::generate(role_args);
         const auto role_runtime = jit::compiler->build("afdep_mixed_hybrid_dispatch", role_code);
         AfdepMixedHybridDispatchRuntime::launch(role_runtime, role_args, stream);
+        return;
+    }
+    if (args.afd_domain_ffn_ranks > 0) {
+        // afdEP silent FFN rails (afdep_roles.hpp): FFN GPUs run the generated copy in the shared shape.
+        EP_HOST_ASSERT(afd_shape == AfdLaunchShape::kShared and num_tokens == 0 and num_notify_warps > 0 and
+                       scaleup_rank_idx < args.afd_domain_ffn_ranks);
+        const auto domain_code = AfdepDomainHybridDispatchRuntime::generate(args);
+        const auto domain_runtime = jit::compiler->build("afdep_domain_hybrid_dispatch", domain_code);
+        AfdepDomainHybridDispatchRuntime::launch(domain_runtime, args, stream);
         return;
     }
     if (afd_shape == AfdLaunchShape::kRoleKernel and num_scaleout_ranks == 1) {

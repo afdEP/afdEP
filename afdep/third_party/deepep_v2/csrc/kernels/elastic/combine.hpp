@@ -35,6 +35,8 @@ public:
         int afd_ffn_scaleout_ranks;
         // afdEP mixed-role hybrid only (afdep_mixed_hybrid_combine.cuh): F, or 0
         int afd_mixed_ffn_ranks;
+        // afdEP silent FFN rails only (afdep_domain_hybrid_combine.cuh, FFN GPUs): f, or 0
+        int afd_domain_ffn_ranks;
 
         // Parameters
         nv_bfloat16* x;
@@ -268,6 +270,29 @@ public:
     }
 };
 
+// afdEP silent FFN rails (afdep_roles.hpp): the union hybrid combine's arguments and shape, with f
+// appended, through afdep_domain_hybrid_combine.cuh, which FFN GPUs of a per-domain FFN prefix run.
+class AfdepDomainHybridCombineRuntime final : public jit::LaunchRuntime<AfdepDomainHybridCombineRuntime> {
+public:
+    using Args = CombineRuntime::Args;
+
+    static std::string generate_impl(const Args& args) {
+        EP_HOST_ASSERT(args.num_scaleout_ranks > 1 and args.afd_ffn_scaleout_ranks == 0 and
+                       args.afd_mixed_ffn_ranks == 0 and args.afd_domain_ffn_ranks > 0);
+        auto code = afdep_repoint_kernel(CombineRuntime::generate_impl(args), "hybrid_combine",
+                                         "afdep_domain_hybrid_combine");
+        const std::string end = ">);";
+        const auto pos = code.find(end);
+        EP_HOST_ASSERT(pos != std::string::npos and code.find(end, pos + 1) == std::string::npos);
+        code.insert(pos, fmt::format(", 0, {}", args.afd_domain_ffn_ranks));
+        return code;
+    }
+
+    static void launch_impl(const jit::KernelHandle& kernel, const jit::LaunchConfigHandle& config, Args args) {
+        CombineRuntime::launch_impl(kernel, config, args);
+    }
+};
+
 // afdEP mixed-role hybrid: every rank's reply inbox, just before the staging slice (calculate_buffer_size).
 static void* afdep_mixed_reply_buffer(void* afd_scaleout_send_base, const layout::TokenLayout& token_layout,
                                       const int& num_scaleout_ranks, const int& num_max_tokens_per_rank,
@@ -326,7 +351,8 @@ static void* launch_combine(void* x,
                             void* afd_scaleout_send_base = nullptr,
                             const AfdLaunchShape afd_shape = AfdLaunchShape::kShared,
                             const int& afd_mixed_ffn_ranks = 0,
-                            const bool& afd_fp8_combine = false) {
+                            const bool& afd_fp8_combine = false,
+                            const int& afd_domain_ffn_ranks = 0) {
     // afdEP FP8 combine (afdep_suites.hpp): the directional hybrid only
     EP_HOST_ASSERT(not afd_fp8_combine or (num_scaleout_ranks > 1 and afd_ffn_scaleout_ranks > 0 and
                                            afd_mixed_ffn_ranks == 0));
@@ -398,6 +424,7 @@ static void* launch_combine(void* x,
                                  afd_single_ffn_reduce,
         .afd_ffn_scaleout_ranks = num_scaleout_ranks > 1 ? afd_ffn_scaleout_ranks : 0,
         .afd_mixed_ffn_ranks = num_scaleout_ranks > 1 and afd_ffn_scaleout_ranks == 1 ? afd_mixed_ffn_ranks : 0,
+        .afd_domain_ffn_ranks = num_scaleout_ranks > 1 and afd_ffn_scaleout_ranks == 0 ? afd_domain_ffn_ranks : 0,
         .x = static_cast<nv_bfloat16*>(x),
         .topk_weights = static_cast<float*>(topk_weights),
         .src_metadata = src_metadata,
@@ -421,7 +448,13 @@ static void* launch_combine(void* x,
         return afdep_mixed_reply_buffer(afd_scaleout_send_base, token_layout, num_scaleout_ranks,
                                         num_max_tokens_per_rank, num_topk, allow_multiple_reduction);
     }
-    if (args.afd_ffn_scaleout_ranks > 0 and scaleout_rank_idx < args.afd_ffn_scaleout_ranks and afd_fp8_combine) {
+    if (args.afd_domain_ffn_ranks > 0) {
+        // afdEP silent FFN rails (afdep_roles.hpp): FFN GPUs run the generated copy in the shared shape.
+        EP_HOST_ASSERT(afd_shape == AfdLaunchShape::kShared and scaleup_rank_idx < args.afd_domain_ffn_ranks);
+        const auto domain_code = AfdepDomainHybridCombineRuntime::generate(args);
+        const auto domain_runtime = jit::compiler->build("afdep_domain_hybrid_combine", domain_code);
+        AfdepDomainHybridCombineRuntime::launch(domain_runtime, args, stream);
+    } else if (args.afd_ffn_scaleout_ranks > 0 and scaleout_rank_idx < args.afd_ffn_scaleout_ranks and afd_fp8_combine) {
         // afdEP FP8 combine, FFN (afdep_suites.hpp): the shared shape through a generated copy, with
         // sparse combine signalling as that switch reads at this launch.
         if (afdep_hybrid_sparse_combine()) {

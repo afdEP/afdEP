@@ -50,6 +50,10 @@ class ElasticBuffer {
     // Zero preserves the original symmetric DeepEP allocation/epilogues.
     int afd_ffn_ranks;
 
+    // afdEP per-domain FFN prefix (afdep_roles.hpp): with f > 0, FFN ranks are the first f local
+    // ranks of every NVLink domain instead of ranks [0, afd_ffn_ranks). Zero: the global prefix.
+    int afd_ffn_ranks_per_domain;
+
     // afdEP count-first (afdep_suites.hpp), latched at construction: the minimum bucket (0: off)
     // and the raw screen arm ("source": sources only, against the payload-first FFN receive).
     int afd_cf_min_bucket = 0;
@@ -104,7 +108,8 @@ public:
                   const bool& prefer_overlap_with_compute,
                   const int& sl_idx, const int& num_allocated_qps,
                   const int& num_cpu_timeout_secs, const int& num_gpu_timeout_secs,
-                  const bool& explicitly_destroy, const int& afd_ffn_ranks = 0):
+                  const bool& explicitly_destroy, const int& afd_ffn_ranks = 0,
+                  const int& afd_ffn_ranks_per_domain = 0):
         num_buffer_bytes(num_buffer_bytes),
         explicitly_destroy(explicitly_destroy),
         comm_stream(get_elastic_comm_stream()),
@@ -112,8 +117,13 @@ public:
         allow_hybrid_mode(allow_hybrid_mode),
         allow_multiple_reduction(allow_multiple_reduction),
         prefer_overlap_with_compute(prefer_overlap_with_compute),
-        afd_ffn_ranks(afd_ffn_ranks) {
+        afd_ffn_ranks(afd_ffn_ranks),
+        afd_ffn_ranks_per_domain(afd_ffn_ranks_per_domain) {
         EP_HOST_ASSERT(afd_ffn_ranks >= 0 and afd_ffn_ranks < num_ranks);
+        // afdep/deepep.py checks the layout against the physical domains before construction.
+        EP_HOST_ASSERT(afd_ffn_ranks_per_domain >= 0 and
+                       (afd_ffn_ranks_per_domain == 0 or
+                        (afd_ffn_ranks > afd_ffn_ranks_per_domain and afd_ffn_ranks % afd_ffn_ranks_per_domain == 0)));
 
         // Init NCCL runtime
         static constexpr int kBufferAlignment = 16;
@@ -142,7 +152,7 @@ public:
         afd_fp8_combine = afd_ffn_ranks > 0 and not deterministic and allow_multiple_reduction and
             kEnableSM90Features and
             afdep_directional_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
-                                     nccl_context->num_scaleup_ranks) > 0 and
+                                     nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain) > 0 and
             afdep_hybrid_fp8_combine();
         afd_fp8_min_bucket = afd_fp8_combine ? afdep_hybrid_fp8_combine_min_bucket() : 0;
 
@@ -219,18 +229,24 @@ public:
     // The mixed-role hybrid (afdep_roles.hpp) is reported the same way: its F, wire-visible.
     // The fifth and sixth elements are the latched FP8 combine replies setting and its minimum bucket
     // (directional hybrid only).
-    std::tuple<int, bool, bool, int, bool, int> get_afd_sparse_hybrid_config() const {
+    // The seventh is the per-domain FFN prefix's protocol (afdep_domain_hybrid: 1, silent FFN rails; 0, union).
+    std::tuple<int, bool, bool, int, bool, int, int> get_afd_sparse_hybrid_config() const {
+        if (afd_ffn_ranks > 0 and afd_ffn_ranks_per_domain > 0)
+            return {0, false, false, 0, false, 0,
+                    afdep_domain_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
+                                        nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain)};
         if (afd_ffn_ranks > 0) {
             const int mixed = afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
-                                                 nccl_context->num_scaleup_ranks);
+                                                 nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain);
             if (mixed > 0)
-                return {0, false, false, mixed, false, 0};
+                return {0, false, false, mixed, false, 0, 0};
         }
         if (afd_ffn_ranks <= 0 or afdep_directional_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
-                                                           nccl_context->num_scaleup_ranks) == 0)
-            return {0, false, false, 0, false, 0};
+                                                           nccl_context->num_scaleup_ranks,
+                                                           afd_ffn_ranks_per_domain) == 0)
+            return {0, false, false, 0, false, 0, 0};
         return {afdep_hybrid_stagger_max_tokens(), afdep_hybrid_sparse_dispatch(), afdep_hybrid_sparse_combine(), 0,
-                afd_fp8_combine, afd_fp8_min_bucket};
+                afd_fp8_combine, afd_fp8_min_bucket, 0};
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
@@ -689,6 +705,13 @@ public:
             num_max_tokens_per_rank).get_num_bytes();
     }
 
+    // afdEP FFN role of a rank: the global prefix [0, F), or the per-domain prefix (afdep_roles.hpp) of
+    // every physical NVLink domain, which hybrid off folds into one logical domain.
+    bool afd_is_ffn(const int& rank) const {
+        return afd_ffn_ranks_per_domain > 0 ? rank % nccl_context->num_nvl_ranks < afd_ffn_ranks_per_domain :
+            rank < afd_ffn_ranks;
+    }
+
     // afdEP single-FFN collect view: one FFN rank, one NVLink domain, rank layout.
     bool afd_single_ffn_collect_rows(const bool& afd_direct_nvlink, const int& num_topk) const {
         return afd_direct_nvlink and afd_ffn_ranks == 1 and allow_multiple_reduction and
@@ -700,7 +723,8 @@ public:
                                          int num_topk, const bool& use_fp8_dispatch,
                                          const bool& allow_hybrid_mode,
                                          const bool& allow_multiple_reduction,
-                                         const int& afd_ffn_ranks) {
+                                         const int& afd_ffn_ranks,
+                                         const int& afd_ffn_ranks_per_domain) {
         EP_HOST_ASSERT(num_max_tokens_per_rank > 0 and hidden > 0);
 
         // The worst case SF bytes must be less than the main part
@@ -732,7 +756,8 @@ public:
 
         // afdEP mixed-role hybrid (afdep_roles.hpp): the reply inbox and the combine staging of every
         // rank get slices past both layouts.
-        if (afd_ffn_ranks > 0 and afdep_mixed_hybrid(afd_ffn_ranks, num_scaleout_ranks, num_scaleup_ranks) > 0) {
+        if (afd_ffn_ranks > 0 and afdep_mixed_hybrid(afd_ffn_ranks, num_scaleout_ranks, num_scaleup_ranks,
+                                                  afd_ffn_ranks_per_domain) > 0) {
             return std::max(num_dispatch_bytes, num_combine_bytes) +
                 get_hybrid_combine_reply_bytes(num_max_tokens_per_rank, hidden, num_topk, num_scaleout_ranks,
                                                allow_multiple_reduction) +
@@ -744,7 +769,7 @@ public:
         // overlap any inbox another role or domain writes (the dispatch inboxes), so it gets its
         // own slice past both layouts.
         const int afd_ffn_scaleout_ranks = afd_ffn_ranks > 0 and num_scaleout_ranks > 1 ?
-            afdep_directional_hybrid(afd_ffn_ranks, num_scaleout_ranks, num_scaleup_ranks) : 0;
+            afdep_directional_hybrid(afd_ffn_ranks, num_scaleout_ranks, num_scaleup_ranks, afd_ffn_ranks_per_domain) : 0;
         if (afd_ffn_scaleout_ranks > 0 and num_scaleout_ranks - afd_ffn_scaleout_ranks >= 2) {
             const auto num_send_bytes = get_hybrid_combine_send_bytes(
                 num_max_tokens_per_rank, hidden, num_topk, num_scaleout_ranks, allow_multiple_reduction);
@@ -809,19 +834,26 @@ public:
         const auto num_local_experts = num_experts / nccl_context->num_ranks;
         const bool afd_role_aware = afd_ffn_ranks > 0;
         const int afd_rank = nccl_context->rank_idx;
-        const bool afd_source = afd_role_aware and afd_rank >= afd_ffn_ranks;
+        const bool afd_source = afd_role_aware and not afd_is_ffn(afd_rank);
         const bool afd_direct_nvlink = afd_role_aware and
             nccl_context->num_scaleout_ranks == 1 and nccl_context->is_scaleup_nvlink and
             not deterministic;
         // Direct dispatch over GIN (hybrid off across NVLink domains): only the in-kernel route
         // checks apply so far; the barrier, count and exit protocol stays union.
+        // A per-domain FFN prefix keeps its route check, which also translates the routes.
         const bool afd_direct_gin_routes = afd_role_aware and nccl_context->num_scaleout_ranks == 1 and
-            not nccl_context->is_scaleup_nvlink and not deterministic and afdep_hybrid_routes_in_kernel();
+            not nccl_context->is_scaleup_nvlink and not deterministic and afdep_hybrid_routes_in_kernel() and
+            afd_ffn_ranks_per_domain == 0;
         if (afd_role_aware) {
             // Only expanded inference dispatch is currently exposed by afdEP.
             // Roles are immutable constructor geometry, never token-count guesses.
             EP_HOST_ASSERT(not cached_mode and do_expand);
             EP_HOST_ASSERT(afd_source or num_tokens == 0);
+            // Per-domain FFN prefix: f FFN ranks in each of the physical NVLink domains, and the handle
+            // copy that carries the logical IDs to combine.
+            EP_HOST_ASSERT(afd_ffn_ranks_per_domain == 0 or
+                           (nccl_context->num_rdma_ranks * afd_ffn_ranks_per_domain == afd_ffn_ranks and
+                            nccl_context->num_rdma_ranks > 1 and do_handle_copy));
         }
         EP_HOST_ASSERT(x.is_cuda() and x.is_contiguous());
         EP_HOST_ASSERT((x.size(1) * x.element_size()) % sizeof(int4) == 0);
@@ -877,15 +909,31 @@ public:
 
         // afdEP mixed-role hybrid (afdep_roles.hpp): one FFN-holding domain shared with Attention ranks.
         const int afd_mixed_ffn_ranks = afd_role_aware and not deterministic ?
-            afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks) : 0;
+            afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks,
+                               afd_ffn_ranks_per_domain) : 0;
         const int afd_ffn_scaleout_ranks = afd_mixed_ffn_ranks > 0 ? 1 : afd_role_aware and not deterministic ?
             afdep_directional_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
-                                     nccl_context->num_scaleup_ranks) : 0;
+                                     nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain) : 0;
         const bool afd_hybrid_routes_in_kernel = afd_ffn_scaleout_ranks > 0 and afdep_hybrid_routes_in_kernel();
-        if (afd_source and not afd_direct_nvlink and not afd_hybrid_routes_in_kernel and not afd_direct_gin_routes)
+        // afdEP silent FFN rails (afdep_roles.hpp): FFN GPUs of a per-domain prefix skip every scale-out action.
+        const int afd_domain_ffn_ranks = afd_role_aware and not afd_source and not deterministic and
+            afdep_domain_silent_rails(afd_ffn_ranks, nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks,
+                                      afd_ffn_ranks_per_domain, num_topk, allow_multiple_reduction) ?
+            afd_ffn_ranks_per_domain : 0;
+        // Per-domain FFN prefix: dispatch reads (and copies for combine) the logical IDs.
+        auto afd_logical_topk_idx = std::optional<torch::Tensor>();
+        if (afd_source and afd_ffn_ranks_per_domain > 0) {
+            afd_logical_topk_idx = torch::empty_like(topk_idx);
+            launch_afdep_domain_routes(topk_idx.data_ptr<topk_idx_t>(),
+                                       afd_logical_topk_idx->data_ptr<topk_idx_t>(), num_tokens,
+                                       afd_ffn_ranks * num_local_experts, num_topk, afd_ffn_ranks_per_domain,
+                                       nccl_context->num_nvl_ranks, num_local_experts, num_sms, comm_stream);
+        } else if (afd_source and not afd_direct_nvlink and not afd_hybrid_routes_in_kernel and not afd_direct_gin_routes) {
             launch_afdep_route_guard(topk_idx.data_ptr<topk_idx_t>(), num_tokens,
                                     afd_ffn_ranks * num_local_experts, num_topk,
                                     num_sms, comm_stream);
+        }
+        const auto& afd_dispatch_topk_idx = afd_logical_topk_idx.has_value() ? afd_logical_topk_idx.value() : topk_idx;
 
         // The number of received tokens per expert
         // This is useful for expanding mode
@@ -1063,7 +1111,7 @@ public:
         // afdEP mixed-role hybrid: this call's dispatch layout ends below the reply and staging slices
         // its combine places at the window end (same bucket and top-k).
         if (afd_ffn_ranks > 0 and afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
-                                                     nccl_context->num_scaleup_ranks) > 0) {
+                                                     nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain) > 0) {
             EP_HOST_ASSERT(get_dispatch_buffer_size(
                                num_max_tokens_per_rank, hidden, num_sf_packs, num_topk, x.element_size(),
                                nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks,
@@ -1122,7 +1170,7 @@ public:
                  afd_mixed_ffn_ranks == 0)
             afd_dispatch_shape = AfdLaunchShape::kRoleKernel;
         launch_dispatch(x.data_ptr(), sf_ptr,
-                        topk_idx.data_ptr<topk_idx_t>(), topk_weights_ptr,
+                        afd_dispatch_topk_idx.data_ptr<topk_idx_t>(), topk_weights_ptr,
                         copied_topk_idx_ptr,
                         cumulative_local_expert_recv_stats_ptr,
                         psum_num_recv_tokens_per_scaleup_rank.data_ptr<int>(),
@@ -1155,7 +1203,7 @@ public:
                             get_combine_token_layout(hidden, sizeof(nv_bfloat16), num_topk).get_num_bytes<false>() : 0,
                         afd_dispatch_shape,
                         afdep_count_first_ungated_tokens(), afdep_count_first_thread_count(),
-                        afd_mixed_ffn_ranks);
+                        afd_mixed_ffn_ranks, afd_domain_ffn_ranks);
 
         // Received token counters
         int num_recv_tokens = 0, num_expanded_tokens = 0;
@@ -1322,7 +1370,7 @@ public:
 
         // Stream control
         const auto event = stream_control_epilogue(
-            {x, sf, topk_idx, topk_weights,
+            {x, sf, topk_idx, topk_weights, afd_logical_topk_idx,
              recv_x, recv_sf, recv_topk_idx, recv_topk_weights,
              cumulative_local_expert_recv_stats,
              copied_topk_idx,
@@ -1380,7 +1428,7 @@ public:
         // Check tensors at dispatch
         const auto [num_combined_tokens, num_topk] = get_shape<2>(combined_topk_idx);
         const int afd_rank = nccl_context->rank_idx;
-        const bool afd_worker = afd_ffn_ranks > 0 and afd_rank < afd_ffn_ranks;
+        const bool afd_worker = afd_ffn_ranks > 0 and afd_is_ffn(afd_rank);
         // Every role must instantiate the same collective combine protocol.
         const bool afd_direct = afd_ffn_ranks > 0 and
             nccl_context->num_scaleout_ranks == 1 and nccl_context->is_scaleup_nvlink and
@@ -1471,10 +1519,11 @@ public:
             num_max_tokens_per_rank * nccl_context->num_ranks : num_reduced_tokens;
         // afdEP directional hybrid: FFN combine staging uses the slice reserved at the window end.
         const int afd_mixed_ffn_ranks = afd_ffn_ranks > 0 and not deterministic ?
-            afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks) : 0;
+            afdep_mixed_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks,
+                               afd_ffn_ranks_per_domain) : 0;
         const int afd_ffn_scaleout_ranks = afd_mixed_ffn_ranks > 0 ? 1 : afd_ffn_ranks > 0 and not deterministic ?
             afdep_directional_hybrid(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
-                                     nccl_context->num_scaleup_ranks) : 0;
+                                     nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain) : 0;
         void* afd_scaleout_send_base = nullptr;
         if (afd_mixed_ffn_ranks > 0) {
             // afdEP mixed-role hybrid: staging slice at the window end, every rank's reply inbox before it,
@@ -1536,7 +1585,11 @@ public:
             afd_scaleout_send_base,
             afd_combine_shape,
             afd_mixed_ffn_ranks,
-            afd_fp8_replies);
+            afd_fp8_replies,
+            afd_worker and not deterministic and
+                afdep_domain_silent_rails(afd_ffn_ranks, nccl_context->num_scaleout_ranks,
+                                          nccl_context->num_scaleup_ranks, afd_ffn_ranks_per_domain, num_topk,
+                                          allow_multiple_reduction) ? afd_ffn_ranks_per_domain : 0);
 
         // Allocate output tensors
         // afdEP single-FFN collect view: with one FFN rank in one NVLink domain (rank layout), each
@@ -1603,6 +1656,7 @@ static void register_apis(pybind11::module_& m) {
     // ### PATCH END: module_local so this coexists with vLLM's deep_ep._C
         .def(pybind11::init<int, int, int64_t, int64_t, bool, bool, bool, bool, int, int, int, int, bool>())
         .def(pybind11::init<int, int, int64_t, int64_t, bool, bool, bool, bool, int, int, int, int, bool, int>())
+        .def(pybind11::init<int, int, int64_t, int64_t, bool, bool, bool, bool, int, int, int, int, bool, int, int>())
         .def("destroy", &ElasticBuffer::destroy)
         .def("get_comm_stream", &ElasticBuffer::get_comm_stream)
         .def("get_physical_domain_size", &ElasticBuffer::get_physical_domain_size)
