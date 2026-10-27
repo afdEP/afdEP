@@ -156,6 +156,8 @@ def test_ffn_role_kernels_are_the_generated_copies():
     assert domain_dispatch == rk.domain_hybrid_dispatch(hybrid)
     domain_combine = (rk.IMPLS / rk.DOMAIN_HYBRID_COMBINE).read_text()
     assert domain_combine == rk.domain_hybrid_combine(combine)
+    direct_gin = (rk.IMPLS / rk.DIRECT_GIN_DISPATCH).read_text()
+    assert direct_gin == rk.direct_gin_dispatch((rk.IMPLS / "dispatch.cuh").read_text())
     fp8_combine = (rk.IMPLS / rk.FFN_FP8_HYBRID_COMBINE).read_text()
     assert fp8_combine == rk.ffn_fp8_hybrid_combine(combine)
     sparse_fp8 = (rk.IMPLS / rk.FFN_SPARSE_FP8_HYBRID_COMBINE).read_text()
@@ -229,6 +231,23 @@ def test_silent_ffn_rail_kernels_have_one_runtime_each():
         text = (rk.IMPLS / name).read_text()
         assert "afdep_sparse_hybrid.cuh" not in text and "afdep_fp8_combine" not in text
         assert text.count("afd_holder = scaleup_rank_idx < kAfdFfnRanksPerDomain;") == 1
+
+
+def test_direct_gin_dispatch_has_one_runtime():
+    """The direct GIN copy has one runtime; no shared kernel includes its header."""
+    from tests import role_kernels as rk
+
+    dispatch = (VENDOR_ROOT / "csrc/kernels/elastic/dispatch.hpp").read_text()
+    assert dispatch.count(f"#include <deep_ep/impls/{rk.DIRECT_GIN_DISPATCH}>") == 1
+    header = "#include <deep_ep/impls/afdep_direct_gin.cuh>"
+    assert (rk.IMPLS / rk.DIRECT_GIN_DISPATCH).read_text().count(header) == 1
+    for name in (
+        "dispatch.cuh",
+        "afdep_roles.cuh",
+        rk.FFN_DISPATCH,
+        rk.SOURCE_DISPATCH,
+    ):
+        assert header not in (rk.IMPLS / name).read_text(), name
 
 
 def test_fp8_combine_kernels_stay_out_of_shared_runtimes():

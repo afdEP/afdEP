@@ -1250,6 +1250,69 @@ FFN GPU enters through that GPU's NIC, while hybrid spreads the same bytes over 
 NICs and NVLink. With two FFN GPUs per node hybrid wins at every size. The direct path still runs
 DeepEP's union protocol (FastAFD M2N is within 1.3%); sections 1–3 over RDMA are next.
 
+### 21. Direct GIN path: sections 1–3 over RDMA
+
+AFD basis: at decode sizes the direct path (hybrid off) takes one hop per token, from every
+Attention GPU to every FFN GPU, but it still ran DeepEP's union protocol: four world GIN barriers
+per round trip (each flushes every context, signals all W ranks and waits for all of them), an
+all-to-all count exchange and, for a per-domain FFN prefix, a separate route kernel. Every
+role-aware direct dispatch now runs `afdep_direct_gin_dispatch.cuh`, a generated copy of
+`dispatch.cuh` with per-rank roles (`afdep_direct_gin.cuh`) for a global or per-domain FFN prefix:
+
+- Entry barriers skipped in both phases (section 1). The exit barriers stay union, so every write
+  of exchange N+1 follows its reader's exit of exchange N, whose signal that reader sent after its
+  count clears, its epilogue's reads and its flush (its NIC finished reading staging, even staging
+  inside an inbox). The world barrier's signal slots carry no phase, so the choice is latched at
+  construction and checked on every rank. The source finalize and the FFN completion kernel go.
+- Routes checked and translated in-kernel: both warp classes check each real route before their
+  first route-derived index and map it to its logical expert (section 20), so the route kernel goes.
+- Directional counts (section 2): sources send rank and expert counts to FFN ranks only, as NVLink
+  stores to same-node FFN ranks and one put to remote ones, at the positions a per-domain prefix
+  interleaves; FFN ranks send none and wait only for sources.
+
+Each step against the tree before it ([record](validation-direct-gin-protocol.json); FP8, hidden
+4096, top-8, capacity 512, three fresh processes per arm, 4-GPU domains), µs at T = 1 / 8 / 32 /
+128 / 512:
+
+| Step, layout | Before | After |
+|---|---|---|
+| 1, FFN on node 0 (2 × 4, F = 2) | 97.7 / 115.4 / 131.9 / 225.9 / 647.7 | 75.4 / 82.3 / 97.4 / 200.4 / 621.9 |
+| 1, per-node FFN (2 × 4, f = 1; combine only) | 96.8 / 114.8 / 126.1 / 200.3 / 530.0 | 87.0 / 94.3 / 103.7 / 182.0 / 515.4 |
+| 1, per-node FFN (3 × 4, f = 1; combine only) | 108.7 / 119.4 / 141.5 / 290.7 / 904.0 | 93.5 / 99.6 / 129.2 / 281.2 / 893.4 |
+| 2, per-node FFN (2 × 4; dispatch entry too) | 89.5 / 95.6 / 105.1 / 183.1 / 516.8 | 78.7 / 84.7 / 93.5 / 171.5 / 503.9 |
+| 2, per-node FFN (3 × 4) | 94.0 / 100.4 / 129.1 / 281.7 / 892.9 | 83.0 / 88.9 / 117.4 / 269.4 / 879.4 |
+| 3, per-node FFN (2 × 4) | 77.4 / 82.8 / 93.1 / 170.6 / 502.8 | 77.2 / 82.8 / 92.2 / 170.7 / 503.6 |
+| 3, per-node FFN (3 × 4) | 82.2 / 87.7 / 116.8 / 269.1 / 878.7 | 81.1 / 86.4 / 115.3 / 268.7 / 879.4 |
+
+Against FastAFD M2N in the same per-node layouts, afdEP-comm is now 21 / 28 / 28 / 15 / 5% faster
+on 2 × 4 and 25 / 27 / 18 / 8 / 3% on 3 × 4. The entry barriers were most of it (about 22 µs at one
+token with the FFN on node 0, against an estimated 8 to 17); directional counts are worth about
+1 µs on three nodes and nothing on two, and stay because they cut count messages from W² to F × N.
+`AFDEP_KEEP_ENTRY_BARRIERS=1` and `AFDEP_UNION_NOTIFY=1` keep the old protocol as controls (both
+measured equal to the tree before each step).
+
+Correctness: the GPU suite passes after every step (17, 18 and 18 runs) on 2 × 4 and 3 × 4 H200
+with global and per-domain prefixes (f = 1 and 2), BF16 and FP8, capacities 8 to 512, hidden 256 to
+4096, 8 and 24 SMs, top-k 2 and 8, and on FastAFD M2N; invalid routes stop at the in-kernel checks in
+eager and graph execution; a rank started with a different control is rejected at construction.
+A directed exit over GIN (section 3) was also built and is slower (R12).
+
+Which layout to run at decode sizes, every arm on the same pods and tree (record, same shapes), µs:
+
+| 2 × 4, 6 Attention + 2 FFN GPUs | T=1 | 8 | 32 | 128 | 512 |
+|---|---:|---:|---:|---:|---:|
+| Per-node FFN, direct | 76.3 | 82.3 | **91.7** | 170.5 | 502.9 |
+| FFN on node 0, direct | **74.0** | **81.7** | 97.2 | 200.7 | 622.2 |
+| FFN on node 0, mixed-role hybrid (opt-in) | 90.6 | 109.8 | 119.2 | **148.3** | **361.9** |
+| Per-node FFN, hybrid (silent FFN rails) | 104.7 | 126.6 | 138.4 | 163.7 | 370.6 |
+| FastAFD M2N, FFN on node 0, direct | 97.6 | 115.9 | 131.5 | 225.5 | 647.1 |
+
+The direct path wins up to 32 tokens, the hybrid from 128, where the FFN's ingress is the limit. On
+3 × 4 (9 + 3) the order is the same (direct 79.7 to 115.5 µs at 1 to 32 tokens, against 112.0 to
+145.0 for the mixed-role hybrid; the hybrid 188.8 against 268.7 at 128). With whole FFN nodes
+(2 × 4, 4 + 4) the directional hybrid stays best at one token (69.7 against 78.9 µs) and from 128,
+and per-node FFN on the direct path is best at 8 and 32 (77.3 and 83.6 µs).
+
 ## 3:1 Attention:FFN: where the time goes (analysis)
 
 Three Attention ranks per FFN rank make one FFN serve three sources. One NVLink
@@ -1555,3 +1618,18 @@ after the gate, so slot order follows issue order. Both passed review and compil
 
 The signaller's lag costs more than the per-row fences it saves, and slot order alone
 does not fix the epilogue's wait at 512 tokens. Section 16 keeps per-row release.
+
+### R12. Directed exit over GIN (slower)
+
+Section 3 over GIN: dispatch sources and combine FFN ranks waited for their stores, flushed every
+context and released each receiver (an NVLink arrival word for same-node ones, a signal on an
+arrival context for remote ones), and only receivers waited. It passed the GPU suite on 2 × 4 and
+3 × 4 and NIC-backlog fault injection (large dummy puts queued ahead of every staging row): the
+protocol passed, and the two negative controls failed as they must (no flush: 5.9% wrong values at
+the remote FFN; same-node receivers released before the flush: replies overwrote staging the NIC was
+still reading). But it is slower than the union exit it replaces: with one thread polling every
+sender, 3.7% at one token on 2 × 4; with one thread per sender, still 0.5 / 2.7 / 3.6% at 1 / 8 / 32
+tokens on 2 × 4 and 2.1 / 1.2 / 3.4% on 3 × 4, level at 1 to 8 tokens with the FFN on node 0. The
+union exit's single flush and W signals cost no more than per-receiver releases on separate contexts,
+and the senders' wait it removes is off the critical path (the next phase waits anyway).
+

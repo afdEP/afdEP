@@ -25,6 +25,10 @@ The per-domain FFN prefix (afdep_roles.hpp, afdep_domain_hybrid) adds two: the
 hybrid dispatch and combine whose FFN GPUs, local ranks [0, f) of every NVLink
 domain, skip every scale-out action, because their rails join FFN GPUs only.
 
+The direct GIN path (hybrid off across NVLink domains) adds one: dispatch.cuh
+with per-rank roles (afdep_direct_gin.cuh) and routes checked and translated to
+logical experts in both warp classes, for global and per-domain FFN prefixes.
+
 tests/unit/test_deepep_build.py re-derives every copy and requires byte
 equality, so a fix to a shared kernel fails the test until the copies are
 regenerated: python -m tests.role_kernels
@@ -51,6 +55,7 @@ MIXED_HYBRID_DISPATCH = "afdep_mixed_hybrid_dispatch.cuh"
 MIXED_HYBRID_COMBINE = "afdep_mixed_hybrid_combine.cuh"
 DOMAIN_HYBRID_DISPATCH = "afdep_domain_hybrid_dispatch.cuh"
 DOMAIN_HYBRID_COMBINE = "afdep_domain_hybrid_combine.cuh"
+DIRECT_GIN_DISPATCH = "afdep_direct_gin_dispatch.cuh"
 FFN_FP8_HYBRID_COMBINE = "afdep_ffn_fp8_hybrid_combine.cuh"
 FFN_SPARSE_FP8_HYBRID_COMBINE = "afdep_ffn_sparse_fp8_hybrid_combine.cuh"
 FP8_COMBINE_REDUCE = "afdep_fp8_combine_reduce.cuh"
@@ -1086,6 +1091,156 @@ DOMAIN_HYBRID_COMBINE_EDITS = (
 )
 
 
+# Direct GIN dispatch (hybrid off across NVLink domains; afdep_direct_gin.cuh): the
+# role template of dispatch.cuh with per-rank roles for a global or per-domain FFN
+# prefix, whose notify and payload warps each check every real route before its first
+# route-derived index and translate it to DeepEP's logical expert, which the payload
+# carries and the handle copies for combine (what afdep_domain_routes.cuh produced).
+# The protocol is unchanged.
+DIRECT_GIN_DISPATCH_EDITS = (
+    (
+        "#pragma once\n",
+        "#pragma once  // afdEP: generated from dispatch.cuh by "
+        "tests/role_kernels.py; do not edit\n",
+    ),
+    (
+        "#include <deep_ep/impls/afdep_roles.cuh>\n",
+        "#include <deep_ep/impls/afdep_roles.cuh>\n"
+        "#include <deep_ep/impls/afdep_direct_gin.cuh>\n",
+    ),
+    (
+        "          int kAfdZeroCollectRowBytes = 0,\n",
+        "          int kAfdZeroCollectRowBytes = 0,\n"
+        "          // afdEP direct GIN (afdep_direct_gin.cuh): FFN ranks per NVLink"
+        " domain (0: [0, F)) and its size.\n"
+        "          int kAfdFfnRanksPerDomain = 0,\n"
+        "          int kAfdDomainRanks = 0,\n",
+    ),
+    ("dispatch_impl(\n", "afdep_direct_gin_dispatch_impl(\n"),
+    (
+        "    constexpr int kNumExpertsPerRank = kNumExperts / kNumRanks;\n",
+        "    constexpr int kNumExpertsPerRank = kNumExperts / kNumRanks;\n"
+        "    // afdEP direct GIN: the role-aware union protocol with per-rank roles.\n"
+        "    EP_STATIC_ASSERT(kAfdFfnRanks > 0 and not kIsScaleupNVLink and\n"
+        "                     not kAfdDirectedExit and not kAfdRoleBuffers and "
+        "kAfdZeroCollectRowBytes == 0,\n"
+        '                     "direct GIN: role routes over the union protocol");\n'
+        "    using Roles = AfdepGinRoles<kNumRanks, kAfdFfnRanks, "
+        "kAfdFfnRanksPerDomain, kAfdDomainRanks>;\n",
+    ),
+    (
+        "    const bool afd_source = rank_idx >= kAfdFfnRanks;\n",
+        "    const bool afd_source = not Roles::is_ffn(rank_idx);\n",
+    ),
+    (
+        "                dst_expert_idx = afdep_checked_expert<kAfdFfnRanks * "
+        "kNumExpertsPerRank>(raw_expert, lane_idx);\n",
+        "                dst_expert_idx = Roles::template logical<"
+        "kNumExpertsPerRank>(\n"
+        "                    afdep_checked_expert<kAfdFfnRanks * kNumExpertsPerRank>"
+        "(raw_expert, lane_idx));\n",
+    ),
+    (
+        "                dst_expert_idx = afdep_checked_expert<kAfdFfnRanks * "
+        "kNumExpertsPerRank>(\n"
+        "                    uncasted_dst_expert_idx, lane_idx);\n",
+        "                dst_expert_idx = Roles::template logical<"
+        "kNumExpertsPerRank>(\n"
+        "                    afdep_checked_expert<kAfdFfnRanks * kNumExpertsPerRank>("
+        "uncasted_dst_expert_idx, lane_idx));\n",
+    ),
+    (
+        "                    copied_topk_idx[token_idx * kNumTopk + lane_idx] = "
+        "uncasted_dst_expert_idx;\n",
+        "                    copied_topk_idx[token_idx * kNumTopk + lane_idx] = "
+        "static_cast<topk_idx_t>(dst_expert_idx);\n",
+    ),
+    (
+        "                if (rank_idx >= kAfdFfnRanks and warp_idx == 0 and "
+        "lane_idx == 0) {\n",
+        "                if (afd_source and warp_idx == 0 and lane_idx == 0) {\n",
+    ),
+    # Directional counts (section 2 over GIN): sources count to FFN ranks only, at their
+    # canonical positions, which a per-domain prefix interleaves.
+    (
+        "    EP_STATIC_ASSERT(not kAfdDirectionalNotify or (kAfdFfnRanks > 0 and "
+        "kIsScaleupNVLink),\n",
+        "    EP_STATIC_ASSERT(not kAfdDirectionalNotify or kAfdFfnRanks > 0,\n",
+    ),
+    (
+        "            return i < kAfdFfnRanks ? i : kNumRanks + i - kAfdFfnRanks;\n",
+        "            return i < kAfdFfnRanks ? Roles::ffn_rank(i) :\n"
+        "                kNumRanks + Roles::ffn_rank((i - kAfdFfnRanks) / kNumExpertsPe"
+        "rRank)"
+        " * kNumExpertsPerRank +\n"
+        "                (i - kAfdFfnRanks) % kNumExpertsPerRank;\n",
+    ),
+    (
+        "            return i < kNumSourceRanks ? kAfdFfnRanks + i :\n"
+        "                kNumRanks + kAfdFfnRanks * kNumExpertsPerRank + i - "
+        "kNumSourceRanks;\n",
+        "            return i < kNumSourceRanks ? Roles::source_rank(i) :\n"
+        "                kNumRanks + Roles::source_rank((i - kNumSourceRanks) / "
+        "kNumExpertsPerRank) * kNumExpertsPerRank +\n"
+        "                (i - kNumSourceRanks) % kNumExpertsPerRank;\n",
+    ),
+    (
+        "                gin.put_value<team_t>(dst_rank_counter, "
+        "static_cast<int64_t>(rank_count[i]), i,\n",
+        "                const int dst = kAfdDirectionalNotify ? Roles::ffn_rank(i) : i"
+        ";\n"
+        "                gin.put_value<team_t>(dst_rank_counter, "
+        "static_cast<int64_t>(rank_count[dst]), dst,\n",
+    ),
+    (
+        "            } else {\n"
+        "                // RDMA bulk copy\n"
+        "                for (int i = thread_idx; i < kNumRanks; i += "
+        "kNumNotifyThreads) {\n",
+        "            } else if constexpr (kAfdDirectionalNotify) {\n"
+        "                // afdEP direct GIN: expert counts to FFN ranks only, from the"
+        " thread"
+        " that sent the\n"
+        "                // rank count (whose aggregated put the bulk put's doorbell ri"
+        "ngs):"
+        " NVLink stores to\n"
+        "                // same-node FFN ranks, one put to remote ones.\n"
+        "                for (int i = thread_idx; afd_source and i < kAfdFfnRanks; i +="
+        " "
+        "kNumNotifyThreads) {\n"
+        "                    const int dst = Roles::ffn_rank(i);\n"
+        "                    const auto dst_ptr = workspace_layout.get_scaleup_expert_c"
+        "ount_ptr"
+        "<false>() + kNumExpertsPerRank * rank_idx;\n"
+        "                    if (gin.is_nvlink_accessible<team_t>(dst)) {\n"
+        "                        for (int e = 0; e < kNumExpertsPerRank; ++ e)\n"
+        "                            gin.put_value<team_t>(dst_ptr + e, static_cast<int"
+        "64_t>("
+        "expert_count[dst * kNumExpertsPerRank + e]), dst);\n"
+        "                    } else {\n"
+        "                        const auto src_ptr = workspace_layout."
+        "get_scaleup_expert_count_ptr<true>() + kNumExpertsPerRank * dst;\n"
+        "                        gin.put<team_t>(dst_ptr, src_ptr, kNumExpertsPerRank *"
+        " "
+        "sizeof(int64_t), dst);\n"
+        "                    }\n"
+        "                }\n"
+        "            } else {\n"
+        "                // RDMA bulk copy\n"
+        "                for (int i = thread_idx; i < kNumRanks; i += "
+        "kNumNotifyThreads) {\n",
+    ),
+    (
+        "                for (int j = kAfdDirectionalNotify ? kAfdFfnRanks : 0; j < "
+        "kNumRanks; ++ j)\n"
+        "                    sum += expert_count[j * kNumExpertsPerRank + i];\n",
+        "                for (int j = 0; j < kNumRanks; ++ j)\n"
+        "                    sum += Roles::is_ffn(j) ? 0 : expert_count[j * "
+        "kNumExpertsPerRank + i];\n",
+    ),
+)
+
+
 def apply_edits(shared: str, edits) -> str:
     """Apply each edit exactly once."""
     for old, new in edits:
@@ -1165,6 +1320,11 @@ def domain_hybrid_combine(shared: str) -> str:
     return apply_edits(shared, DOMAIN_HYBRID_COMBINE_EDITS)
 
 
+def direct_gin_dispatch(shared: str) -> str:
+    """dispatch.cuh with per-rank roles and translated routes (direct GIN)."""
+    return apply_edits(shared, DIRECT_GIN_DISPATCH_EDITS)
+
+
 def ffn_fp8_hybrid_combine(shared: str) -> str:
     """The hybrid combine whose forwarders send FP8 reply rows across NVLink domains."""
     return apply_edits(shared, FFN_FP8_HYBRID_COMBINE_EDITS)
@@ -1239,5 +1399,6 @@ if __name__ == "__main__":
     (IMPLS / FFN_DISPATCH).write_text(ffn_dispatch(direct))
     (IMPLS / SOURCE_DISPATCH).write_text(source_dispatch(direct))
     (IMPLS / FFN_STREAM_DISPATCH).write_text(ffn_stream_dispatch(direct))
+    (IMPLS / DIRECT_GIN_DISPATCH).write_text(direct_gin_dispatch(direct))
     epilogue = (IMPLS / "dispatch_copy_epilogue.cuh").read_text()
     (IMPLS / FFN_STREAM_EPILOGUE).write_text(ffn_stream_epilogue(epilogue))

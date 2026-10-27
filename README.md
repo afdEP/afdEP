@@ -373,7 +373,9 @@ the suite on 2 × 4 and 3 × 4 H200 with one and two FFN GPUs per node, BF16 and
 FastAFD's DeepEP M2N in the same layouts ([record](docs/validation-per-domain.json)). These
 layouts run the union hybrid with silent FFN rails, or with hybrid off one RDMA hop per token
 ([direct record](docs/validation-direct-per-domain.json)); nodes with different GPU counts are not
-supported.
+supported. The direct path runs sections 1–3 over RDMA (design section 21): at 1 to 32 tokens it is
+21–28% faster than FastAFD's DeepEP M2N in the same layouts
+([record](docs/validation-direct-gin-protocol.json)).
 
 ## Acknowledgments
 

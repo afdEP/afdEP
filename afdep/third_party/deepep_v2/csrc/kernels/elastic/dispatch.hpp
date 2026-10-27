@@ -125,6 +125,9 @@ public:
         int afd_mixed_ffn_ranks;
         // afdEP silent FFN rails only (afdep_domain_hybrid_dispatch.cuh, FFN GPUs): f, or 0
         int afd_domain_ffn_ranks;
+        // afdEP direct GIN only (afdep_direct_gin_dispatch.cuh): FFN ranks per NVLink domain (0: the
+        // global prefix) and the domain size
+        int afd_ffn_ranks_per_domain, afd_domain_ranks;
 
         // Parameters
         void* x; sf_pack_t* sf; topk_idx_t* topk_idx; float* topk_weights;
@@ -351,6 +354,33 @@ static void __instantiate_kernel() {{
     }
 };
 
+// afdEP direct GIN dispatch (hybrid off across NVLink domains; afdep_direct_gin.cuh): the role
+// template's arguments, the collect-row bytes made explicit, then f and U.
+class AfdepDirectGinDispatchRuntime final : public jit::LaunchRuntime<AfdepDirectGinDispatchRuntime> {
+public:
+    using Args = DispatchRuntime::Args;
+
+    static std::string generate_impl(const Args& args) {
+        EP_HOST_ASSERT(args.num_scaleout_ranks == 1 and not args.is_scaleup_nvlink and args.afd_ffn_ranks > 0 and
+                       args.afd_zero_collect_row_bytes == 0);
+        auto shared = DispatchRuntime::get_direct_template_args(args);
+        shared.pop_back();
+        return fmt::format(R"(
+#include <deep_ep/impls/afdep_direct_gin_dispatch.cuh>
+
+using namespace deep_ep::elastic;
+
+static void __instantiate_kernel() {{
+    auto ptr = reinterpret_cast<void*>(&afdep_direct_gin_dispatch_impl{}, 0, {}, {}>);
+}}
+)", shared, args.afd_ffn_ranks_per_domain, args.afd_domain_ranks);
+    }
+
+    static void launch_impl(const jit::KernelHandle& kernel, const jit::LaunchConfigHandle& config, Args args) {
+        DispatchRuntime::launch_impl(kernel, config, args);
+    }
+};
+
 // afdEP FFN directional hybrid dispatch whose forwarders retire unused channels by source
 // token count (afdep_suites.hpp): the FFN copy's shape.
 class AfdepFfnSparseHybridDispatchRuntime final : public jit::LaunchRuntime<AfdepFfnSparseHybridDispatchRuntime> {
@@ -507,7 +537,9 @@ static void launch_dispatch(void* x, void* sf,
                             const int afd_ungated_tokens = 0,
                             const bool afd_thread_count = true,
                             const int afd_mixed_ffn_ranks = 0,
-                            const int afd_domain_ffn_ranks = 0) {
+                            const int afd_domain_ffn_ranks = 0,
+                            const int afd_ffn_ranks_per_domain = 0,
+                            const int afd_domain_ranks = 0) {
     // Cached mode does not support expert token counting
     if (cached_mode)
         EP_HOST_ASSERT(cumulative_local_expert_recv_stats == nullptr);
@@ -560,8 +592,9 @@ static void launch_dispatch(void* x, void* sf,
         .num_qps = num_qps, .num_timeout_cycles = num_timeout_cycles,
         .afd_ffn_ranks = afd_ffn_ranks,
         .afd_skip_entry_barrier = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and afd_skip_entry_barrier,
-        .afd_directional_notify = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and is_scaleup_nvlink and
-                                  not cached_mode and afd_directional_notify,
+        // One NVLink domain, or the direct GIN copy (afdep_direct_gin_dispatch.cuh).
+        .afd_directional_notify = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and not cached_mode and
+                                  afd_directional_notify,
         .afd_directed_exit = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and is_scaleup_nvlink and
                              afd_directed_exit,
         .afd_role_buffers = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and is_scaleup_nvlink and
@@ -578,6 +611,7 @@ static void launch_dispatch(void* x, void* sf,
         .afd_thread_count = afd_thread_count,
         .afd_mixed_ffn_ranks = num_scaleout_ranks > 1 and afd_ffn_scaleout_ranks == 1 ? afd_mixed_ffn_ranks : 0,
         .afd_domain_ffn_ranks = num_scaleout_ranks > 1 and afd_ffn_scaleout_ranks == 0 ? afd_domain_ffn_ranks : 0,
+        .afd_ffn_ranks_per_domain = afd_ffn_ranks_per_domain, .afd_domain_ranks = afd_domain_ranks,
         .x = x, .sf = static_cast<sf_pack_t*>(sf), .topk_idx = topk_idx, .topk_weights = topk_weights,
         .copied_topk_idx = copied_topk_idx,
         .cumulative_local_expert_recv_stats = cumulative_local_expert_recv_stats,
@@ -687,6 +721,14 @@ static void launch_dispatch(void* x, void* sf,
         const auto role_code = AfdepSourceHybridDispatchRuntime::generate(role_args);
         const auto role_runtime = jit::compiler->build("afdep_source_hybrid_dispatch", role_code);
         AfdepSourceHybridDispatchRuntime::launch(role_runtime, role_args, stream);
+        return;
+    }
+    if (num_scaleout_ranks == 1 and not is_scaleup_nvlink and args.afd_ffn_ranks > 0) {
+        // afdEP direct GIN (afdep_direct_gin.cuh): routes checked and translated in both warp classes.
+        EP_HOST_ASSERT(afd_shape == AfdLaunchShape::kShared);
+        const auto gin_code = AfdepDirectGinDispatchRuntime::generate(args);
+        const auto gin_runtime = jit::compiler->build("afdep_direct_gin_dispatch", gin_code);
+        AfdepDirectGinDispatchRuntime::launch(gin_runtime, args, stream);
         return;
     }
     const auto code = DispatchRuntime::generate(args);

@@ -478,6 +478,15 @@ class ElasticBuffer:
                 "(AFDEP_HYBRID_FP8_COMBINE*, AFDEP_MIXED_HYBRID, AFDEP_UNION_HYBRID "
                 "and AFDEP_SHARED_* controls)"
             )
+        # The direct GIN path's latched protocol (afdep_roles.hpp): its world barriers
+        # carry no phase, so one rank skipping its entry barriers would shift the rest.
+        direct = self._gather(tuple(self._runtime.get_afd_direct_gin_config()))
+        if any(value != direct[0] for value in direct):
+            self.close()
+            raise ValueError(
+                "Every DeepEP rank must use the same direct GIN configuration "
+                "(AFDEP_KEEP_ENTRY_BARRIERS and AFDEP_UNION_NOTIFY)"
+            )
         # Lossy FP8 combine replies across NVLink domains (AFDEP_HYBRID_FP8_COMBINE=1),
         # for buckets of at least fp8_combine_min_bucket tokens.
         self.fp8_combine = bool(sparse[0][4])
