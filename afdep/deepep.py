@@ -485,7 +485,7 @@ class ElasticBuffer:
             self.close()
             raise ValueError(
                 "Every DeepEP rank must use the same direct GIN configuration "
-                "(AFDEP_KEEP_ENTRY_BARRIERS)"
+                "(AFDEP_KEEP_ENTRY_BARRIERS and AFDEP_UNION_NOTIFY)"
             )
         # Lossy FP8 combine replies across NVLink domains (AFDEP_HYBRID_FP8_COMBINE=1),
         # for buckets of at least fp8_combine_min_bucket tokens.

@@ -20,6 +20,12 @@ struct AfdepGinRoles {
 
     __device__ __forceinline__ static bool is_ffn(const int& rank) { return rank % kLocalRanks < kLocalFfn; }
 
+    // The rank of FFN index j and of source (Attention) index s.
+    __device__ __forceinline__ static int ffn_rank(const int& j) { return j / kLocalFfn * kLocalRanks + j % kLocalFfn; }
+    __device__ __forceinline__ static int source_rank(const int& s) {
+        return s / (kLocalRanks - kLocalFfn) * kLocalRanks + kLocalFfn + s % (kLocalRanks - kLocalFfn);
+    }
+
     template <int kNumExpertsPerRank>
     __device__ __forceinline__ static int logical(const int& expert) {
         return expert < 0 ? expert :

@@ -592,8 +592,9 @@ static void launch_dispatch(void* x, void* sf,
         .num_qps = num_qps, .num_timeout_cycles = num_timeout_cycles,
         .afd_ffn_ranks = afd_ffn_ranks,
         .afd_skip_entry_barrier = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and afd_skip_entry_barrier,
-        .afd_directional_notify = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and is_scaleup_nvlink and
-                                  not cached_mode and afd_directional_notify,
+        // One NVLink domain, or the direct GIN copy (afdep_direct_gin_dispatch.cuh).
+        .afd_directional_notify = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and not cached_mode and
+                                  afd_directional_notify,
         .afd_directed_exit = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and is_scaleup_nvlink and
                              afd_directed_exit,
         .afd_role_buffers = num_scaleout_ranks == 1 and afd_ffn_ranks > 0 and is_scaleup_nvlink and

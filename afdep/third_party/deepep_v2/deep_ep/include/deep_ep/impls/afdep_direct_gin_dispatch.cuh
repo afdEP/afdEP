@@ -63,13 +63,13 @@ afdep_direct_gin_dispatch_impl(
 ) {
     constexpr int kNumExpertsPerRank = kNumExperts / kNumRanks;
     // afdEP direct GIN: the role-aware union protocol with per-rank roles.
-    EP_STATIC_ASSERT(kAfdFfnRanks > 0 and not kIsScaleupNVLink and not kAfdDirectionalNotify and
+    EP_STATIC_ASSERT(kAfdFfnRanks > 0 and not kIsScaleupNVLink and
                      not kAfdDirectedExit and not kAfdRoleBuffers and kAfdZeroCollectRowBytes == 0,
                      "direct GIN: role routes over the union protocol");
     using Roles = AfdepGinRoles<kNumRanks, kAfdFfnRanks, kAfdFfnRanksPerDomain, kAfdDomainRanks>;
     EP_STATIC_ASSERT(kNumExperts % kNumRanks == 0, "Invalid number of experts or ranks");
     EP_STATIC_ASSERT(kNumNotifyWarps % 4 == 0, "Invalid warpgroup size");
-    EP_STATIC_ASSERT(not kAfdDirectionalNotify or (kAfdFfnRanks > 0 and kIsScaleupNVLink),
+    EP_STATIC_ASSERT(not kAfdDirectionalNotify or kAfdFfnRanks > 0,
                      "Directional notify requires the direct-NVLink role path");
     EP_STATIC_ASSERT(not kAfdDirectedExit or (kAfdFfnRanks > 0 and kIsScaleupNVLink),
                      "Directed exit requires the direct-NVLink role path");
@@ -92,14 +92,17 @@ afdep_direct_gin_dispatch_impl(
     // Canonical R+E positions: outgoing FFN ranks/experts, incoming source ranks/experts.
     const auto reduced_count_index = [](const int i) {
         if constexpr (kAfdDirectionalNotify)
-            return i < kAfdFfnRanks ? i : kNumRanks + i - kAfdFfnRanks;
+            return i < kAfdFfnRanks ? Roles::ffn_rank(i) :
+                kNumRanks + Roles::ffn_rank((i - kAfdFfnRanks) / kNumExpertsPerRank) * kNumExpertsPerRank +
+                (i - kAfdFfnRanks) % kNumExpertsPerRank;
         else
             return i;
     };
     const auto incoming_count_index = [](const int i) {
         if constexpr (kAfdDirectionalNotify)
-            return i < kNumSourceRanks ? kAfdFfnRanks + i :
-                kNumRanks + kAfdFfnRanks * kNumExpertsPerRank + i - kNumSourceRanks;
+            return i < kNumSourceRanks ? Roles::source_rank(i) :
+                kNumRanks + Roles::source_rank((i - kNumSourceRanks) / kNumExpertsPerRank) * kNumExpertsPerRank +
+                (i - kNumSourceRanks) % kNumExpertsPerRank;
         else
             return i;
     };
@@ -226,7 +229,8 @@ afdep_direct_gin_dispatch_impl(
                 // Rank counters
                 const auto dst_rank_counter =
                     workspace_layout.get_scaleup_rank_count_ptr<false>() + rank_idx;
-                gin.put_value<team_t>(dst_rank_counter, static_cast<int64_t>(rank_count[i]), i,
+                const int dst = kAfdDirectionalNotify ? Roles::ffn_rank(i) : i;
+                gin.put_value<team_t>(dst_rank_counter, static_cast<int64_t>(rank_count[dst]), dst,
                                       ncclGinOptFlagsAggregateRequests);
             }
             __syncwarp();
@@ -241,6 +245,21 @@ afdep_direct_gin_dispatch_impl(
                     gin.put_value<team_t>(
                         workspace_layout.get_scaleup_expert_count_ptr<false>() + idx,
                         static_cast<int64_t>(expert_count[i]), i / kNumExpertsPerRank);
+                }
+            } else if constexpr (kAfdDirectionalNotify) {
+                // afdEP direct GIN: expert counts to FFN ranks only, from the thread that sent the
+                // rank count (whose aggregated put the bulk put's doorbell rings): NVLink stores to
+                // same-node FFN ranks, one put to remote ones.
+                for (int i = thread_idx; afd_source and i < kAfdFfnRanks; i += kNumNotifyThreads) {
+                    const int dst = Roles::ffn_rank(i);
+                    const auto dst_ptr = workspace_layout.get_scaleup_expert_count_ptr<false>() + kNumExpertsPerRank * rank_idx;
+                    if (gin.is_nvlink_accessible<team_t>(dst)) {
+                        for (int e = 0; e < kNumExpertsPerRank; ++ e)
+                            gin.put_value<team_t>(dst_ptr + e, static_cast<int64_t>(expert_count[dst * kNumExpertsPerRank + e]), dst);
+                    } else {
+                        const auto src_ptr = workspace_layout.get_scaleup_expert_count_ptr<true>() + kNumExpertsPerRank * dst;
+                        gin.put<team_t>(dst_ptr, src_ptr, kNumExpertsPerRank * sizeof(int64_t), dst);
+                    }
                 }
             } else {
                 // RDMA bulk copy
@@ -292,8 +311,8 @@ afdep_direct_gin_dispatch_impl(
                  i += kNumNotifyThreads) {
                 int sum = 0;
                 #pragma unroll
-                for (int j = kAfdDirectionalNotify ? kAfdFfnRanks : 0; j < kNumRanks; ++ j)
-                    sum += expert_count[j * kNumExpertsPerRank + i];
+                for (int j = 0; j < kNumRanks; ++ j)
+                    sum += Roles::is_ffn(j) ? 0 : expert_count[j * kNumExpertsPerRank + i];
                 expert_count[i] = math::align(sum, kExpertAlignment);
 
                 // Update statistics counters

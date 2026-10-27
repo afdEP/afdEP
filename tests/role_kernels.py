@@ -1121,8 +1121,7 @@ DIRECT_GIN_DISPATCH_EDITS = (
         "    constexpr int kNumExpertsPerRank = kNumExperts / kNumRanks;\n",
         "    constexpr int kNumExpertsPerRank = kNumExperts / kNumRanks;\n"
         "    // afdEP direct GIN: the role-aware union protocol with per-rank roles.\n"
-        "    EP_STATIC_ASSERT(kAfdFfnRanks > 0 and not kIsScaleupNVLink and not "
-        "kAfdDirectionalNotify and\n"
+        "    EP_STATIC_ASSERT(kAfdFfnRanks > 0 and not kIsScaleupNVLink and\n"
         "                     not kAfdDirectedExit and not kAfdRoleBuffers and "
         "kAfdZeroCollectRowBytes == 0,\n"
         '                     "direct GIN: role routes over the union protocol");\n'
@@ -1160,6 +1159,84 @@ DIRECT_GIN_DISPATCH_EDITS = (
         "                if (rank_idx >= kAfdFfnRanks and warp_idx == 0 and "
         "lane_idx == 0) {\n",
         "                if (afd_source and warp_idx == 0 and lane_idx == 0) {\n",
+    ),
+    # Directional counts (section 2 over GIN): sources count to FFN ranks only, at their
+    # canonical positions, which a per-domain prefix interleaves.
+    (
+        "    EP_STATIC_ASSERT(not kAfdDirectionalNotify or (kAfdFfnRanks > 0 and "
+        "kIsScaleupNVLink),\n",
+        "    EP_STATIC_ASSERT(not kAfdDirectionalNotify or kAfdFfnRanks > 0,\n",
+    ),
+    (
+        "            return i < kAfdFfnRanks ? i : kNumRanks + i - kAfdFfnRanks;\n",
+        "            return i < kAfdFfnRanks ? Roles::ffn_rank(i) :\n"
+        "                kNumRanks + Roles::ffn_rank((i - kAfdFfnRanks) / kNumExpertsPe"
+        "rRank)"
+        " * kNumExpertsPerRank +\n"
+        "                (i - kAfdFfnRanks) % kNumExpertsPerRank;\n",
+    ),
+    (
+        "            return i < kNumSourceRanks ? kAfdFfnRanks + i :\n"
+        "                kNumRanks + kAfdFfnRanks * kNumExpertsPerRank + i - "
+        "kNumSourceRanks;\n",
+        "            return i < kNumSourceRanks ? Roles::source_rank(i) :\n"
+        "                kNumRanks + Roles::source_rank((i - kNumSourceRanks) / "
+        "kNumExpertsPerRank) * kNumExpertsPerRank +\n"
+        "                (i - kNumSourceRanks) % kNumExpertsPerRank;\n",
+    ),
+    (
+        "                gin.put_value<team_t>(dst_rank_counter, "
+        "static_cast<int64_t>(rank_count[i]), i,\n",
+        "                const int dst = kAfdDirectionalNotify ? Roles::ffn_rank(i) : i"
+        ";\n"
+        "                gin.put_value<team_t>(dst_rank_counter, "
+        "static_cast<int64_t>(rank_count[dst]), dst,\n",
+    ),
+    (
+        "            } else {\n"
+        "                // RDMA bulk copy\n"
+        "                for (int i = thread_idx; i < kNumRanks; i += "
+        "kNumNotifyThreads) {\n",
+        "            } else if constexpr (kAfdDirectionalNotify) {\n"
+        "                // afdEP direct GIN: expert counts to FFN ranks only, from the"
+        " thread"
+        " that sent the\n"
+        "                // rank count (whose aggregated put the bulk put's doorbell ri"
+        "ngs):"
+        " NVLink stores to\n"
+        "                // same-node FFN ranks, one put to remote ones.\n"
+        "                for (int i = thread_idx; afd_source and i < kAfdFfnRanks; i +="
+        " "
+        "kNumNotifyThreads) {\n"
+        "                    const int dst = Roles::ffn_rank(i);\n"
+        "                    const auto dst_ptr = workspace_layout.get_scaleup_expert_c"
+        "ount_ptr"
+        "<false>() + kNumExpertsPerRank * rank_idx;\n"
+        "                    if (gin.is_nvlink_accessible<team_t>(dst)) {\n"
+        "                        for (int e = 0; e < kNumExpertsPerRank; ++ e)\n"
+        "                            gin.put_value<team_t>(dst_ptr + e, static_cast<int"
+        "64_t>("
+        "expert_count[dst * kNumExpertsPerRank + e]), dst);\n"
+        "                    } else {\n"
+        "                        const auto src_ptr = workspace_layout."
+        "get_scaleup_expert_count_ptr<true>() + kNumExpertsPerRank * dst;\n"
+        "                        gin.put<team_t>(dst_ptr, src_ptr, kNumExpertsPerRank *"
+        " "
+        "sizeof(int64_t), dst);\n"
+        "                    }\n"
+        "                }\n"
+        "            } else {\n"
+        "                // RDMA bulk copy\n"
+        "                for (int i = thread_idx; i < kNumRanks; i += "
+        "kNumNotifyThreads) {\n",
+    ),
+    (
+        "                for (int j = kAfdDirectionalNotify ? kAfdFfnRanks : 0; j < "
+        "kNumRanks; ++ j)\n"
+        "                    sum += expert_count[j * kNumExpertsPerRank + i];\n",
+        "                for (int j = 0; j < kNumRanks; ++ j)\n"
+        "                    sum += Roles::is_ffn(j) ? 0 : expert_count[j * "
+        "kNumExpertsPerRank + i];\n",
     ),
 )
 

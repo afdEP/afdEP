@@ -71,6 +71,8 @@ class ElasticBuffer {
     // routes in-kernel) and entry barriers skipped (afdep_roles.hpp).
     bool afd_gin_direct = false;
     bool afd_gin_skip_entry = false;
+    // Sources count to FFN ranks only (section 2 over GIN; afdep_direct_gin_dispatch.cuh).
+    bool afd_gin_directional = false;
 
     // Timeout settings
     int num_cpu_timeout_secs;
@@ -149,6 +151,7 @@ public:
         afd_gin_direct = afd_ffn_ranks > 0 and nccl_context->num_scaleout_ranks == 1 and
             not nccl_context->is_scaleup_nvlink and not deterministic;
         afd_gin_skip_entry = afd_gin_direct and afdep_skip_entry_barriers();
+        afd_gin_directional = afd_gin_direct and afdep_directional_notify();
         if (afd_ffn_ranks > 0 and nccl_context->num_scaleout_ranks == 1 and nccl_context->is_scaleup_nvlink and
             not deterministic and afdep_skip_entry_barriers() and afdep_directional_notify() and
             afdep_directed_exit() and afdep_per_cta_exit() and afdep_role_buffers())
@@ -225,11 +228,11 @@ public:
         return {nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks};
     }
 
-    // afdEP direct GIN path: (role-aware, entry barriers skipped), which must agree on every rank: the
-    // GIN world barriers' signal slots carry no phase, so one rank skipping alone would shift every
-    // later barrier.
-    std::tuple<bool, bool> get_afd_direct_gin_config() const {
-        return {afd_gin_direct, afd_gin_skip_entry};
+    // afdEP direct GIN path: (role-aware, entry barriers skipped, directional counts), which must agree
+    // on every rank: the GIN world barriers' signal slots carry no phase, so one rank skipping alone
+    // would shift every later barrier, and counts are sent and awaited by role.
+    std::tuple<bool, bool, bool> get_afd_direct_gin_config() const {
+        return {afd_gin_direct, afd_gin_skip_entry, afd_gin_directional};
     }
 
     // afdEP count-first: (minimum bucket, arm), which must agree on every rank.
@@ -1207,7 +1210,7 @@ public:
                         cached_mode, deterministic, do_cpu_sync,
                         comm_stream, afd_direct_nvlink or afd_direct_gin_routes ? afd_ffn_ranks : 0,
                         (afd_direct_nvlink and afdep_skip_entry_barriers()) or afd_gin_skip_entry,
-                        afd_direct_nvlink and afdep_directional_notify(),
+                        (afd_direct_nvlink and afdep_directional_notify()) or afd_gin_directional,
                         afd_direct_nvlink and afdep_directed_exit(),
                         afd_role_buffers,
                         afd_direct_nvlink and afdep_directed_exit() and afdep_per_cta_exit(),

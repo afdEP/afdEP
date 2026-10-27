@@ -77,7 +77,7 @@ def runtime(monkeypatch):
     native.get_logical_domain_size.return_value = (1, 4)
     native.get_afd_count_first_config.return_value = (0, "full")
     native.get_afd_sparse_hybrid_config.return_value = (0, False, False, 0, False, 0, 0)
-    native.get_afd_direct_gin_config.return_value = (False, False)
+    native.get_afd_direct_gin_config.return_value = (False, False, False)
     native.combine.return_value = (Tensor((2, 256)), None, None)
 
     def dispatch(*args):
@@ -279,13 +279,13 @@ def disagree_on_hybrid_configuration(runtime, other):
 
 def test_direct_gin_configuration_must_agree(runtime):
     # AFDEP_KEEP_ENTRY_BARRIERS=1 on one rank only: it alone would run entry barriers.
-    runtime.native.get_afd_direct_gin_config.return_value = (True, True)
+    runtime.native.get_afd_direct_gin_config.return_value = (True, True, True)
     gather = runtime.dist.all_gather_object
 
     def split(values, value, group):
         gather(values, value, group)
-        if value == (True, True):
-            values[1] = (True, False)
+        if value == (True, True, True):
+            values[1] = (True, False, True)
 
     runtime.dist.all_gather_object = split
     with pytest.raises(ValueError, match="same direct GIN configuration"):
