@@ -18,6 +18,17 @@ namespace deep_ep::elastic {
 // the shared NVLink barrier phase stays aligned. Construction synchronizes all
 // ranks before the first exchange. AFDEP_KEEP_ENTRY_BARRIERS=1 restores them as
 // a measurement control.
+// The direct GIN path (hybrid off across NVLink domains) skips them the same way:
+// its exit barriers stay union (system fence, flush of every QP, then a signal to
+// every rank and a wait for all of them), so every exchange-(N+1) write follows the
+// writer's exit wait of exchange N, which saw each peer's signal, sent after that
+// peer's count clears, its epilogue's inbox reads (stream order) and its flush (its
+// NIC finished reading staging, even staging inside an inbox). Same-node writes are
+// ordered by the acquire on that signal, remote ones by being posted after it.
+// Every rank runs the same sequence of world barriers on one set of signal slots,
+// whose targets are cumulative, so skipping requires every rank to skip, which
+// construction latches and checks. A per-domain FFN prefix skips only combine's,
+// since its dispatch keeps the union template (translated routes).
 static bool afdep_skip_entry_barriers() {
     return deep_ep::get_env<int>("AFDEP_KEEP_ENTRY_BARRIERS", 0) == 0;
 }
