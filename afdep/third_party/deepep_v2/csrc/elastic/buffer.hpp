@@ -67,11 +67,10 @@ class ElasticBuffer {
     int afd_fp8_min_bucket = 0;
 
     // afdEP direct GIN path (hybrid off across NVLink domains), latched at construction and checked
-    // on every rank by afdep/deepep.py: role-aware, entry barriers skipped (afdep_roles.hpp), and
-    // in-kernel route checks (global FFN prefix only; a per-domain prefix translates its routes).
+    // on every rank by afdep/deepep.py: role-aware (afdep_direct_gin_dispatch.cuh checks and translates
+    // routes in-kernel) and entry barriers skipped (afdep_roles.hpp).
     bool afd_gin_direct = false;
     bool afd_gin_skip_entry = false;
-    bool afd_gin_routes = false;
 
     // Timeout settings
     int num_cpu_timeout_secs;
@@ -150,7 +149,6 @@ public:
         afd_gin_direct = afd_ffn_ranks > 0 and nccl_context->num_scaleout_ranks == 1 and
             not nccl_context->is_scaleup_nvlink and not deterministic;
         afd_gin_skip_entry = afd_gin_direct and afdep_skip_entry_barriers();
-        afd_gin_routes = afd_gin_direct and afd_ffn_ranks_per_domain == 0 and afdep_hybrid_routes_in_kernel();
         if (afd_ffn_ranks > 0 and nccl_context->num_scaleout_ranks == 1 and nccl_context->is_scaleup_nvlink and
             not deterministic and afdep_skip_entry_barriers() and afdep_directional_notify() and
             afdep_directed_exit() and afdep_per_cta_exit() and afdep_role_buffers())
@@ -227,11 +225,11 @@ public:
         return {nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks};
     }
 
-    // afdEP direct GIN path: (role-aware, entry barriers skipped, in-kernel routes), which must agree
-    // on every rank: the GIN world barriers' signal slots carry no phase, so one rank skipping alone
-    // would shift every later barrier.
-    std::tuple<bool, bool, bool> get_afd_direct_gin_config() const {
-        return {afd_gin_direct, afd_gin_skip_entry, afd_gin_routes};
+    // afdEP direct GIN path: (role-aware, entry barriers skipped), which must agree on every rank: the
+    // GIN world barriers' signal slots carry no phase, so one rank skipping alone would shift every
+    // later barrier.
+    std::tuple<bool, bool> get_afd_direct_gin_config() const {
+        return {afd_gin_direct, afd_gin_skip_entry};
     }
 
     // afdEP count-first: (minimum bucket, arm), which must agree on every rank.
@@ -859,7 +857,7 @@ public:
         // Direct dispatch over GIN (hybrid off across NVLink domains): only the in-kernel route
         // checks apply so far; the barrier, count and exit protocol stays union.
         // A per-domain FFN prefix keeps its route check, which also translates the routes.
-        const bool afd_direct_gin_routes = afd_gin_routes;
+        const bool afd_direct_gin_routes = afd_gin_direct;
         if (afd_role_aware) {
             // Only expanded inference dispatch is currently exposed by afdEP.
             // Roles are immutable constructor geometry, never token-count guesses.
@@ -938,7 +936,7 @@ public:
             afd_ffn_ranks_per_domain : 0;
         // Per-domain FFN prefix: dispatch reads (and copies for combine) the logical IDs.
         auto afd_logical_topk_idx = std::optional<torch::Tensor>();
-        if (afd_source and afd_ffn_ranks_per_domain > 0) {
+        if (afd_source and afd_ffn_ranks_per_domain > 0 and not afd_gin_direct) {
             afd_logical_topk_idx = torch::empty_like(topk_idx);
             launch_afdep_domain_routes(topk_idx.data_ptr<topk_idx_t>(),
                                        afd_logical_topk_idx->data_ptr<topk_idx_t>(), num_tokens,
@@ -1208,7 +1206,7 @@ public:
                         num_qps, num_gpu_timeout_cycles,
                         cached_mode, deterministic, do_cpu_sync,
                         comm_stream, afd_direct_nvlink or afd_direct_gin_routes ? afd_ffn_ranks : 0,
-                        (afd_direct_nvlink and afdep_skip_entry_barriers()) or (afd_gin_routes and afd_gin_skip_entry),
+                        (afd_direct_nvlink and afdep_skip_entry_barriers()) or afd_gin_skip_entry,
                         afd_direct_nvlink and afdep_directional_notify(),
                         afd_direct_nvlink and afdep_directed_exit(),
                         afd_role_buffers,
@@ -1219,7 +1217,8 @@ public:
                             get_combine_token_layout(hidden, sizeof(nv_bfloat16), num_topk).get_num_bytes<false>() : 0,
                         afd_dispatch_shape,
                         afdep_count_first_ungated_tokens(), afdep_count_first_thread_count(),
-                        afd_mixed_ffn_ranks, afd_domain_ffn_ranks);
+                        afd_mixed_ffn_ranks, afd_domain_ffn_ranks,
+                        afd_gin_direct ? afd_ffn_ranks_per_domain : 0, nccl_context->num_nvl_ranks);
 
         // Received token counters
         int num_recv_tokens = 0, num_expanded_tokens = 0;
@@ -1352,8 +1351,8 @@ public:
         // Launch copy kernels with full SMs
         stream_control_before_epilogue(previous_event_before_epilogue);
         if (afd_source) {
-            // The direct GIN dispatch with in-kernel routes asserts the source's zero counts itself.
-            if (not afd_direct_nvlink and not afd_gin_routes)
+            // The direct GIN dispatch asserts the source's zero counts itself.
+            if (not afd_direct_nvlink and not afd_gin_direct)
                 launch_afdep_completion(true, workspace, channel_linked_list_ptr,
                                         psum_num_recv_tokens_per_scaleup_rank.data_ptr<int>(),
                                         nccl_context->num_scaleout_ranks, nccl_context->num_scaleup_ranks,

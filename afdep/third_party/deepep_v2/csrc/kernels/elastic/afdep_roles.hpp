@@ -146,7 +146,9 @@ static int afdep_mixed_hybrid(const int afd_ffn_ranks, const int num_scaleout_ra
 // the first route-derived index, store or put, as the direct NVLink path does,
 // instead of a separate route-guard kernel ahead of every dispatch (the guard
 // exists only because the union world gives Attention ranks dummy expert slots).
-// AFDEP_HYBRID_ROUTE_GUARD=1 keeps the guard kernel as a control on both.
+// AFDEP_HYBRID_ROUTE_GUARD=1 keeps the guard kernel as a control on the directional
+// hybrid; the direct GIN dispatch (afdep_direct_gin_dispatch.cuh) always checks, and
+// translates, its routes in-kernel, for global and per-domain FFN prefixes.
 static bool afdep_hybrid_routes_in_kernel() {
     return deep_ep::get_env<int>("AFDEP_HYBRID_ROUTE_GUARD", 0) == 0;
 }
