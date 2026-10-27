@@ -91,6 +91,10 @@ Across domains, role specialization runs the directional hybrid when every domai
 holds one role, and the union hybrid otherwise ([design](design.md), sections 6 and 7).
 A per-domain FFN prefix puts both roles in every domain, so it runs the union hybrid with
 per-rank roles (section 20).
+With hybrid off across domains (direct RDMA) the role path skips the entry barriers, checks and
+translates routes in-kernel and sends counts Attention -> FFN only (section 21), for global and
+per-domain FFN prefixes; `AFDEP_KEEP_ENTRY_BARRIERS` and `AFDEP_UNION_NOTIFY` are latched at
+construction there and must be set alike on every rank.
 The directional hybrid always signals only the channels that carry tokens (the sparse
 directional hybrid, section 17 and [sparse-hybrid.md](sparse-hybrid.md)); there is
 nothing to set. The opt-in mixed-role path (`AFDEP_MIXED_HYBRID`, section 18) changes
